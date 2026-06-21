@@ -60,18 +60,18 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                 locked = lock_map.get(slug)
                 version = locked.version if locked else "?"
 
-                installed.append({
-                    "slug": slug,
-                    "dir_name": child.name,
-                    "version": version,
-                    "source": tag_content,
-                })
+                installed.append(
+                    {
+                        "slug": slug,
+                        "dir_name": child.name,
+                        "version": version,
+                        "source": tag_content,
+                    }
+                )
 
         if not installed:
             if plugin_slug:
-                console.print(
-                    f"[red]Plugin '{plugin_slug}' not installed.[/red]"
-                )
+                console.print(f"[red]Plugin '{plugin_slug}' not installed.[/red]")
             else:
                 console.print("[dim]No plugins installed.[/dim]")
             return
@@ -100,8 +100,7 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                             latest_ver = versions[0].get("version", current_ver)
                     except Exception as e:
                         console.print(
-                            f"  [dim]Failed to fetch versions for "
-                            f"{slug}: {e}[/dim]"
+                            f"  [dim]Failed to fetch versions for {slug}: {e}[/dim]"
                         )
 
                 current_norm = normalize_version(current_ver.lstrip("vV"))
@@ -112,13 +111,15 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                 else:
                     update_status = f"⬆ {latest_ver}"
 
-                results.append({
-                    "slug": slug,
-                    "version": current_ver,
-                    "latest": latest_ver,
-                    "status": update_status,
-                    "dir_name": plugin["dir_name"],
-                })
+                results.append(
+                    {
+                        "slug": slug,
+                        "version": current_ver,
+                        "latest": latest_ver,
+                        "status": update_status,
+                        "dir_name": plugin["dir_name"],
+                    }
+                )
         finally:
             await store.close()
 
@@ -128,9 +129,7 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
             click.echo(json.dumps(results, indent=2))
             return
 
-        console.print(
-            f"[bold]Plugin status ({len(results)}):[/bold]\n"
-        )
+        console.print(f"[bold]Plugin status ({len(results)}):[/bold]\n")
 
         table = Table(show_header=True, header_style="bold", box=None)
         table.add_column("Plugin", style="cyan", min_width=20)

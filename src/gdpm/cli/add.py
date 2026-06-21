@@ -111,13 +111,9 @@ def add(plugins: tuple[str, ...], dev: bool) -> None:
                         godot_parts.append(f"<={max_godot}")
 
                     if godot_parts:
-                        console.print(
-                            f"  [dim]Godot {' '.join(godot_parts)}[/dim]"
-                        )
+                        console.print(f"  [dim]Godot {' '.join(godot_parts)}[/dim]")
 
-                    compatible, msg = is_compatible(
-                        config.godot, min_godot, max_godot
-                    )
+                    compatible, msg = is_compatible(config.godot, min_godot, max_godot)
                     if compatible:
                         console.print("  [green]✓ Compatible[/green]")
                     else:

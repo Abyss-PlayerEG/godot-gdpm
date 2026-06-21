@@ -56,13 +56,15 @@ def list_cmd(outdated: bool, as_json: bool) -> None:
             dep = all_deps.get(slug)
             source = tag_content
 
-            installed.append({
-                "slug": slug,
-                "dir_name": child.name,
-                "version": version,
-                "source": source,
-                "is_dev": str(dep.is_dev) if dep else "false",
-            })
+            installed.append(
+                {
+                    "slug": slug,
+                    "dir_name": child.name,
+                    "version": version,
+                    "source": source,
+                    "is_dev": str(dep.is_dev) if dep else "false",
+                }
+            )
 
     if as_json:
         import json
@@ -72,14 +74,10 @@ def list_cmd(outdated: bool, as_json: bool) -> None:
 
     if not installed:
         console.print("[dim]No plugins installed.[/dim]")
-        console.print(
-            "  Use [bold]gdpm add <plugin>[/bold] to install plugins."
-        )
+        console.print("  Use [bold]gdpm add <plugin>[/bold] to install plugins.")
         return
 
-    console.print(
-        f"[bold]Installed plugins ({len(installed)}):[/bold]\n"
-    )
+    console.print(f"[bold]Installed plugins ({len(installed)}):[/bold]\n")
 
     table = Table(show_header=True, header_style="bold", box=None)
     table.add_column("Plugin", style="cyan", min_width=20)

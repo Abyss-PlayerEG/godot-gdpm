@@ -20,17 +20,20 @@ console = Console()
 @click.option("--limit", "-n", default=20, help="Number of results")
 @click.option(
     "--sort",
-    type=click.Choice([
-        "relevance", "updated_desc", "reviews_desc", "created_desc",
-    ]),
+    type=click.Choice(
+        [
+            "relevance",
+            "updated_desc",
+            "reviews_desc",
+            "created_desc",
+        ]
+    ),
     default="relevance",
     help="Sort order",
 )
 @click.option("--all", "show_all", is_flag=True, help="Include project templates")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-def search(
-    query: str, limit: int, sort: str, show_all: bool, as_json: bool
-) -> None:
+def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> None:
     """Search for plugins in the Godot Asset Store."""
 
     async def _search() -> None:
@@ -72,8 +75,7 @@ def search(
             return
 
         console.print(
-            f"Search results for [bold]{query}[/bold] "
-            f"({len(results)} found):\n"
+            f"Search results for [bold]{query}[/bold] ({len(results)} found):\n"
         )
 
         for plugin in results:
@@ -81,8 +83,7 @@ def search(
 
             if is_template(plugin.tags):
                 console.print(
-                    f"  [bold yellow]{plugin.name}[/bold yellow] "
-                    "[dim](template)[/dim]"
+                    f"  [bold yellow]{plugin.name}[/bold yellow] [dim](template)[/dim]"
                 )
             else:
                 console.print(f"  [bold cyan]{plugin.name}[/bold cyan]")
@@ -113,10 +114,7 @@ def search(
                         min_godot = latest.get("min_godot_version", "")
                         max_godot = latest.get("max_godot_version", "")
 
-                        ver_display = (
-                            ver if ver.startswith(("v", "V"))
-                            else f"v{ver}"
-                        )
+                        ver_display = ver if ver.startswith(("v", "V")) else f"v{ver}"
                         console.print(f"    [dim]{ver_display}[/dim]")
 
                         godot_parts = []
@@ -127,8 +125,7 @@ def search(
 
                         if godot_parts:
                             console.print(
-                                f"    [dim]Godot "
-                                f"{' '.join(godot_parts)}[/dim]"
+                                f"    [dim]Godot {' '.join(godot_parts)}[/dim]"
                             )
 
                         if project_godot:
@@ -136,13 +133,9 @@ def search(
                                 project_godot, min_godot, max_godot
                             )
                             if compatible:
-                                console.print(
-                                    "    [green]✓ Compatible[/green]"
-                                )
+                                console.print("    [green]✓ Compatible[/green]")
                             else:
-                                console.print(
-                                    f"    [red]✗ {msg}[/red]"
-                                )
+                                console.print(f"    [red]✗ {msg}[/red]")
                 except Exception:
                     pass
 
@@ -150,19 +143,14 @@ def search(
                 console.print(f"    [dim]Tags: {tags}[/dim]")
 
             if plugin.store_url:
-                console.print(
-                    f"    [dim]{plugin.store_url}[/dim]"
-                )
+                console.print(f"    [dim]{plugin.store_url}[/dim]")
 
             if is_template(plugin.tags):
                 console.print(
-                    "    [dim]Project template - "
-                    "not installable as addon[/dim]"
+                    "    [dim]Project template - not installable as addon[/dim]"
                 )
             else:
-                console.print(
-                    f"    [green]gdpm add {add_route}[/green]"
-                )
+                console.print(f"    [green]gdpm add {add_route}[/green]")
             console.print()
 
     asyncio.run(_search())
