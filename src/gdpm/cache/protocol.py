@@ -1,0 +1,16 @@
+"""Cache protocol."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+class CacheProtocol(Protocol):
+    def get(self, key: str) -> Path | None: ...
+    def put(self, key: str, source: Path) -> Path: ...
+    def has(self, key: str) -> bool: ...
+    def clean(self) -> None: ...
+    def size(self) -> int: ...
