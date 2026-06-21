@@ -48,6 +48,7 @@ def read_project_config(path: Path) -> ProjectConfig:
                 name,
                 spec.get("version", "*"),
                 publisher_slug=spec.get("publisher", ""),
+                path=spec.get("path", ""),
             )
             dependencies[name] = dep
 
@@ -60,6 +61,7 @@ def read_project_config(path: Path) -> ProjectConfig:
                 name,
                 spec.get("version", "*"),
                 publisher_slug=spec.get("publisher", ""),
+                path=spec.get("path", ""),
                 is_dev=True,
             )
 
@@ -93,11 +95,13 @@ def write_project_config(config: ProjectConfig, path: Path) -> None:
     if config.dependencies:
         lines.append("[dependencies]")
         for name, dep in config.dependencies.items():
-            if dep.publisher_slug:
-                lines.append(
-                    f'{name} = {{ version = "{dep.constraint}", '
-                    f'publisher = "{dep.publisher_slug}" }}'
-                )
+            if dep.publisher_slug or dep.path:
+                parts = [f'version = "{dep.constraint}"']
+                if dep.publisher_slug:
+                    parts.append(f'publisher = "{dep.publisher_slug}"')
+                if dep.path:
+                    parts.append(f'path = "{dep.path}"')
+                lines.append(f"{name} = {{ {', '.join(parts)} }}")
             else:
                 lines.append(f'{name} = "{dep.constraint}"')
         lines.append("")
@@ -105,11 +109,13 @@ def write_project_config(config: ProjectConfig, path: Path) -> None:
     if config.dev_dependencies:
         lines.append("[dev-dependencies]")
         for name, dep in config.dev_dependencies.items():
-            if dep.publisher_slug:
-                lines.append(
-                    f'{name} = {{ version = "{dep.constraint}", '
-                    f'publisher = "{dep.publisher_slug}" }}'
-                )
+            if dep.publisher_slug or dep.path:
+                parts = [f'version = "{dep.constraint}"']
+                if dep.publisher_slug:
+                    parts.append(f'publisher = "{dep.publisher_slug}"')
+                if dep.path:
+                    parts.append(f'path = "{dep.path}"')
+                lines.append(f"{name} = {{ {', '.join(parts)} }}")
             else:
                 lines.append(f'{name} = "{dep.constraint}"')
         lines.append("")

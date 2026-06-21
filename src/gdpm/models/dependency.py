@@ -12,6 +12,7 @@ class Dependency:
     name: str
     constraint: VersionConstraint
     publisher_slug: str = ""
+    path: str = ""
     is_dev: bool = False
     source: str = ""
 
@@ -22,6 +23,7 @@ class Dependency:
         spec: str,
         *,
         publisher_slug: str = "",
+        path: str = "",
         is_dev: bool = False,
     ) -> Dependency:
         if spec.startswith("^"):
@@ -43,5 +45,6 @@ class Dependency:
             name=name,
             constraint=VersionConstraint(constraint),
             publisher_slug=publisher_slug,
+            path=path,
             is_dev=is_dev,
         )

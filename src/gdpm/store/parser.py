@@ -24,6 +24,7 @@ def parse_search_hit(hit: dict[str, Any]) -> Plugin:
         author=publisher_data.get("name", ""),
         publisher_slug=publisher_data.get("slug", ""),
         license=asset.get("license_type", ""),
+        store_url=asset.get("store_url", ""),
         tags=[t for t in tags if t],
         stars=asset.get("reviews_score", 0),
     )

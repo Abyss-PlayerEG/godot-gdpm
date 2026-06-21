@@ -106,8 +106,10 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
 
             for name in sorted(to_install):
                 entry = lock_map.get(name)
+                deps = all_deps.get(name)
+                dest_path = deps.path if deps else ""
+
                 if not entry:
-                    deps = all_deps.get(name)
                     if deps:
                         search_results = await store.search(name, limit=5)
                         exact = next(
@@ -116,16 +118,19 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
                         if exact:
                             publisher = exact.publisher_slug
                             try:
-                                result = await manager.install(publisher, name)
+                                zip_path, ver = await manager.download(publisher, name)
+                                manager.install_from_zip(
+                                    zip_path, name, publisher, dest_path
+                                )
                                 installed += 1
                                 console.print(
                                     f"[green]✓[/green] Installed "
-                                    f"[bold]{name}[/bold] {result['version']}"
+                                    f"[bold]{name}[/bold] {ver}"
                                 )
                                 updated_entries[name] = LockEntry(
                                     name=name,
-                                    version=result["version"],
-                                    source=result.get("source", ""),
+                                    version=ver,
+                                    source=f"store+{publisher}/{name}",
                                 )
                             except Exception as e:
                                 errors.append(f"Failed to install {name}: {e}")
@@ -135,9 +140,10 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
 
                 publisher = entry.source.replace("store+", "").split("/")[0]
                 try:
-                    result = await manager.install(
+                    zip_path, ver = await manager.download(
                         publisher, name, entry.version.lstrip("v")
                     )
+                    manager.install_from_zip(zip_path, name, publisher, dest_path)
                     installed += 1
                     console.print(
                         f"[green]✓[/green] Installed "

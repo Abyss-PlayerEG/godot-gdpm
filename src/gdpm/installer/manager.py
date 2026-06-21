@@ -6,13 +6,18 @@ import shutil
 from typing import TYPE_CHECKING, Any
 
 from gdpm.store.client import StoreClient
-from gdpm.utils.checksum import sha256_file
-from gdpm.utils.zip import extract_addon_from_zip
+from gdpm.utils.zip import (
+    ZipAnalysis,
+    analyze_zip,
+    extract_addon_from_zip,
+    extract_full_zip,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from gdpm.cache.file_cache import FileCache
+    from gdpm.store.client import ProgressCallback
 
 TAG_FILENAME = "tag.gdpm"
 
@@ -25,6 +30,7 @@ class PluginManager:
         store: StoreClient | None = None,
     ) -> None:
         self._addons = addons_dir
+        self._project_root = addons_dir.parent
         self._cache = cache
         self._store = store or StoreClient()
         self._owns_store = store is None
@@ -33,12 +39,13 @@ class PluginManager:
         if self._owns_store:
             await self._store.close()
 
-    async def install(
+    async def download(
         self,
         publisher: str,
         slug: str,
         version: str = "",
-    ) -> dict[str, Any]:
+        on_progress: ProgressCallback | None = None,
+    ) -> tuple[Path, str]:
         releases = await self._store.get_versions(publisher, slug)
         if not releases:
             raise ValueError(f"No releases found for {publisher}/{slug}")
@@ -60,30 +67,78 @@ class PluginManager:
 
         if zip_path is None:
             zip_path = await self._store.download(
-                publisher, slug, ver, self._cache.path
+                publisher,
+                slug,
+                ver,
+                self._cache.path,
+                on_progress=on_progress,
             )
             self._cache.put(cache_key, zip_path)
 
-        extracted = extract_addon_from_zip(zip_path, self._addons, slug)
-        if not extracted:
-            raise ValueError(
-                f"Plugin '{slug}' is not an addon (no addons/ directory in zip). "
-                "It may be a project template."
-            )
+        return zip_path, ver
 
-        source = f"store+{publisher}/{slug}"
-        for addon_dir in extracted:
-            tag_path = self._addons / addon_dir / TAG_FILENAME
+    def analyze(self, zip_path: Path) -> ZipAnalysis:
+        return analyze_zip(zip_path)
+
+    def extract_to_path(
+        self, zip_path: Path, dest: Path, slug: str, publisher: str = ""
+    ) -> None:
+        dest.mkdir(parents=True, exist_ok=True)
+        extract_full_zip(zip_path, dest)
+
+        source = f"store+{publisher}/{slug}" if publisher else f"store+{slug}"
+        tag_path = dest / TAG_FILENAME
+        tag_path.write_text(source, encoding="utf-8")
+
+    def install_from_zip(
+        self,
+        zip_path: Path,
+        slug: str,
+        publisher: str = "",
+        dest_path: str = "",
+    ) -> dict[str, Any]:
+        analysis = analyze_zip(zip_path)
+        source = f"store+{publisher}/{slug}" if publisher else f"store+{slug}"
+
+        if dest_path:
+            dest = self._project_root / dest_path
+            dest.mkdir(parents=True, exist_ok=True)
+            extract_full_zip(zip_path, dest)
+
+            if dest_path.endswith("/"):
+                root_dirs: set[str] = set()
+                for item in dest.iterdir():
+                    if item.is_dir():
+                        root_dirs.add(item.name)
+                tag_dest = dest / next(iter(root_dirs)) if len(root_dirs) == 1 else dest
+            else:
+                tag_dest = dest
+
+            tag_path = tag_dest / TAG_FILENAME
             tag_path.write_text(source, encoding="utf-8")
+            return {"dest": str(dest), "addon_dirs": []}
 
-        checksum = sha256_file(zip_path) if zip_path.exists() else ""
+        if analysis.has_addons:
+            extracted = extract_addon_from_zip(zip_path, self._addons, slug)
+            if not extracted:
+                raise ValueError(f"Plugin '{slug}' extraction failed.")
+            for addon_dir in extracted:
+                tag_path = self._addons / addon_dir / TAG_FILENAME
+                tag_path.write_text(source, encoding="utf-8")
+            return {"dest": str(self._addons), "addon_dirs": extracted}
 
-        return {
-            "name": slug,
-            "version": ver,
-            "source": source,
-            "checksum": checksum,
-        }
+        if len(analysis.asset_dirs or []) > 0:
+            return {"dest": "", "addon_dirs": [], "has_assets": True}
+
+        raise ValueError(
+            f"Plugin '{slug}' is not an addon (no addons/ directory in zip). "
+            "Use --path to specify a custom install path."
+        )
+
+    def write_tag(self, dest: Path, slug: str, publisher: str = "") -> None:
+        source = f"store+{publisher}/{slug}" if publisher else f"store+{slug}"
+        tag_path = dest / TAG_FILENAME
+        tag_path.write_text(source, encoding="utf-8")
 
     def remove(self, slug: str) -> None:
         if not self._addons.exists():
@@ -115,16 +170,3 @@ class PluginManager:
 
     def is_installed(self, slug: str) -> bool:
         return len(self.find_addon_dirs(slug)) > 0
-
-    def installed_version(self, slug: str) -> str | None:
-        cfg = self._addons / slug / "plugin.cfg"
-        if not cfg.exists():
-            return None
-        try:
-            import configparser
-
-            parser = configparser.ConfigParser()
-            parser.read(cfg)
-            return parser.get("plugin", "version", fallback=None)
-        except Exception:
-            return None

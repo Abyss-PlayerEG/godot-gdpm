@@ -70,7 +70,12 @@ def update(plugins: tuple[str, ...], latest: bool, dry_run: bool) -> None:
                         continue
                     publisher = exact.publisher_slug
 
-                versions = await store.get_versions(publisher, name)
+                try:
+                    versions = await store.get_versions(publisher, name)
+                except Exception as e:
+                    errors.append(f"Failed to fetch versions for '{name}': {e}")
+                    continue
+
                 if not versions:
                     errors.append(f"No versions found for '{name}'")
                     continue
@@ -136,15 +141,16 @@ def update(plugins: tuple[str, ...], latest: bool, dry_run: bool) -> None:
             try:
                 for u in updates:
                     try:
-                        result = await manager2.install(
+                        zip_path, _ver = await manager2.download(
                             u["publisher"],
                             u["name"],
                             u["new_version"].lstrip("v"),
                         )
+                        manager2.install_from_zip(zip_path, u["name"], u["publisher"])
                         lock_map[u["name"]] = LockEntry(
                             name=u["name"],
                             version=u["new_version"],
-                            source=result.get("source", ""),
+                            source=f"store+{u['publisher']}/{u['name']}",
                         )
                         applied += 1
                         console.print(

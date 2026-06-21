@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 
 from packaging.version import Version as PkgVersion
 
+from gdpm.utils.version import normalize_version, version_matches
+
 
 @dataclass(frozen=True)
 class Version:
@@ -13,7 +15,8 @@ class Version:
     _parsed: PkgVersion = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "_parsed", PkgVersion(self.version))
+        normalized = normalize_version(self.version)
+        object.__setattr__(self, "_parsed", PkgVersion(normalized))
 
     @property
     def major(self) -> int:
@@ -68,14 +71,7 @@ class VersionConstraint:
     constraint: str
 
     def matches(self, version: Version) -> bool:
-        from packaging.specifiers import SpecifierSet
-
-        try:
-            normalized = self.constraint.lstrip("v")
-            spec = SpecifierSet(normalized)
-            return version._parsed in spec
-        except Exception:
-            return self.constraint.lstrip("v") == version.version
+        return version_matches(version.version, self.constraint)
 
     def __str__(self) -> str:
         return self.constraint

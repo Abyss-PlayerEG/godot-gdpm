@@ -13,6 +13,7 @@ class Plugin:
     author: str
     publisher_slug: str
     license: str
+    store_url: str = ""
     tags: list[str] = field(default_factory=list)
     stars: int = 0
 

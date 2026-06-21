@@ -17,7 +17,7 @@ class FileCache:
 
     @property
     def path(self) -> Path:
-        return self._dir
+        return self._downloads
 
     def get(self, key: str) -> Path | None:
         path = self._key_path(key)

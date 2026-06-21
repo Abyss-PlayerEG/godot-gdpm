@@ -6,15 +6,25 @@ import asyncio
 
 import click
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    TaskID,
+    TextColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
 
 from gdpm.cache.file_cache import FileCache
-from gdpm.cli.common import require_project
+from gdpm.cli.common import is_template, require_project
 from gdpm.config.project import read_project_config, write_project_config
 from gdpm.installer.manager import PluginManager
 from gdpm.lockfile.lock import find_lockfile, read_lockfile, write_lockfile
 from gdpm.models.dependency import Dependency
 from gdpm.models.lock import LockEntry
 from gdpm.store.client import StoreClient
+from gdpm.utils.version import is_compatible
 
 console = Console()
 
@@ -22,8 +32,7 @@ console = Console()
 @click.command()
 @click.argument("plugins", nargs=-1, required=True)
 @click.option("--dev", is_flag=True, help="Add as dev dependency")
-@click.option("--no-sync", is_flag=True, help="Only update config, don't install")
-def add(plugins: tuple[str, ...], dev: bool, no_sync: bool) -> None:
+def add(plugins: tuple[str, ...], dev: bool) -> None:
     """Add one or more plugins to the project."""
 
     async def _add() -> None:
@@ -51,6 +60,13 @@ def add(plugins: tuple[str, ...], dev: bool, no_sync: bool) -> None:
                     publisher = ""
                     slug = name
 
+                if slug in config.dependencies or slug in config.dev_dependencies:
+                    console.print(
+                        f"[yellow]![/yellow] [bold]{slug}[/bold] "
+                        "already in dependencies. Use 'gdpm update' to update."
+                    )
+                    continue
+
                 if not publisher:
                     search_results = await store.search(slug, limit=20)
                     if not search_results:
@@ -69,29 +85,88 @@ def add(plugins: tuple[str, ...], dev: bool, no_sync: bool) -> None:
 
                 try:
                     detail = await store.get_plugin(publisher, slug)
-                    template_tags = {"template", "starterkit", "demo", "project"}
-                    if any(t.lower() in template_tags for t in detail.tags):
+                    if is_template(detail.tags):
                         errors.append(
                             f"'{slug}' is a project template, not an addon. "
-                            "Use 'gdpm search' to find addons instead."
+                            "Use 'gdpm download' for templates and resources."
                         )
                         continue
                 except Exception:
                     pass
 
+                versions = await store.get_versions(publisher, slug)
+                if versions:
+                    latest = versions[0]
+                    ver = latest.get("version", "")
+                    min_godot = latest.get("min_godot_version", "")
+                    max_godot = latest.get("max_godot_version", "")
+
+                    ver_display = ver if ver.startswith(("v", "V")) else f"v{ver}"
+                    console.print(f"  [dim]{ver_display}[/dim]")
+
+                    godot_parts = []
+                    if min_godot and min_godot not in ("None", ""):
+                        godot_parts.append(f">={min_godot}")
+                    if max_godot and max_godot not in ("None", ""):
+                        godot_parts.append(f"<={max_godot}")
+
+                    if godot_parts:
+                        console.print(
+                            f"  [dim]Godot {' '.join(godot_parts)}[/dim]"
+                        )
+
+                    compatible, msg = is_compatible(
+                        config.godot, min_godot, max_godot
+                    )
+                    if compatible:
+                        console.print("  [green]✓ Compatible[/green]")
+                    else:
+                        console.print(f"  [red]✗ {msg}[/red]")
+
                 try:
-                    result = await manager.install(publisher, slug)
+                    with Progress(
+                        TextColumn("[bold blue]{task.fields[name]}"),
+                        BarColumn(),
+                        DownloadColumn(),
+                        TransferSpeedColumn(),
+                        TimeRemainingColumn(),
+                    ) as progress:
+                        task_id = progress.add_task("download", name=slug, total=None)
+
+                        def on_progress(
+                            current: int,
+                            total: int,
+                            speed: float,
+                            _task: TaskID = task_id,
+                        ) -> None:
+                            if progress.tasks[_task].total is None:
+                                progress.update(_task, total=total)
+                            progress.update(_task, completed=current)
+
+                        zip_path, ver = await manager.download(
+                            publisher, slug, on_progress=on_progress
+                        )
+
+                    manager.install_from_zip(zip_path, slug, publisher)
+
+                    result = {
+                        "name": slug,
+                        "version": ver,
+                        "source": f"store+{publisher}/{slug}",
+                    }
                     results.append(result)
                 except Exception as e:
                     if "404" in str(e):
                         search_results = await store.search(slug, limit=5)
                         exact = next(
-                            (r for r in search_results if r.slug == slug), None
+                            (r for r in search_results if r.slug == slug),
+                            None,
                         )
                         if exact:
                             errors.append(
                                 f"Plugin '{slug}' not found at '{publisher}'. "
-                                f"Did you mean: {exact.publisher_slug}/{slug}?"
+                                f"Did you mean: "
+                                f"{exact.publisher_slug}/{slug}?"
                             )
                         else:
                             errors.append(f"Failed to install {slug}: {e}")
