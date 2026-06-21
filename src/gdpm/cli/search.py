@@ -90,8 +90,7 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
                 console.print(f"    [dim]Tags: {tags}[/dim]")
             if is_template:
                 console.print(
-                    f"    [yellow]gdpm add {add_route}[/yellow] "
-                    "[dim](project template)[/dim]"
+                    "    [dim]Project template - not installable as addon[/dim]"
                 )
             else:
                 console.print(f"    [green]gdpm add {add_route}[/green]")
