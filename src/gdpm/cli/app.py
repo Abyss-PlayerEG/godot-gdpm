@@ -9,7 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from gdpm import __version__
+from gdpm import __tag__, __version__
 
 console = Console()
 
@@ -107,15 +107,38 @@ class GdpmGroup(click.Group):
         console.print()
 
 
-@click.group(cls=GdpmGroup)
-@click.version_option(
-    version=__version__,
-    prog_name="gdpm",
-    message=(
-        "gdpm v%(version)s [DEV]\n"
-        "Report issues: https://github.com/Abyss-PlayerEG/godot-gdpm/issues"
-    ),
-)
+def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> None:
+    """Print formatted version info."""
+    if not value:
+        return
+
+    tag_display = f" [{__tag__}]" if __tag__ else ""
+    console.print()
+    console.print(Text(BANNER, style="bold cyan"))
+    console.print()
+    console.print(
+        Text("  gdpm", style="bold white")
+        + Text(f" v{__version__}", style="bold green")
+        + Text(tag_display, style="bold yellow")
+    )
+    console.print(
+        Text("  Godot Dependency Package Manager", style="dim")
+    )
+    console.print()
+    console.print(
+        Text("  Report issues: ", style="dim")
+        + Text(
+            "https://github.com/Abyss-PlayerEG/godot-gdpm/issues",
+            style="blue underline",
+        )
+    )
+    console.print()
+    ctx.exit()
+
+
+@click.group(cls=GdpmGroup, context_settings={"help_option_names": ["-h", "--help"]})
+@click.option("-V", "--version", is_flag=True, is_eager=True, expose_value=False,
+              callback=print_version, help="Show version and exit.")
 def main() -> None:
     """Godot Dependency Package Manager."""
 
