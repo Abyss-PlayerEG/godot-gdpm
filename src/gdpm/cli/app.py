@@ -121,9 +121,7 @@ def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> No
         + Text(f" v{__version__}", style="bold green")
         + Text(tag_display, style="bold yellow")
     )
-    console.print(
-        Text("  Godot Dependency Package Manager", style="dim")
-    )
+    console.print(Text("  Godot Dependency Package Manager", style="dim"))
     console.print()
     console.print(
         Text("  Report issues: ", style="dim")
@@ -137,8 +135,15 @@ def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> No
 
 
 @click.group(cls=GdpmGroup, context_settings={"help_option_names": ["-h", "--help"]})
-@click.option("-V", "--version", is_flag=True, is_eager=True, expose_value=False,
-              callback=print_version, help="Show version and exit.")
+@click.option(
+    "-V",
+    "--version",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=print_version,
+    help="Show version and exit.",
+)
 def main() -> None:
     """Godot Dependency Package Manager."""
 
