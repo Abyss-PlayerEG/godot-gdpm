@@ -37,6 +37,18 @@ def lock(check: bool) -> None:
             all_deps = {**config.dependencies, **config.dev_dependencies}
 
             for name, dep in all_deps.items():
+                # Local plugins - skip API lookup
+                if dep.is_local:
+                    console.print(f"  {name} (local)")
+                    entries.append(
+                        LockEntry(
+                            name=name,
+                            version="local",
+                            source="local",
+                        )
+                    )
+                    continue
+
                 if dep.publisher_slug:
                     publisher = dep.publisher_slug
                 else:

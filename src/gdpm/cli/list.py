@@ -51,7 +51,14 @@ def list_cmd(outdated: bool, as_json: bool) -> None:
                 slug = tag_content.split("+")[-1]
 
             locked = lock_map.get(slug)
-            version = locked.version if locked else "?"
+            is_local = tag_content.startswith("local+")
+
+            if is_local:
+                version = "local"
+            elif locked:
+                version = locked.version
+            else:
+                version = "?"
 
             dep = all_deps.get(slug)
             source = tag_content

@@ -129,6 +129,10 @@ def is_compatible(
     if not project_godot or project_godot == "*":
         return True, ""
 
+    # Filter out None/empty values
+    min_godot = min_godot if min_godot and min_godot != "None" else ""
+    max_godot = max_godot if max_godot and max_godot != "None" else ""
+
     min_v = normalize_version(min_godot) if min_godot else ""
     max_v = normalize_version(max_godot) if max_godot else ""
 

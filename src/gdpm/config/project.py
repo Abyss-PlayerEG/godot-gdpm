@@ -49,6 +49,7 @@ def read_project_config(path: Path) -> ProjectConfig:
                 spec.get("version", "*"),
                 publisher_slug=spec.get("publisher", ""),
                 path=spec.get("path", ""),
+                is_local=spec.get("local", False),
             )
             dependencies[name] = dep
 
@@ -62,6 +63,7 @@ def read_project_config(path: Path) -> ProjectConfig:
                 spec.get("version", "*"),
                 publisher_slug=spec.get("publisher", ""),
                 path=spec.get("path", ""),
+                is_local=spec.get("local", False),
                 is_dev=True,
             )
 
@@ -95,7 +97,9 @@ def write_project_config(config: ProjectConfig, path: Path) -> None:
     if config.dependencies:
         lines.append("[dependencies]")
         for name, dep in config.dependencies.items():
-            if dep.publisher_slug or dep.path:
+            if dep.is_local:
+                lines.append(f"{name} = {{ local = true }}")
+            elif dep.publisher_slug or dep.path:
                 parts = [f'version = "{dep.constraint}"']
                 if dep.publisher_slug:
                     parts.append(f'publisher = "{dep.publisher_slug}"')
@@ -109,7 +113,9 @@ def write_project_config(config: ProjectConfig, path: Path) -> None:
     if config.dev_dependencies:
         lines.append("[dev-dependencies]")
         for name, dep in config.dev_dependencies.items():
-            if dep.publisher_slug or dep.path:
+            if dep.is_local:
+                lines.append(f"{name} = {{ local = true }}")
+            elif dep.publisher_slug or dep.path:
                 parts = [f'version = "{dep.constraint}"']
                 if dep.publisher_slug:
                     parts.append(f'publisher = "{dep.publisher_slug}"')

@@ -49,6 +49,10 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
     all_deps = {**config.dependencies, **config.dev_dependencies}
     declared_names = set(all_deps.keys())
 
+    # Separate local and online plugins
+    local_names = {name for name, dep in all_deps.items() if dep.is_local}
+    online_names = declared_names - local_names
+
     installed_by_dep: set[str] = set()
     if addons_dir.exists():
         for child in addons_dir.iterdir():
@@ -61,7 +65,7 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
                     if tag.endswith(f"/{name}"):
                         installed_by_dep.add(name)
 
-    to_install = declared_names - installed_by_dep
+    to_install = online_names - installed_by_dep
     to_remove = set()
     if addons_dir.exists():
         for child in addons_dir.iterdir():
@@ -92,6 +96,22 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
         return
 
     async def _sync() -> None:
+        from gdpm.utils.local import sync_local_plugins
+
+        # Step 1: Sync local plugins first
+        local_synced = sync_local_plugins(root, addons_dir)
+        if local_synced:
+            console.print(
+                f"[green]✓[/green] Synced {len(local_synced)} local plugin(s)"
+            )
+            # Update lock file for local plugins
+            for name in local_synced:
+                lock_map[name] = LockEntry(
+                    name=name,
+                    version="local",
+                    source="local",
+                )
+
         store = StoreClient()
         cache_dir = root / ".gdpm" / "cache"
         cache = FileCache(cache_dir)
@@ -164,6 +184,9 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
 
             if updated_entries:
                 lock_map.update(updated_entries)
+
+            # Write lock file if any changes
+            if local_synced or updated_entries or to_remove:
                 write_lockfile(list(lock_map.values()), lock_path)
 
         finally:

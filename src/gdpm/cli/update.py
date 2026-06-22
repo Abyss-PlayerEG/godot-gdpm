@@ -60,6 +60,11 @@ def update(plugins: tuple[str, ...], latest: bool, dry_run: bool) -> None:
                     errors.append(f"Plugin '{name}' not in dependencies")
                     continue
 
+                # Skip local plugins
+                if dep.source and dep.source.startswith("local+"):
+                    console.print(f"  [dim]Skipping {name} (local plugin)[/dim]")
+                    continue
+
                 if dep.publisher_slug:
                     publisher = dep.publisher_slug
                 else:

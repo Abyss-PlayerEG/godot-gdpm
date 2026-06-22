@@ -106,6 +106,20 @@ class GdpmGroup(click.Group):
         )
         console.print()
 
+        # Common options
+        console.print(
+            Panel(
+                Text("  -h, --help     Show help message\n", style="dim")
+                + Text("  -V, --version  Show version\n", style="dim")
+                + Text("  -y, --yes      Skip confirmation prompts", style="dim"),
+                title="[bold cyan]Common Options[/bold cyan]",
+                border_style="dim",
+                padding=(0, 1),
+                width=terminal_width,
+            )
+        )
+        console.print()
+
 
 def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> None:
     """Print formatted version info."""
