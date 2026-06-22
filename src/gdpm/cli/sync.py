@@ -49,6 +49,10 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
     all_deps = {**config.dependencies, **config.dev_dependencies}
     declared_names = set(all_deps.keys())
 
+    # Separate local and online plugins
+    local_names = {name for name, dep in all_deps.items() if dep.is_local}
+    online_names = declared_names - local_names
+
     installed_by_dep: set[str] = set()
     if addons_dir.exists():
         for child in addons_dir.iterdir():
@@ -61,7 +65,7 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
                     if tag.endswith(f"/{name}"):
                         installed_by_dep.add(name)
 
-    to_install = declared_names - installed_by_dep
+    to_install = online_names - installed_by_dep
     to_remove = set()
     if addons_dir.exists():
         for child in addons_dir.iterdir():

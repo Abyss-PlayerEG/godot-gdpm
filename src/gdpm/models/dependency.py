@@ -13,6 +13,7 @@ class Dependency:
     constraint: VersionConstraint
     publisher_slug: str = ""
     path: str = ""
+    is_local: bool = False
     is_dev: bool = False
     source: str = ""
 
@@ -24,6 +25,7 @@ class Dependency:
         *,
         publisher_slug: str = "",
         path: str = "",
+        is_local: bool = False,
         is_dev: bool = False,
     ) -> Dependency:
         if spec.startswith("^"):
@@ -46,5 +48,6 @@ class Dependency:
             constraint=VersionConstraint(constraint),
             publisher_slug=publisher_slug,
             path=path,
+            is_local=is_local,
             is_dev=is_dev,
         )

@@ -324,7 +324,13 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
                 continue
 
         # Check if content changed
-        if name in hashes and hashes[name] == content_hash:
+        zip_exists = (local_dir / f"{name}.zip").exists()
+        is_registered = name in config.dependencies or name in config.dev_dependencies
+
+        if not zip_exists or not is_registered:
+            # Zip was deleted or not registered, force repack
+            pass
+        elif name in hashes and hashes[name] == content_hash:
             console.print(f"  [dim]○ {name}: unchanged → skipped[/dim]")
             skipped += 1
             continue
@@ -334,7 +340,7 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
         pack_plugin(addons_dir, name, local_dir)
         hashes[name] = content_hash
 
-        dep = Dependency.from_spec(name, "*", is_dev=False)
+        dep = Dependency.from_spec(name, "*", is_local=True, is_dev=False)
         config.dependencies[name] = dep
 
         console.print(
@@ -345,6 +351,23 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
     if packed or renamed:
         save_hashes(root, hashes)
         write_project_config(config, config_path)
+
+        # Update lock file
+        lock_path = find_lockfile(root)
+        lock_entries = read_lockfile(lock_path)
+        lock_map = {e.name: e for e in lock_entries}
+
+        for name in targets:
+            plugin_dir = addons_dir / name
+            if plugin_dir.exists():
+                lock_map[name] = LockEntry(
+                    name=name,
+                    version="local",
+                    source="local",
+                )
+
+        write_lockfile(list(lock_map.values()), lock_path)
+
         console.print()
         if packed:
             console.print(f"  Packed: {packed}")
@@ -353,4 +376,5 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
         if skipped:
             console.print(f"  Skipped: {skipped}")
         console.print("  Updated [cyan]gdproject.toml[/cyan]")
+        console.print("  Updated [cyan]gdpm.lock[/cyan]")
         console.print(f"  Updated [cyan]{LOCAL_DIR_NAME}/.hashes[/cyan]")
