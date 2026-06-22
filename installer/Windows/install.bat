@@ -20,6 +20,7 @@ if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 
 echo [1/3] Installing files...
 copy /Y "%SRC%gdpm.exe" "%INSTALL_DIR%\" >nul
+copy /Y "%SRC%gdpm.bat" "%INSTALL_DIR%\" >nul 2>nul
 if exist "%SRC%install.bat" copy /Y "%SRC%install.bat" "%INSTALL_DIR%\" >nul 2>nul
 if exist "%SRC%uninstall.bat" copy /Y "%SRC%uninstall.bat" "%INSTALL_DIR%\" >nul 2>nul
 echo    Done.
