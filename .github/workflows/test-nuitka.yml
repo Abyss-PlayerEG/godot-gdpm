@@ -80,6 +80,7 @@ jobs:
 
       - name: Test executable (Windows)
         if: matrix.platform == 'windows'
+        shell: bash
         run: dist/gdpm.exe --version
 
       - name: Create archive (Linux)
