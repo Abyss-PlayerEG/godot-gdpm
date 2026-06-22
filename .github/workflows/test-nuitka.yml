@@ -65,12 +65,12 @@ jobs:
             --output-filename=gdpm \
             --output-dir=dist \
             --include-package=gdpm \
-            --include-data-file=icon.png=icon.png \
-            src/gdpm/__main__.py
+            src/gdpm/__main__.py \
+            --no-deployment-warning
 
       - name: Build with Nuitka (Windows)
         if: matrix.platform == 'windows'
-        run: uv run nuitka --onefile --output-filename=gdpm.exe --output-dir=dist --include-package=gdpm --windows-icon-from-ico=icon.ico src/gdpm/__main__.py
+        run: uv run nuitka --onefile --output-filename=gdpm.exe --output-dir=dist --include-package=gdpm --windows-icon-from-ico=icon.ico src/gdpm/__main__.py --no-deployment-warning
 
       - name: Test executable (Linux/macOS)
         if: matrix.platform != 'windows'
