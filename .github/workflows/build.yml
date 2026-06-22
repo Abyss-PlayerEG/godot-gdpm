@@ -64,8 +64,7 @@ jobs:
 
       - name: Build executable (Windows)
         if: matrix.platform == 'windows'
-        run: |
-          uv run pyinstaller --onefile --name gdpm --paths src --icon icon.png src/gdpm/__main__.py
+        run: uv run pyinstaller --onefile --name gdpm --paths src --icon icon.ico src/gdpm/__main__.py
 
       - name: Create archive (Linux)
         if: matrix.platform == 'linux'
