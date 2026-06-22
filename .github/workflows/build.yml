@@ -38,7 +38,10 @@ jobs:
       - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cache/uv
+          path: |
+            ~/.cache/uv
+            ~/Library/Caches/uv
+            ~\AppData\Local\uv\Cache
           key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-uv-
@@ -49,8 +52,20 @@ jobs:
       - name: Install PyInstaller
         run: uv pip install pyinstaller
 
-      - name: Build executable
-        run: uv run pyinstaller --onefile --name gdpm src/gdpm/cli/app.py
+      - name: Build executable (Linux/macOS)
+        if: matrix.platform != 'windows'
+        run: |
+          uv run pyinstaller \
+            --onefile \
+            --name gdpm \
+            --paths src \
+            --icon icon.png \
+            src/gdpm/__main__.py
+
+      - name: Build executable (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          uv run pyinstaller --onefile --name gdpm --paths src --icon icon.png src/gdpm/__main__.py
 
       - name: Create archive (Linux/macOS)
         if: matrix.platform != 'windows'
@@ -60,9 +75,10 @@ jobs:
 
       - name: Create archive (Windows)
         if: matrix.platform == 'windows'
+        shell: pwsh
         run: |
           cd dist
-          Compress-Archive -Path gdpm.exe -DestinationPath gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.zip
+          Compress-Archive -Path gdpm.exe -DestinationPath "gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
