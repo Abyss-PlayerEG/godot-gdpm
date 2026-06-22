@@ -30,10 +30,18 @@ console = Console()
 
 
 @click.command()
-@click.argument("plugins", nargs=-1, required=True)
+@click.argument("plugins", nargs=-1)
 @click.option("--dev", is_flag=True, help="Add as dev dependency")
-def add(plugins: tuple[str, ...], dev: bool) -> None:
+@click.option("--local", is_flag=True, help="Pack local plugins to gdpm-local/")
+def add(plugins: tuple[str, ...], dev: bool, local: bool) -> None:
     """Add one or more plugins to the project."""
+    if local:
+        _add_local(plugins)
+        return
+
+    if not plugins:
+        console.print("[red]Error:[/red] No plugins specified.")
+        raise SystemExit(1)
 
     async def _add() -> None:
         root = require_project()
@@ -223,3 +231,117 @@ def _parse_spec(spec: str) -> tuple[str, str]:
         name, constraint = spec.split("@", 1)
         return name, constraint
     return spec, ""
+
+
+def _add_local(plugins: tuple[str, ...]) -> None:
+    """Pack local plugins to gdpm-local/ with hash comparison."""
+    from gdpm.utils.local import (
+        LOCAL_DIR_NAME,
+        compute_dir_hash,
+        find_matching_hash,
+        load_hashes,
+        pack_plugin,
+        save_hashes,
+        scan_untagged_or_local_plugins,
+        tag_plugin,
+    )
+
+    root = require_project()
+    config_path = root / "gdproject.toml"
+    config = read_project_config(config_path)
+    addons_dir = root / config.addons_dir
+    local_dir = root / LOCAL_DIR_NAME
+
+    if plugins:
+        targets = list(plugins)
+    else:
+        untagged = scan_untagged_or_local_plugins(addons_dir)
+        if not untagged:
+            console.print("[dim]No local plugins found in addons/[/dim]")
+            return
+        targets = [p.name for p in untagged]
+
+    if not targets:
+        console.print("[dim]No plugins to pack.[/dim]")
+        return
+
+    hashes = load_hashes(root)
+    console.print(f"Scanning {len(targets)} plugin(s)...\n")
+
+    packed = 0
+    skipped = 0
+    renamed = 0
+
+    for name in targets:
+        plugin_dir = addons_dir / name
+        if not plugin_dir.exists():
+            console.print(f"[red]✗[/red] Plugin directory not found: {name}")
+            continue
+
+        content_hash = compute_dir_hash(plugin_dir)
+
+        # Check if hash matches an existing plugin (possible rename)
+        existing_name = find_matching_hash(hashes, content_hash)
+
+        if existing_name and existing_name != name:
+            # Rename detected
+            old_zip = local_dir / f"{existing_name}.zip"
+            new_zip = local_dir / f"{name}.zip"
+
+            if old_zip.exists() and not console.input(
+                f"  [yellow]?[/yellow] {name} matches "
+                f"[bold]{existing_name}[/bold]. Rename? (y/n): "
+            ).strip().lower().startswith("y"):
+                # User declined rename, treat as new plugin
+                existing_name = None
+
+            if existing_name and existing_name != name:
+                if old_zip.exists():
+                    old_zip.rename(new_zip)
+                hashes.pop(existing_name, None)
+                hashes[name] = content_hash
+                tag_plugin(addons_dir, name)
+
+                # Update dependency name
+                if existing_name in config.dependencies:
+                    dep = config.dependencies.pop(existing_name)
+                    config.dependencies[name] = dep
+
+                console.print(
+                    f"[green]✓[/green] Renamed [bold]{existing_name}[/bold] "
+                    f"→ [bold]{name}[/bold]"
+                )
+                renamed += 1
+                continue
+
+        # Check if content changed
+        if name in hashes and hashes[name] == content_hash:
+            console.print(f"  [dim]○ {name}: unchanged → skipped[/dim]")
+            skipped += 1
+            continue
+
+        # Pack the plugin
+        tag_plugin(addons_dir, name)
+        pack_plugin(addons_dir, name, local_dir)
+        hashes[name] = content_hash
+
+        dep = Dependency.from_spec(name, "*", is_dev=False)
+        config.dependencies[name] = dep
+
+        console.print(
+            f"[green]✓[/green] Packed [bold]{name}[/bold] → {LOCAL_DIR_NAME}/{name}.zip"
+        )
+        packed += 1
+
+    if packed or renamed:
+        save_hashes(root, hashes)
+        write_project_config(config, config_path)
+        console.print()
+        if packed:
+            console.print(f"  Packed: {packed}")
+        if renamed:
+            console.print(f"  Renamed: {renamed}")
+        if skipped:
+            console.print(f"  Skipped: {skipped}")
+        console.print("  Updated [cyan]gdproject.toml[/cyan]")
+        console.print(f"  Updated [cyan]{LOCAL_DIR_NAME}/.hashes[/cyan]")

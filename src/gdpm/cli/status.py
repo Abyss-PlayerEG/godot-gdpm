@@ -47,6 +47,7 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                     continue
 
                 tag_content = tag_path.read_text(encoding="utf-8").strip()
+                is_local = tag_content.startswith("local+")
 
                 slug = ""
                 if "/" in tag_content:
@@ -58,7 +59,7 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                     continue
 
                 locked = lock_map.get(slug)
-                version = locked.version if locked else "?"
+                version = "local" if is_local else (locked.version if locked else "?")
 
                 installed.append(
                     {
@@ -66,6 +67,7 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                         "dir_name": child.name,
                         "version": version,
                         "source": tag_content,
+                        "is_local": str(is_local),
                     }
                 )
 
@@ -83,6 +85,20 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
             for plugin in installed:
                 slug = plugin["slug"]
                 current_ver = plugin["version"]
+                is_local = plugin.get("is_local", "False") == "True"
+
+                # Local plugins don't have versions to check
+                if is_local:
+                    results.append(
+                        {
+                            "slug": slug,
+                            "version": "local",
+                            "latest": "local",
+                            "status": "✓ Local",
+                            "dir_name": plugin["dir_name"],
+                        }
+                    )
+                    continue
 
                 source = plugin["source"]
                 publisher = ""

@@ -92,6 +92,15 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
         return
 
     async def _sync() -> None:
+        from gdpm.utils.local import sync_local_plugins
+
+        # Step 1: Sync local plugins first
+        local_synced = sync_local_plugins(root, addons_dir)
+        if local_synced:
+            console.print(
+                f"[green]✓[/green] Synced {len(local_synced)} local plugin(s)"
+            )
+
         store = StoreClient()
         cache_dir = root / ".gdpm" / "cache"
         cache = FileCache(cache_dir)
