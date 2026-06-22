@@ -13,15 +13,26 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-20.04
             platform: linux
             arch: amd64
+            suffix: ubuntu2004
+          - os: ubuntu-22.04
+            platform: linux
+            arch: amd64
+            suffix: ubuntu2204
+          - os: ubuntu-24.04
+            platform: linux
+            arch: amd64
+            suffix: ubuntu2404
           - os: macos-latest
             platform: macos
             arch: arm64
+            suffix: ""
           - os: windows-latest
             platform: windows
             arch: amd64
+            suffix: ""
 
     runs-on: ${{ matrix.os }}
 
@@ -72,7 +83,7 @@ jobs:
           cp installer/Linux/install.sh dist/gdpm/
           cp installer/Linux/uninstall.sh dist/gdpm/
           cd dist
-          tar -czf gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.tar.gz gdpm
+          tar -czf gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}_${{ matrix.suffix }}.tar.gz gdpm
 
       - name: Create archive (macOS)
         if: matrix.platform == 'macos'
