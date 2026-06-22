@@ -45,22 +45,36 @@ def read_current() -> tuple[str, str]:
     version_match = re.search(r'__version__\s*=\s*"([^"]*)"', content)
     tag_match = re.search(r'__tag__\s*=\s*"([^"]*)"', content)
 
-    version = version_match.group(1) if version_match else "0.0.0"
+    pypi_version = version_match.group(1) if version_match else "0.0.0"
     tag = tag_match.group(1) if tag_match else ""
 
-    return version, tag
+    # Extract base version from PyPI format
+    # "0.0.2b1" → "0.0.2"
+    # "0.0.2.dev1" → "0.0.2"
+    # "0.0.2" → "0.0.2"
+    base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", pypi_version)
+
+    return base_version, tag
 
 
-def get_display_version(version: str, tag: str) -> str:
+def get_pypi_version(version: str, tag: str) -> str:
     """Get PyPI-compatible version string."""
     if not tag:
         return version
     return TAG_FORMATS.get(tag, version).format(version=version)
 
 
+def get_display_version(version: str, tag: str) -> str:
+    """Get display version string."""
+    pypi = get_pypi_version(version, tag)
+    if tag:
+        return f"{pypi} ({tag})"
+    return f"{pypi} (stable)"
+
+
 def update_files(version: str, tag: str) -> None:
     """Update pyproject.toml and __init__.py."""
-    pypi_version = get_display_version(version, tag)
+    pypi_version = get_pypi_version(version, tag)
 
     # Update pyproject.toml
     content = PYPROJECT_FILE.read_text(encoding="utf-8")
@@ -76,7 +90,7 @@ def update_files(version: str, tag: str) -> None:
     content = INIT_FILE.read_text(encoding="utf-8")
     content = re.sub(
         r'__version__\s*=\s*"[^"]*"',
-        f'__version__ = "{version}"',
+        f'__version__ = "{pypi_version}"',
         content,
     )
     content = re.sub(
@@ -97,9 +111,7 @@ def main() -> None:
 
     # Interactive mode if no arguments
     if len(sys.argv) < 2:
-        display = get_display_version(current_version, current_tag)
-        tag_info = f" ({current_tag})" if current_tag else " (stable)"
-        print(f"Current version: {display}{tag_info}")
+        print(f"Current version: {get_display_version(current_version, current_tag)}")
         print()
 
         new_version = input("New version (empty to skip): ").strip()
@@ -139,9 +151,8 @@ def _print_result(old_ver: str, old_tag: str, new_ver: str, new_tag: str) -> Non
     """Print update result."""
     old_display = get_display_version(old_ver, old_tag)
     new_display = get_display_version(new_ver, new_tag)
-    tag_info = new_tag if new_tag else "stable"
 
-    print(f"\nUpdated: {old_display} → {new_display} ({tag_info})")
+    print(f"\nUpdated: {old_display} → {new_display}")
     print()
     print("pyproject.toml:")
     for line in PYPROJECT_FILE.read_text().splitlines():

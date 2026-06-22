@@ -112,13 +112,18 @@ def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> No
     if not value:
         return
 
+    import re
+
+    # Extract base version (remove tag suffix like b1, dev1, a1, rc1)
+    base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
     tag_display = f" [{__tag__}]" if __tag__ else ""
+
     console.print()
     console.print(Text(BANNER, style="bold cyan"))
     console.print()
     console.print(
         Text("  gdpm", style="bold white")
-        + Text(f" v{__version__}", style="bold green")
+        + Text(f" v{base_version}", style="bold green")
         + Text(tag_display, style="bold yellow")
     )
     console.print(Text("  Godot Dependency Package Manager", style="dim"))
