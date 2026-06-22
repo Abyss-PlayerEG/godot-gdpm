@@ -18,6 +18,7 @@ from rich.progress import (
 
 from gdpm.cache.file_cache import FileCache
 from gdpm.cli.common import is_template, require_project
+from gdpm.cli.options import yes_option
 from gdpm.config.project import read_project_config, write_project_config
 from gdpm.installer.manager import PluginManager
 from gdpm.lockfile.lock import find_lockfile, read_lockfile, write_lockfile
@@ -33,11 +34,11 @@ console = Console()
 @click.argument("plugins", nargs=-1)
 @click.option("--dev", is_flag=True, help="Add as dev dependency")
 @click.option("--local", is_flag=True, help="Pack local plugins to gdpm-local/")
-@click.pass_context
-def add(ctx: click.Context, plugins: tuple[str, ...], dev: bool, local: bool) -> None:
+@yes_option
+def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
     """Add one or more plugins to the project."""
     if local:
-        _add_local(plugins, yes=ctx.obj.get("yes", False))
+        _add_local(plugins, yes=yes)
         return
 
     if not plugins:
@@ -289,10 +290,17 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
             old_zip = local_dir / f"{existing_name}.zip"
             new_zip = local_dir / f"{name}.zip"
 
-            if old_zip.exists() and not yes and not console.input(
-                f"  [yellow]?[/yellow] {name} matches "
-                f"[bold]{existing_name}[/bold]. Rename? (y/n): "
-            ).strip().lower().startswith("y"):
+            if (
+                old_zip.exists()
+                and not yes
+                and not console.input(
+                    f"  [yellow]?[/yellow] {name} matches "
+                    f"[bold]{existing_name}[/bold]. Rename? (y/n): "
+                )
+                .strip()
+                .lower()
+                .startswith("y")
+            ):
                 # User declined rename, treat as new plugin
                 existing_name = None
 
