@@ -3,20 +3,34 @@ name: Build with Nuitka (Test)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-20.04
             platform: linux
             arch: amd64
+            suffix: ubuntu2004
+          - os: ubuntu-22.04
+            platform: linux
+            arch: amd64
+            suffix: ubuntu2204
+          - os: ubuntu-24.04
+            platform: linux
+            arch: amd64
+            suffix: ubuntu2404
           - os: macos-latest
             platform: macos
             arch: arm64
+            suffix: ""
           - os: windows-latest
             platform: windows
             arch: amd64
+            suffix: ""
 
     runs-on: ${{ matrix.os }}
 
@@ -29,6 +43,17 @@ jobs:
 
       - name: Install uv
         run: pip install uv
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/Library/Caches/uv
+            ~\AppData\Local\uv\Cache
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Install dependencies
         run: uv sync
@@ -44,18 +69,64 @@ jobs:
             --output-filename=gdpm \
             --output-dir=dist \
             --include-package=gdpm \
+            --include-data-file=icon.png=icon.png \
             src/gdpm/__main__.py
 
       - name: Build with Nuitka (Windows)
         if: matrix.platform == 'windows'
         run: |
-          uv run nuitka --onefile --output-filename=gdpm --output-dir=dist --include-package=gdpm src/gdpm/__main__.py
+          uv run nuitka \
+            --onefile \
+            --output-filename=gdpm.exe \
+            --output-dir=dist \
+            --include-package=gdpm \
+            --windows-icon-from-ico=icon.ico \
+            src/gdpm/__main__.py
 
       - name: Test executable
-        run: ./dist/gdpm --version || dist/gdpm.exe --version
+        run: |
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            dist/gdpm.exe --version
+          else
+            chmod +x dist/gdpm
+            dist/gdpm --version
+          fi
+
+      - name: Create archive (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          mkdir -p dist/gdpm
+          mv dist/gdpm dist/gdpm_bin 2>/dev/null || mv dist/gdpm.exe dist/gdpm_bin 2>/dev/null || true
+          cp dist/gdpm_bin dist/gdpm/gdpm
+          cp installer/Linux/install.sh dist/gdpm/
+          cp installer/Linux/uninstall.sh dist/gdpm/
+          cd dist
+          tar -czf gdpm_nuitka_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}_${{ matrix.suffix }}.tar.gz gdpm
+
+      - name: Create archive (macOS)
+        if: matrix.platform == 'macos'
+        run: |
+          mkdir -p dist/gdpm
+          mv dist/gdpm dist/gdpm_bin 2>/dev/null || true
+          cp dist/gdpm_bin dist/gdpm/gdpm
+          cp installer/macOS/install.sh dist/gdpm/
+          cp installer/macOS/uninstall.sh dist/gdpm/
+          cd dist
+          tar -czf gdpm_nuitka_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.tar.gz gdpm
+
+      - name: Create archive (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/gdpm
+          Copy-Item -Path "dist/gdpm.exe" -Destination "dist/gdpm/" -Force
+          Copy-Item -Path "installer/Windows/install.bat" -Destination "dist/gdpm/" -Force
+          Copy-Item -Path "installer/Windows/uninstall.bat" -Destination "dist/gdpm/" -Force
+          cd dist
+          Compress-Archive -Path gdpm -DestinationPath "gdpm_nuitka_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gdpm-nuitka-${{ matrix.platform }}-${{ matrix.arch }}
-          path: dist/gdpm*
+          name: gdpm-nuitka-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.suffix }}
+          path: dist/gdpm_nuitka_*
