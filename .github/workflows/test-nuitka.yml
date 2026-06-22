@@ -76,14 +76,15 @@ jobs:
         if: matrix.platform == 'windows'
         run: uv run nuitka --onefile --output-filename=gdpm.exe --output-dir=dist --include-package=gdpm --windows-icon-from-ico=icon.ico src/gdpm/__main__.py
 
-      - name: Test executable
+      - name: Test executable (Linux/macOS)
+        if: matrix.platform != 'windows'
         run: |
-          if [ "${{ matrix.platform }}" = "windows" ]; then
-            dist/gdpm.exe --version
-          else
-            chmod +x dist/gdpm
-            dist/gdpm --version
-          fi
+          chmod +x dist/gdpm
+          dist/gdpm --version
+
+      - name: Test executable (Windows)
+        if: matrix.platform == 'windows'
+        run: dist/gdpm.exe --version
 
       - name: Create archive (Linux)
         if: matrix.platform == 'linux'
