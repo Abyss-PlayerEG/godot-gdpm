@@ -56,7 +56,7 @@ jobs:
         if: matrix.platform != 'windows'
         run: |
           uv run pyinstaller \
-            --onefile \
+            --onedir \
             --name gdpm \
             --paths src \
             --icon icon.png \
@@ -64,29 +64,32 @@ jobs:
 
       - name: Build executable (Windows)
         if: matrix.platform == 'windows'
-        run: uv run pyinstaller --onefile --name gdpm --paths src --icon icon.ico src/gdpm/__main__.py
+        run: uv run pyinstaller --onedir --name gdpm --paths src --icon icon.ico src/gdpm/__main__.py
 
       - name: Create archive (Linux)
         if: matrix.platform == 'linux'
         run: |
-          cp -r installer/Linux/* dist/
+          cp installer/Linux/install.sh dist/gdpm/
+          cp installer/Linux/uninstall.sh dist/gdpm/
           cd dist
-          tar -czf gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.tar.gz *
+          tar -czf gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.tar.gz gdpm
 
       - name: Create archive (macOS)
         if: matrix.platform == 'macos'
         run: |
-          cp -r installer/macOS/* dist/
+          cp installer/macOS/install.sh dist/gdpm/
+          cp installer/macOS/uninstall.sh dist/gdpm/
           cd dist
-          tar -czf gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.tar.gz *
+          tar -czf gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.tar.gz gdpm
 
       - name: Create archive (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          Copy-Item -Path "installer/Windows/*" -Destination "dist/" -Force
+          Copy-Item -Path "installer/Windows/install.bat" -Destination "dist/gdpm/" -Force
+          Copy-Item -Path "installer/Windows/uninstall.bat" -Destination "dist/gdpm/" -Force
           cd dist
-          Compress-Archive -Path * -DestinationPath "gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.zip"
+          Compress-Archive -Path gdpm -DestinationPath "gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
