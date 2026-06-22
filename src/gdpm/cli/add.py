@@ -33,10 +33,11 @@ console = Console()
 @click.argument("plugins", nargs=-1)
 @click.option("--dev", is_flag=True, help="Add as dev dependency")
 @click.option("--local", is_flag=True, help="Pack local plugins to gdpm-local/")
-def add(plugins: tuple[str, ...], dev: bool, local: bool) -> None:
+@click.pass_context
+def add(ctx: click.Context, plugins: tuple[str, ...], dev: bool, local: bool) -> None:
     """Add one or more plugins to the project."""
     if local:
-        _add_local(plugins)
+        _add_local(plugins, yes=ctx.obj.get("yes", False))
         return
 
     if not plugins:
@@ -233,7 +234,7 @@ def _parse_spec(spec: str) -> tuple[str, str]:
     return spec, ""
 
 
-def _add_local(plugins: tuple[str, ...]) -> None:
+def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
     """Pack local plugins to gdpm-local/ with hash comparison."""
     from gdpm.utils.local import (
         LOCAL_DIR_NAME,
@@ -288,7 +289,7 @@ def _add_local(plugins: tuple[str, ...]) -> None:
             old_zip = local_dir / f"{existing_name}.zip"
             new_zip = local_dir / f"{name}.zip"
 
-            if old_zip.exists() and not console.input(
+            if old_zip.exists() and not yes and not console.input(
                 f"  [yellow]?[/yellow] {name} matches "
                 f"[bold]{existing_name}[/bold]. Rename? (y/n): "
             ).strip().lower().startswith("y"):

@@ -149,8 +149,18 @@ def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> No
     callback=print_version,
     help="Show version and exit.",
 )
-def main() -> None:
+@click.option(
+    "-y",
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Skip all confirmation prompts.",
+)
+@click.pass_context
+def main(ctx: click.Context, yes: bool) -> None:
     """Godot Dependency Package Manager."""
+    ctx.ensure_object(dict)
+    ctx.obj["yes"] = yes
 
 
 from gdpm.cli.add import add  # noqa: E402
