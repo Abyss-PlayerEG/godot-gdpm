@@ -85,8 +85,8 @@ jobs:
       - name: Create archive (Linux)
         if: matrix.platform == 'linux'
         run: |
+          mv dist/gdpm dist/gdpm_bin 2>/dev/null || true
           mkdir -p dist/gdpm
-          mv dist/gdpm dist/gdpm_bin 2>/dev/null || mv dist/gdpm.exe dist/gdpm_bin 2>/dev/null || true
           cp dist/gdpm_bin dist/gdpm/gdpm
           cp installer/Linux/install.sh dist/gdpm/
           cp installer/Linux/uninstall.sh dist/gdpm/
@@ -96,8 +96,8 @@ jobs:
       - name: Create archive (macOS)
         if: matrix.platform == 'macos'
         run: |
-          mkdir -p dist/gdpm
           mv dist/gdpm dist/gdpm_bin 2>/dev/null || true
+          mkdir -p dist/gdpm
           cp dist/gdpm_bin dist/gdpm/gdpm
           cp installer/macOS/install.sh dist/gdpm/
           cp installer/macOS/uninstall.sh dist/gdpm/
@@ -108,6 +108,7 @@ jobs:
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
+          if (Test-Path dist/gdpm) { Remove-Item -Recurse -Force dist/gdpm }
           New-Item -ItemType Directory -Force -Path dist/gdpm
           Copy-Item -Path "dist/gdpm.exe" -Destination "dist/gdpm/" -Force
           Copy-Item -Path "installer/Windows/install.bat" -Destination "dist/gdpm/" -Force
