@@ -74,14 +74,7 @@ jobs:
 
       - name: Build with Nuitka (Windows)
         if: matrix.platform == 'windows'
-        run: |
-          uv run nuitka \
-            --onefile \
-            --output-filename=gdpm.exe \
-            --output-dir=dist \
-            --include-package=gdpm \
-            --windows-icon-from-ico=icon.ico \
-            src/gdpm/__main__.py
+        run: uv run nuitka --onefile --output-filename=gdpm.exe --output-dir=dist --include-package=gdpm --windows-icon-from-ico=icon.ico src/gdpm/__main__.py
 
       - name: Test executable
         run: |
