@@ -104,6 +104,13 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
             console.print(
                 f"[green]✓[/green] Synced {len(local_synced)} local plugin(s)"
             )
+            # Update lock file for local plugins
+            for name in local_synced:
+                lock_map[name] = LockEntry(
+                    name=name,
+                    version="local",
+                    source="local",
+                )
 
         store = StoreClient()
         cache_dir = root / ".gdpm" / "cache"
@@ -177,6 +184,9 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
 
             if updated_entries:
                 lock_map.update(updated_entries)
+
+            # Write lock file if any changes
+            if local_synced or updated_entries or to_remove:
                 write_lockfile(list(lock_map.values()), lock_path)
 
         finally:
