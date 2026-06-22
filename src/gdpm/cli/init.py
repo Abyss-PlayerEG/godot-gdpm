@@ -32,8 +32,7 @@ def init(
 
     if config_path.exists() and not force:
         console.print(
-            "[red]Error:[/red] gdproject.toml already exists. "
-            "Use --force to overwrite."
+            "[red]Error:[/red] gdproject.toml already exists. Use --force to overwrite."
         )
         raise SystemExit(1)
 

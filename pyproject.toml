@@ -1,6 +1,6 @@
 [project]
 name = "godot-gdpm"
-version = "0.0.1"
+version = "0.0.2b1"
 description = "A dependency package manager for Godot plugins, like uv/npm/cargo"
 readme = "README.md"
 license = "MIT"
@@ -49,6 +49,9 @@ dev = [
     "ruff>=0.8",
     "twine>=6.0",
     "build>=1.0",
+    "vulture>=2.10",
+    "deptry>=0.20",
+    "pre-commit>=4.0",
 ]
 
 [tool.mypy]
@@ -90,3 +93,6 @@ known-first-party = ["gdpm"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.deptry]
+ignore = ["DEP003"]
