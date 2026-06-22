@@ -1,0 +1,61 @@
+name: Build with Nuitka (Test)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: amd64
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+          - os: windows-latest
+            platform: windows
+            arch: amd64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Install Nuitka
+        run: uv pip install nuitka
+
+      - name: Build with Nuitka (Linux/macOS)
+        if: matrix.platform != 'windows'
+        run: |
+          uv run nuitka \
+            --onefile \
+            --output-filename=gdpm \
+            --output-dir=dist \
+            --include-package=gdpm \
+            src/gdpm/__main__.py
+
+      - name: Build with Nuitka (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          uv run nuitka --onefile --output-filename=gdpm --output-dir=dist --include-package=gdpm src/gdpm/__main__.py
+
+      - name: Test executable
+        run: ./dist/gdpm --version || dist/gdpm.exe --version
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdpm-nuitka-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/gdpm*
