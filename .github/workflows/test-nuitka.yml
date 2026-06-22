@@ -11,10 +11,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-20.04
-            platform: linux
-            arch: amd64
-            suffix: ubuntu2004
           - os: ubuntu-22.04
             platform: linux
             arch: amd64
