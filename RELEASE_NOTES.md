@@ -1,6 +1,23 @@
 # Release Notes
 
-## v0.0.5
+## v0.0.6
+
+### Changes
+
+- **Optimized Build** — Changed from `--onefile` to `--onedir` for faster startup (~1s vs ~10s).
+- **Platform Archives** — Each platform archive includes install/uninstall scripts.
+
+### Installation
+
+```bash
+# macOS / Linux
+tar -xzf gdpm_v0.0.6_*.tar.gz
+cd gdpm
+./install.sh
+
+# Windows
+# Extract zip, run install.bat
+```
 
 ### New Features
 
