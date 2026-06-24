@@ -20,26 +20,17 @@ console = Console()
         ("gdpm init", "Initialize with auto-detected settings"),
         ("gdpm init my-game", "Initialize with custom name"),
         ("gdpm init --godot '>=4.3'", "Specify Godot version"),
-        ("gdpm init --force", "Overwrite existing config"),
     ],
 )
 @click.argument("name", required=False)
 @click.option("--godot", default="", help="Godot version constraint")
-@click.option("--force", is_flag=True, help="Overwrite existing gdproject.toml")
 def init(
     name: str | None,
     godot: str,
-    force: bool,
 ) -> None:
     """Initialize a new gdpm project."""
     project_dir = Path.cwd()
     config_path = project_dir / "gdproject.toml"
-
-    if config_path.exists() and not force:
-        console.print(
-            "[red]Error:[/red] gdproject.toml already exists. Use --force to overwrite."
-        )
-        raise SystemExit(1)
 
     project_file = project_dir / "project.godot"
     godot_project = parse_project_godot(project_file)
