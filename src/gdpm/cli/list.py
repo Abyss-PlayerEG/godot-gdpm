@@ -6,6 +6,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import require_project
 from gdpm.config.project import read_project_config
 from gdpm.lockfile.lock import find_lockfile, read_lockfile
@@ -14,7 +15,13 @@ from gdpm.utils.tag import scan_addons
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm list", "List all installed plugins"),
+        ("gdpm list --json", "Output as JSON"),
+    ],
+)
 @click.option("--outdated", is_flag=True, help="Show only outdated plugins")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
 def list_cmd(outdated: bool, as_json: bool) -> None:

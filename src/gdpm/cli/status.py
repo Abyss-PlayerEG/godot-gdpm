@@ -8,6 +8,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from gdpm.cli.app import GdpmCommand
 from gdpm.cli.context import get_project_context
 from gdpm.store.client import StoreClient
 from gdpm.utils.tag import scan_addons
@@ -16,7 +17,14 @@ from gdpm.utils.version import normalize_version
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm status", "Show status of all plugins"),
+        ("gdpm status limbo-ai", "Show status of specific plugin"),
+        ("gdpm status --json", "Output as JSON"),
+    ],
+)
 @click.argument("plugin_slug", required=False)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
 def status(plugin_slug: str | None, as_json: bool) -> None:

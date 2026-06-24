@@ -7,13 +7,20 @@ import asyncio
 import click
 from rich.console import Console
 
+from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import is_template
 from gdpm.store.client import StoreClient
 
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm info limbo-ai", "Show plugin details"),
+        ("gdpm info rsubtil/controller-icons", "Show with publisher/slug"),
+    ],
+)
 @click.argument("plugin_slug")
 def info(plugin_slug: str) -> None:
     """Show detailed information about a plugin."""

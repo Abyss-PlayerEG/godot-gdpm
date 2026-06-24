@@ -7,6 +7,7 @@ import asyncio
 import click
 from rich.console import Console
 
+from gdpm.cli.app import GdpmCommand
 from gdpm.cli.context import get_project_context
 from gdpm.lockfile.lock import write_lockfile
 from gdpm.models.lock import LockEntry
@@ -15,7 +16,13 @@ from gdpm.store.utils import resolve_publisher
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm lock", "Generate lock file"),
+        ("gdpm lock --check", "Check if lock file is up to date"),
+    ],
+)
 @click.option("--check", is_flag=True, help="Check if lock file is up to date")
 def lock(check: bool) -> None:
     """Generate or update the lock file."""

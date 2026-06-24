@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import click
 from rich.console import Console
 
+from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import require_project
 from gdpm.cli.options import yes_option
 from gdpm.config.project import read_project_config, write_project_config
@@ -19,7 +20,14 @@ if TYPE_CHECKING:
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm remove limbo-ai", "Remove a plugin"),
+        ("gdpm remove -y limbo-ai", "Remove without confirmation"),
+        ("gdpm remove -r limbo-ai", "Remove with sub-dependencies"),
+    ],
+)
 @click.argument("plugins", nargs=-1, required=True)
 @click.option(
     "--recursive",
