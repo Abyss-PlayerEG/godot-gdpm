@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
 
 import click
 from rich.console import Console
@@ -23,6 +24,9 @@ from gdpm.lockfile.utils import update_lockfile
 from gdpm.models.lock import LockEntry
 from gdpm.store.utils import resolve_publisher
 from gdpm.utils.tag import scan_addons
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 console = Console()
 
@@ -146,7 +150,7 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
 
             async def download_one(
                 name: str, publisher: str, version: str
-            ) -> tuple[str, str, str, bool]:
+            ) -> tuple[str, str, str, bool, Path | None]:
                 async with semaphore:
                     task_id = progress.add_task(
                         "download", name=name, total=None
@@ -161,12 +165,13 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                         progress.update(_task, completed=current)
 
                     try:
-                        _zip_path, ver = await svc.manager.download(
-                            publisher, name, version, on_progress=on_progress
+                        zip_path, ver = await svc.manager.download(
+                            publisher, name, version,
+                            on_progress=on_progress,
                         )
-                        return name, ver, publisher, True
+                        return name, ver, publisher, True, zip_path
                     except Exception:
-                        return name, "", publisher, False
+                        return name, "", publisher, False, None
 
             with progress:
                 results = await asyncio.gather(
@@ -174,37 +179,28 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                 )
 
             # Install downloaded plugins
-            for name, ver, publisher, success in results:
-                if not success:
+            for name, ver, publisher, success, zip_path in results:
+                if not success or not zip_path:
                     errors.append(f"Failed to download {name}")
                     continue
 
-                zip_path_local = svc.manager._cache.get(
-                    f"{publisher}_{name}_{ver}.zip"
-                )
-                if not zip_path_local:
-                    zip_path_local = svc.manager._cache.get(
-                        f"{publisher}_{name}_{ver.lstrip('v')}.zip"
-                    )
-
-                if zip_path_local:
+                try:
                     deps = ctx.all_deps.get(name)
                     dest_path = deps.path if deps else ""
-                    try:
-                        svc.manager.install_from_zip(
-                            zip_path_local, name, publisher, dest_path
-                        )
-                        lock_updates[name] = LockEntry(
-                            name=name,
-                            version=ver,
-                            source=f"store+{publisher}/{name}",
-                        )
-                        console.print(
-                            f"  [green]✓[/green] Installed "
-                            f"[bold]{name}[/bold] {ver}"
-                        )
-                    except Exception as e:
-                        errors.append(f"Failed to install {name}: {e}")
+                    svc.manager.install_from_zip(
+                        zip_path, name, publisher, dest_path
+                    )
+                    lock_updates[name] = LockEntry(
+                        name=name,
+                        version=ver,
+                        source=f"store+{publisher}/{name}",
+                    )
+                    console.print(
+                        f"  [green]✓[/green] Installed "
+                        f"[bold]{name}[/bold] {ver}"
+                    )
+                except Exception as e:
+                    errors.append(f"Failed to install {name}: {e}")
 
         # Remove plugins
         for name in sorted(to_remove):
