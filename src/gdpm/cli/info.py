@@ -7,6 +7,7 @@ import asyncio
 import click
 from rich.console import Console
 
+from gdpm.cli.common import is_template
 from gdpm.store.client import StoreClient
 
 console = Console()
@@ -72,7 +73,15 @@ def info(plugin_slug: str) -> None:
         if detail.tags:
             console.print(f"  Tags:       {', '.join(detail.tags)}")
         console.print()
-        console.print(f"  [bold]Install:[/bold]  [green]gdpm add {add_route}[/green]")
+
+        if is_template(detail.tags):
+            console.print(
+                "  [yellow]Project template - not installable as addon[/yellow]"
+            )
+        else:
+            console.print(
+                f"  [bold]Install:[/bold]  [green]gdpm add {add_route}[/green]"
+            )
         console.print()
 
         if versions:

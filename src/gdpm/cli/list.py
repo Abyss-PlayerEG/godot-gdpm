@@ -9,10 +9,9 @@ from rich.table import Table
 from gdpm.cli.common import require_project
 from gdpm.config.project import read_project_config
 from gdpm.lockfile.lock import find_lockfile, read_lockfile
+from gdpm.utils.tag import scan_addons
 
 console = Console()
-
-TAG_FILENAME = "tag.gdpm"
 
 
 @click.command()
@@ -21,57 +20,23 @@ TAG_FILENAME = "tag.gdpm"
 def list_cmd(outdated: bool, as_json: bool) -> None:
     """List installed plugins."""
     root = require_project()
-    config_path = root / "gdproject.toml"
-    config = read_project_config(config_path)
+    config = read_project_config(root / "gdproject.toml")
     addons_dir = root / config.addons_dir
-    lock_path = find_lockfile(root)
-
-    lock_entries = read_lockfile(lock_path)
-    lock_map = {e.name: e for e in lock_entries}
-
-    all_deps = {**config.dependencies, **config.dev_dependencies}
+    lock_entries = {e.name: e for e in read_lockfile(find_lockfile(root))}
 
     installed: list[dict[str, str]] = []
 
-    if addons_dir.exists():
-        for child in sorted(addons_dir.iterdir()):
-            if not child.is_dir():
-                continue
+    for _, tag in scan_addons(addons_dir):
+        locked = lock_entries.get(tag.slug)
+        version = "local" if tag.is_local else (locked.version if locked else "?")
 
-            tag_path = child / TAG_FILENAME
-            if not tag_path.exists():
-                continue
-
-            tag_content = tag_path.read_text(encoding="utf-8").strip()
-
-            slug = ""
-            if "/" in tag_content:
-                slug = tag_content.split("/")[-1]
-            else:
-                slug = tag_content.split("+")[-1]
-
-            locked = lock_map.get(slug)
-            is_local = tag_content.startswith("local+")
-
-            if is_local:
-                version = "local"
-            elif locked:
-                version = locked.version
-            else:
-                version = "?"
-
-            dep = all_deps.get(slug)
-            source = tag_content
-
-            installed.append(
-                {
-                    "slug": slug,
-                    "dir_name": child.name,
-                    "version": version,
-                    "source": source,
-                    "is_dev": str(dep.is_dev) if dep else "false",
-                }
-            )
+        installed.append(
+            {
+                "slug": tag.slug,
+                "version": version,
+                "source": tag.source,
+            }
+        )
 
     if as_json:
         import json
@@ -89,16 +54,10 @@ def list_cmd(outdated: bool, as_json: bool) -> None:
     table = Table(show_header=True, header_style="bold", box=None)
     table.add_column("Plugin", style="cyan", min_width=20)
     table.add_column("Version", min_width=10)
-    table.add_column("Directory", style="dim")
     table.add_column("Source", style="dim")
 
-    for plugin in installed:
-        table.add_row(
-            plugin["slug"],
-            plugin["version"],
-            plugin["dir_name"],
-            plugin["source"],
-        )
+    for p in installed:
+        table.add_row(p["slug"], p["version"], p["source"])
 
     console.print(table)
     console.print()

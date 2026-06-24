@@ -3,90 +3,57 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
 
 import click
 from rich.console import Console
 
-from gdpm.cache.file_cache import FileCache
-from gdpm.cli.common import require_project
-from gdpm.config.project import ProjectConfig, read_project_config
-from gdpm.installer.manager import PluginManager
-from gdpm.lockfile.lock import find_lockfile, read_lockfile, write_lockfile
+from gdpm.cli.context import get_project_context, get_services
+from gdpm.lockfile.utils import update_lockfile
 from gdpm.models.lock import LockEntry
-from gdpm.store.client import StoreClient
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from gdpm.store.utils import resolve_publisher
+from gdpm.utils.tag import scan_addons
 
 console = Console()
 
 
 @click.command()
+@click.option("--frozen", is_flag=True, help="Strict mode for CI")
 @click.option(
-    "--frozen",
-    is_flag=True,
-    help="Strict mode for CI (fail if lock outdated)",
+    "-dr", "--check", "--dry-run", is_flag=True, help="Preview changes without applying"
 )
-@click.option("--dry-run", is_flag=True, help="Preview changes without applying")
 @click.option("--no-cache", is_flag=True, help="Don't use local cache")
-def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
+def sync(frozen: bool, check: bool, no_cache: bool) -> None:
     """Sync addons/ directory to lock file state."""
-    root = require_project()
-    config_path = root / "gdproject.toml"
-    config = read_project_config(config_path)
-    addons_dir = root / config.addons_dir
-    lock_path = find_lockfile(root)
-
-    if not lock_path.exists():
-        console.print("[yellow]No lock file found. Generating...[/yellow]")
-        _generate_lock(root, config, lock_path)
-
-    lock_entries = read_lockfile(lock_path)
-    lock_map = {e.name: e for e in lock_entries}
-    lock_names = set(lock_map.keys())
-
-    all_deps = {**config.dependencies, **config.dev_dependencies}
-    declared_names = set(all_deps.keys())
+    ctx = get_project_context()
 
     # Separate local and online plugins
-    local_names = {name for name, dep in all_deps.items() if dep.is_local}
-    online_names = declared_names - local_names
+    local_names = {n for n, d in ctx.all_deps.items() if d.is_local}
+    online_names = set(ctx.all_deps.keys()) - local_names
 
+    # Check what's installed via tag files
     installed_by_dep: set[str] = set()
-    if addons_dir.exists():
-        for child in addons_dir.iterdir():
-            if not child.is_dir():
-                continue
-            tag_path = child / "tag.gdpm"
-            if tag_path.exists():
-                tag = tag_path.read_text(encoding="utf-8").strip()
-                for name in declared_names:
-                    if tag.endswith(f"/{name}"):
-                        installed_by_dep.add(name)
+    for _, tag in scan_addons(ctx.addons_dir):
+        for name in set(ctx.all_deps.keys()):
+            if tag.source.endswith(f"/{name}") or tag.slug == name:
+                installed_by_dep.add(name)
 
     to_install = online_names - installed_by_dep
-    to_remove = set()
-    if addons_dir.exists():
-        for child in addons_dir.iterdir():
-            if not child.is_dir():
-                continue
-            tag_path = child / "tag.gdpm"
-            if tag_path.exists():
-                tag = tag_path.read_text(encoding="utf-8").strip()
-                for name in lock_names:
-                    if tag.endswith(f"/{name}") and name not in declared_names:
-                        to_remove.add(name)
+
+    # Check what needs to be removed
+    to_remove: set[str] = set()
+    for _, tag in scan_addons(ctx.addons_dir):
+        if tag.source.endswith(f"/{tag.slug}") and tag.slug not in ctx.all_deps:
+            to_remove.add(tag.slug)
 
     if not to_install and not to_remove:
         console.print("[green]✓[/green] Everything is up to date. Nothing to do.")
         return
 
-    if dry_run:
+    if check:
         for name in sorted(to_install):
-            ver = lock_map.get(name)
-            v = ver.version if ver else "?"
-            console.print(f"  [dim]Would install:[/dim] {name} v{v}")
+            entry = ctx.lock_map.get(name)
+            v = entry.version if entry else "?"
+            console.print(f"  [dim]Would install:[/dim] {name} {v}")
         for name in sorted(to_remove):
             console.print(f"  [dim]Would remove:[/dim]  {name}")
         console.print(
@@ -98,59 +65,45 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
     async def _sync() -> None:
         from gdpm.utils.local import sync_local_plugins
 
-        # Step 1: Sync local plugins first
-        local_synced = sync_local_plugins(root, addons_dir)
+        # Step 1: Sync local plugins
+        local_synced = sync_local_plugins(ctx.root, ctx.addons_dir)
         if local_synced:
             console.print(
                 f"[green]✓[/green] Synced {len(local_synced)} local plugin(s)"
             )
-            # Update lock file for local plugins
-            for name in local_synced:
-                lock_map[name] = LockEntry(
-                    name=name,
-                    version="local",
-                    source="local",
-                )
 
-        store = StoreClient()
-        cache_dir = root / ".gdpm" / "cache"
-        cache = FileCache(cache_dir)
-        manager = PluginManager(addons_dir, cache, store)
-
+        svc = get_services(ctx)
         installed = 0
         removed = 0
         errors: list[str] = []
+        lock_updates: dict[str, LockEntry] = {}
 
         try:
-            updated_entries: dict[str, LockEntry] = {}
-
             for name in sorted(to_install):
-                entry = lock_map.get(name)
-                deps = all_deps.get(name)
+                entry = ctx.lock_map.get(name)
+                deps = ctx.all_deps.get(name)
                 dest_path = deps.path if deps else ""
 
                 if not entry:
                     if deps:
-                        search_results = await store.search(name, limit=5)
-                        exact = next(
-                            (r for r in search_results if r.slug == name), None
-                        )
-                        if exact:
-                            publisher = exact.publisher_slug
+                        resolved = await resolve_publisher(svc.store, name)
+                        if resolved.found:
                             try:
-                                zip_path, ver = await manager.download(publisher, name)
-                                manager.install_from_zip(
-                                    zip_path, name, publisher, dest_path
+                                zip_path, ver = await svc.manager.download(
+                                    resolved.publisher, name
+                                )
+                                svc.manager.install_from_zip(
+                                    zip_path, name, resolved.publisher, dest_path
                                 )
                                 installed += 1
                                 console.print(
                                     f"[green]✓[/green] Installed "
                                     f"[bold]{name}[/bold] {ver}"
                                 )
-                                updated_entries[name] = LockEntry(
+                                lock_updates[name] = LockEntry(
                                     name=name,
                                     version=ver,
-                                    source=f"store+{publisher}/{name}",
+                                    source=f"store+{resolved.publisher}/{name}",
                                 )
                             except Exception as e:
                                 errors.append(f"Failed to install {name}: {e}")
@@ -160,16 +113,16 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
 
                 publisher = entry.source.replace("store+", "").split("/")[0]
                 try:
-                    zip_path, ver = await manager.download(
+                    zip_path, ver = await svc.manager.download(
                         publisher, name, entry.version.lstrip("v")
                     )
-                    manager.install_from_zip(zip_path, name, publisher, dest_path)
+                    svc.manager.install_from_zip(zip_path, name, publisher, dest_path)
                     installed += 1
                     console.print(
                         f"[green]✓[/green] Installed "
                         f"[bold]{name}[/bold] {entry.version}"
                     )
-                    updated_entries[name] = LockEntry(
+                    lock_updates[name] = LockEntry(
                         name=name,
                         version=entry.version,
                         source=entry.source,
@@ -178,19 +131,22 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
                     errors.append(f"Failed to install {name}: {e}")
 
             for name in sorted(to_remove):
-                manager.remove(name)
+                svc.manager.remove(name)
                 removed += 1
                 console.print(f"[green]✓[/green] Removed [bold]{name}[/bold]")
 
-            if updated_entries:
-                lock_map.update(updated_entries)
+            # Update lock file
+            if local_synced:
+                for name in local_synced:
+                    lock_updates[name] = LockEntry(
+                        name=name, version="local", source="local"
+                    )
 
-            # Write lock file if any changes
-            if local_synced or updated_entries or to_remove:
-                write_lockfile(list(lock_map.values()), lock_path)
+            if lock_updates or to_remove:
+                update_lockfile(ctx.lock_path, lock_updates, list(to_remove))
 
         finally:
-            await manager.close()
+            await svc.store.close()
 
         console.print()
         summary = []
@@ -207,49 +163,3 @@ def sync(frozen: bool, dry_run: bool, no_cache: bool) -> None:
             console.print(f"  [red]✗[/red] {err}")
 
     asyncio.run(_sync())
-
-
-def _generate_lock(
-    root: Path,
-    config: ProjectConfig,
-    lock_path: Path,
-) -> None:
-    async def _gen() -> None:
-        store = StoreClient()
-        entries: list[LockEntry] = []
-
-        try:
-            all_deps = {**config.dependencies, **config.dev_dependencies}
-
-            for name, dep in all_deps.items():
-                if dep.publisher_slug:
-                    publisher = dep.publisher_slug
-                else:
-                    search_results = await store.search(name, limit=5)
-                    exact = next((r for r in search_results if r.slug == name), None)
-                    if not exact:
-                        continue
-                    publisher = exact.publisher_slug
-
-                versions = await store.get_versions(publisher, name)
-                if not versions:
-                    continue
-
-                ver = versions[0]["version"]
-                entries.append(
-                    LockEntry(
-                        name=name,
-                        version=ver,
-                        source=f"store+{publisher}/{name}",
-                    )
-                )
-        finally:
-            await store.close()
-
-        if entries:
-            write_lockfile(entries, lock_path)
-            console.print(
-                f"[green]✓[/green] Generated lock file with {len(entries)} packages"
-            )
-
-    asyncio.run(_gen())

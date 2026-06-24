@@ -9,6 +9,7 @@ import click
 from rich.console import Console
 
 from gdpm.cli.common import require_project
+from gdpm.cli.options import yes_option
 from gdpm.config.project import read_project_config, write_project_config
 from gdpm.lockfile.lock import find_lockfile, read_lockfile, write_lockfile
 
@@ -26,12 +27,14 @@ console = Console()
     is_flag=True,
     help="Also remove unused sub-dependencies",
 )
-def remove(plugins: tuple[str, ...], recursive: bool) -> None:
+@yes_option
+def remove(plugins: tuple[str, ...], recursive: bool, yes: bool) -> None:
     """Remove one or more plugins from the project."""
     root = require_project()
     config_path = root / "gdproject.toml"
     config = read_project_config(config_path)
     addons_dir = root / config.addons_dir
+    local_dir = root / "gdpm-local"
 
     removed: list[str] = []
     not_found: list[str] = []
@@ -43,17 +46,32 @@ def remove(plugins: tuple[str, ...], recursive: bool) -> None:
             not_found.append(slug)
             continue
 
+        # Check if local plugin
+        dep = config.dependencies.get(slug) or config.dev_dependencies.get(slug)
+        is_local = dep.is_local if dep else False
+
         config.dependencies.pop(slug, None)
         config.dev_dependencies.pop(slug, None)
 
+        # Remove addon directory
         actual_dir = _find_addon_dir(addons_dir, slug)
         if actual_dir and actual_dir.exists():
             import shutil
 
             shutil.rmtree(actual_dir)
-            removed.append(f"{slug} ({actual_dir.name})")
-        else:
-            removed.append(slug)
+
+        # Remove local zip if exists
+        if is_local:
+            local_zip = local_dir / f"{slug}.zip"
+            if local_zip.exists():
+                delete_zip = yes or console.input(
+                    f"  Delete {local_dir.name}/{slug}.zip? (y/n): "
+                ).strip().lower().startswith("y")
+                if delete_zip:
+                    local_zip.unlink()
+                    console.print(f"  [dim]Removed {local_dir.name}/{slug}.zip[/dim]")
+
+        removed.append(slug)
 
     if removed:
         write_project_config(config, config_path)

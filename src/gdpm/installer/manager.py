@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 from typing import TYPE_CHECKING, Any
 
+from gdpm.cache.index import CacheIndex, make_cache_key
 from gdpm.store.client import StoreClient
 from gdpm.utils.zip import (
     ZipAnalysis,
@@ -32,6 +33,7 @@ class PluginManager:
         self._addons = addons_dir
         self._project_root = addons_dir.parent
         self._cache = cache
+        self._index = CacheIndex(cache.path.parent)
         self._store = store or StoreClient()
         self._owns_store = store is None
 
@@ -46,12 +48,33 @@ class PluginManager:
         version: str = "",
         on_progress: ProgressCallback | None = None,
     ) -> tuple[Path, str]:
-        releases = await self._store.get_versions(publisher, slug)
-        if not releases:
-            raise ValueError(f"No releases found for {publisher}/{slug}")
+        # If no version specified, get latest from API
+        if not version:
+            releases = await self._store.get_versions(publisher, slug)
+            if not releases:
+                raise ValueError(f"No releases found for {publisher}/{slug}")
+            ver = releases[0]["version"]
+        else:
+            ver = version.lstrip("v")
+            if not ver.startswith("v"):
+                ver = f"v{ver}"
 
+        # Check cache index first
+        cache_key = make_cache_key(publisher, slug, ver)
+        entry = self._index.get(cache_key)
+
+        if entry:
+            cached_path = self._cache.path / entry.file
+            if cached_path.exists():
+                return cached_path, entry.version
+            else:
+                # File missing, clean stale index entry
+                self._index.remove(cache_key)
+
+        # Cache miss - need to download
         if version:
-            normalized = version.lstrip("v")
+            releases = await self._store.get_versions(publisher, slug)
+            normalized = ver.lstrip("v")
             target = next(
                 (r for r in releases if r["version"].lstrip("v") == normalized),
                 None,
@@ -59,21 +82,22 @@ class PluginManager:
             if target is None:
                 raise ValueError(f"Version {version} not found for {publisher}/{slug}")
         else:
+            releases = await self._store.get_versions(publisher, slug)
+            if not releases:
+                raise ValueError(f"No releases found for {publisher}/{slug}")
             target = releases[0]
 
         ver = target["version"]
-        cache_key = f"{publisher}_{slug}_{ver}.zip"
-        zip_path = self._cache.get(cache_key)
+        zip_path = await self._store.download(
+            publisher,
+            slug,
+            ver,
+            self._cache.path,
+            on_progress=on_progress,
+        )
 
-        if zip_path is None:
-            zip_path = await self._store.download(
-                publisher,
-                slug,
-                ver,
-                self._cache.path,
-                on_progress=on_progress,
-            )
-            self._cache.put(cache_key, zip_path)
+        # Update cache index
+        self._index.put(cache_key, zip_path.name, ver, zip_path)
 
         return zip_path, ver
 

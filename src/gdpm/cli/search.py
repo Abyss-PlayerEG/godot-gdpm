@@ -8,9 +8,9 @@ import click
 from rich.console import Console
 
 from gdpm.cli.common import is_template, require_project
+from gdpm.cli.display import display_plugin_meta, display_version_info
 from gdpm.config.project import read_project_config
 from gdpm.store.client import StoreClient
-from gdpm.utils.version import is_compatible
 
 console = Console()
 
@@ -52,6 +52,10 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
         finally:
             await client.close()
 
+        # Filter out templates unless --all is used
+        if not show_all:
+            results = [r for r in results if not is_template(r.tags)]
+
         if not results:
             console.print(f"No results found for [bold]{query}[/bold]")
             return
@@ -80,28 +84,19 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
 
         for plugin in results:
             add_route = f"{plugin.publisher_slug}/{plugin.slug}"
-
-            if is_template(plugin.tags):
-                console.print(
-                    f"  [bold yellow]{plugin.name}[/bold yellow] [dim](template)[/dim]"
-                )
-            else:
-                console.print(f"  [bold cyan]{plugin.name}[/bold cyan]")
+            console.print(f"  [bold cyan]{plugin.name}[/bold cyan]")
 
             desc = plugin.description[:100]
             if len(plugin.description) > 100:
                 desc += "..."
             console.print(f"    {desc}")
 
-            tags = ", ".join(plugin.tags) if plugin.tags else ""
-            meta_parts = []
-            if plugin.license:
-                meta_parts.append(f"License: {plugin.license}")
-            if plugin.stars:
-                meta_parts.append(f"Score: {plugin.stars}")
-            meta = "  |  ".join(meta_parts)
-            if meta:
-                console.print(f"    [dim]{meta}[/dim]")
+            display_plugin_meta(
+                license_name=plugin.license,
+                stars=plugin.stars,
+                tags=plugin.tags,
+                store_url=plugin.store_url,
+            )
 
             if not is_template(plugin.tags):
                 try:
@@ -110,40 +105,14 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
                     )
                     if versions:
                         latest = versions[0]
-                        ver = latest.get("version", "")
-                        min_godot = latest.get("min_godot_version", "")
-                        max_godot = latest.get("max_godot_version", "")
-
-                        ver_display = ver if ver.startswith(("v", "V")) else f"v{ver}"
-                        console.print(f"    [dim]{ver_display}[/dim]")
-
-                        godot_parts = []
-                        if min_godot and min_godot not in ("None", ""):
-                            godot_parts.append(f">={min_godot}")
-                        if max_godot and max_godot not in ("None", ""):
-                            godot_parts.append(f"<={max_godot}")
-
-                        if godot_parts:
-                            console.print(
-                                f"    [dim]Godot {' '.join(godot_parts)}[/dim]"
-                            )
-
-                        if project_godot:
-                            compatible, msg = is_compatible(
-                                project_godot, min_godot, max_godot
-                            )
-                            if compatible:
-                                console.print("    [green]✓ Compatible[/green]")
-                            else:
-                                console.print(f"    [red]✗ {msg}[/red]")
+                        display_version_info(
+                            ver=latest.get("version", ""),
+                            min_godot=latest.get("min_godot_version", ""),
+                            max_godot=latest.get("max_godot_version", ""),
+                            project_godot=project_godot,
+                        )
                 except Exception:
                     pass
-
-            if tags:
-                console.print(f"    [dim]Tags: {tags}[/dim]")
-
-            if plugin.store_url:
-                console.print(f"    [dim]{plugin.store_url}[/dim]")
 
             if is_template(plugin.tags):
                 console.print(
