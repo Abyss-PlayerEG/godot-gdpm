@@ -254,27 +254,27 @@ def main() -> None:
 
 
 from gdpm.cli.add import add as add_cmd  # noqa: E402
-from gdpm.cli.export import export  # noqa: E402
-from gdpm.cli.import_cmd import import_cmd  # noqa: E402
-from gdpm.cli.info import info  # noqa: E402
-from gdpm.cli.init import init  # noqa: E402
+from gdpm.cli.export import export as export_cmd  # noqa: E402
+from gdpm.cli.import_cmd import import_cmd as import_cmd_  # noqa: E402
+from gdpm.cli.info import info as info_cmd  # noqa: E402
+from gdpm.cli.init import init as init_cmd  # noqa: E402
 from gdpm.cli.list import list_cmd  # noqa: E402
-from gdpm.cli.lock import lock  # noqa: E402
-from gdpm.cli.remove import remove  # noqa: E402
-from gdpm.cli.search import search  # noqa: E402
-from gdpm.cli.status import status  # noqa: E402
-from gdpm.cli.sync import sync  # noqa: E402
-from gdpm.cli.update import update  # noqa: E402
+from gdpm.cli.lock import lock as lock_cmd  # noqa: E402
+from gdpm.cli.remove import remove as remove_cmd  # noqa: E402
+from gdpm.cli.search import search as search_cmd  # noqa: E402
+from gdpm.cli.status import status as status_cmd  # noqa: E402
+from gdpm.cli.sync import sync as sync_cmd  # noqa: E402
+from gdpm.cli.update import update as update_cmd  # noqa: E402
 
-main.add_command(add_cmd)  # type: ignore[has-type]
-main.add_command(export)
-main.add_command(import_cmd, "import")
-main.add_command(info)
-main.add_command(init)
+main.add_command(add_cmd, "add")  # type: ignore[has-type]
+main.add_command(export_cmd, "export")
+main.add_command(import_cmd_, "import")
+main.add_command(info_cmd, "info")
+main.add_command(init_cmd, "init")
 main.add_command(list_cmd, "list")
-main.add_command(lock)
-main.add_command(remove)
-main.add_command(search)
-main.add_command(status)
-main.add_command(sync)
-main.add_command(update)
+main.add_command(lock_cmd, "lock")
+main.add_command(remove_cmd, "remove")
+main.add_command(search_cmd, "search")
+main.add_command(status_cmd, "status")
+main.add_command(sync_cmd, "sync")
+main.add_command(update_cmd, "update")
