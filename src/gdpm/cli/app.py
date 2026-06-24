@@ -159,7 +159,10 @@ class GdpmCommand(click.Command):
         )
         console.print()
 
-        options = [p for p in self.params if p.name != "help"]
+        options = [
+            p for p in self.params
+            if p.name != "help" and isinstance(p, click.Option)
+        ]
         if options:
             table = Table(
                 box=box.SIMPLE,
@@ -172,8 +175,6 @@ class GdpmCommand(click.Command):
             table.add_column("Description", justify="left")
 
             for param in options:
-                if not isinstance(param, click.Option):
-                    continue
                 opts = ", ".join(param.opts)
                 desc = param.help or ""
                 default = ""
