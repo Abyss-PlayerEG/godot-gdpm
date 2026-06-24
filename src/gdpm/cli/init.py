@@ -25,14 +25,10 @@ console = Console()
 )
 @click.argument("name", required=False)
 @click.option("--godot", default="", help="Godot version constraint")
-@click.option("--license", "license_id", default="MIT", help="SPDX license ID")
-@click.option("--as-plugin", is_flag=True, help="Initialize as a plugin project")
 @click.option("--force", is_flag=True, help="Overwrite existing gdproject.toml")
 def init(
     name: str | None,
     godot: str,
-    license_id: str,
-    as_plugin: bool,
     force: bool,
 ) -> None:
     """Initialize a new gdpm project."""
@@ -62,7 +58,6 @@ def init(
     config = ProjectConfig(
         name=name,
         godot=godot,
-        license=license_id,
     )
 
     write_project_config(config, config_path)
