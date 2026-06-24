@@ -43,21 +43,25 @@ def export(output: str) -> None:
             local_zip = local_dir / f"{name}.zip"
             if local_zip.exists():
                 local_files.append(name)
-                plugins.append({
-                    "name": name,
-                    "version": "local",
-                    "source": "local",
-                    "type": "local",
-                    "file": f"local-plugins/{name}.zip",
-                })
+                plugins.append(
+                    {
+                        "name": name,
+                        "version": "local",
+                        "source": "local",
+                        "type": "local",
+                        "file": f"local-plugins/{name}.zip",
+                    }
+                )
         else:
-            plugins.append({
-                "name": name,
-                "version": entry.version if entry else str(dep.constraint),
-                "source": entry.source if entry else "",
-                "publisher": dep.publisher_slug,
-                "type": "store",
-            })
+            plugins.append(
+                {
+                    "name": name,
+                    "version": entry.version if entry else str(dep.constraint),
+                    "source": entry.source if entry else "",
+                    "publisher": dep.publisher_slug,
+                    "type": "store",
+                }
+            )
 
     # Also scan addons/ for installed plugins not in config
     for _, tag in scan_addons(root / config.addons_dir):
@@ -69,21 +73,25 @@ def export(output: str) -> None:
             local_zip = local_dir / f"{tag.slug}.zip"
             if local_zip.exists():
                 local_files.append(tag.slug)
-                plugins.append({
-                    "name": tag.slug,
-                    "version": "local",
-                    "source": "local",
-                    "type": "local",
-                    "file": f"local-plugins/{tag.slug}.zip",
-                })
+                plugins.append(
+                    {
+                        "name": tag.slug,
+                        "version": "local",
+                        "source": "local",
+                        "type": "local",
+                        "file": f"local-plugins/{tag.slug}.zip",
+                    }
+                )
         else:
             entry = lock_entries.get(tag.slug)
-            plugins.append({
-                "name": tag.slug,
-                "version": entry.version if entry else "?",
-                "source": tag.source,
-                "type": "store",
-            })
+            plugins.append(
+                {
+                    "name": tag.slug,
+                    "version": entry.version if entry else "?",
+                    "source": tag.source,
+                    "type": "store",
+                }
+            )
 
     manifest = {
         "version": 1,

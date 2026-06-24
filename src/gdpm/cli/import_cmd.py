@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
 import zipfile
 from pathlib import Path
 
@@ -26,25 +27,33 @@ console = Console()
 
 
 @click.command()
-@click.argument("file", type=click.Path(exists=True))
+@click.argument("source", type=click.Path(exists=True))
 @yes_option
-def import_cmd(file: str, yes: bool) -> None:
-    """Import plugins from a zip archive."""
+def import_cmd(source: str, yes: bool) -> None:
+    """Import plugins from a zip archive or directory."""
     root = require_project()
-    zip_path = Path(file)
+    source_path = Path(source)
 
-    if not zipfile.is_zipfile(zip_path):
-        console.print(f"[red]Error:[/red] '{file}' is not a valid zip file")
+    # Determine source type and read manifest
+    if source_path.is_dir():
+        manifest_path = source_path / "manifest.json"
+        if not manifest_path.exists():
+            console.print("[red]Error:[/red] No manifest.json found in directory")
+            raise SystemExit(1)
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        source_type = "dir"
+    elif zipfile.is_zipfile(source_path):
+        with zipfile.ZipFile(source_path, "r") as zf:
+            if "manifest.json" not in zf.namelist():
+                console.print("[red]Error:[/red] No manifest.json found in zip")
+                raise SystemExit(1)
+            manifest = json.loads(zf.read("manifest.json"))
+        source_type = "zip"
+    else:
+        console.print(f"[red]Error:[/red] '{source}' is not a valid zip or directory")
         raise SystemExit(1)
 
-    with zipfile.ZipFile(zip_path, "r") as zf:
-        if "manifest.json" not in zf.namelist():
-            console.print("[red]Error:[/red] No manifest.json found in zip")
-            raise SystemExit(1)
-
-        manifest = json.loads(zf.read("manifest.json"))
-        plugins = manifest.get("plugins", [])
-
+    plugins = manifest.get("plugins", [])
     console.print(f"Importing {len(plugins)} plugin(s)...\n")
 
     config = read_project_config(root / "gdproject.toml")
@@ -90,27 +99,27 @@ def import_cmd(file: str, yes: bool) -> None:
                                 "(already installed, skipped)[/dim]"
                             )
                             continue
-                        # Different version - ask user
                         if not yes:
                             old_ver = entry.version if entry else "?"
-                            if not console.input(
-                                f"  [yellow]?[/yellow] {name} "
-                                f"v{old_ver} → v{version}? (y/n): "
-                            ).strip().lower().startswith("y"):
-                                console.print(
-                                    f"  [dim]○ {name} (skipped)[/dim]"
+                            if (
+                                not console.input(
+                                    f"  [yellow]?[/yellow] {name} "
+                                    f"v{old_ver} → v{version}? (y/n): "
                                 )
+                                .strip()
+                                .lower()
+                                .startswith("y")
+                            ):
+                                console.print(f"  [dim]○ {name} (skipped)[/dim]")
                                 continue
 
                     if not publisher:
-                        source = p.get("source", "")
-                        if "/" in source:
-                            publisher = source.split("/")[-2]
+                        src = p.get("source", "")
+                        if "/" in src:
+                            publisher = src.split("/")[-2]
 
                     if not publisher:
-                        errors.append(
-                            f"Cannot resolve publisher for '{name}'"
-                        )
+                        errors.append(f"Cannot resolve publisher for '{name}'")
                         continue
 
                     try:
@@ -119,22 +128,17 @@ def import_cmd(file: str, yes: bool) -> None:
                             publisher, name, ver_to_get
                         )
                         manager.install_from_zip(zip_dl, name, publisher)
+
                         lock_updates[name] = LockEntry(
                             name=name,
                             version=ver,
                             source=f"store+{publisher}/{name}",
                         )
-
-                        # Update config
-                        dep = Dependency.from_spec(
-                            name, ver, publisher_slug=publisher
-                        )
+                        dep = Dependency.from_spec(name, ver, publisher_slug=publisher)
                         config.dependencies[name] = dep
-
                         imported += 1
                         console.print(
-                            f"[green]✓[/green] Installed "
-                            f"[bold]{name}[/bold] {ver}"
+                            f"[green]✓[/green] Installed [bold]{name}[/bold] {ver}"
                         )
                     except Exception as e:
                         errors.append(f"Failed to install {name}: {e}")
@@ -148,49 +152,65 @@ def import_cmd(file: str, yes: bool) -> None:
         name = p["name"]
         zip_file = p.get("file", "")
 
-        # Skip if already installed
+        # Check if already installed
         if name in config.dependencies:
             if not yes:
-                if not console.input(
-                    f"  [yellow]?[/yellow] {name} "
-                    "already installed. Overwrite? (y/n): "
-                ).strip().lower().startswith("y"):
+                if (
+                    not console.input(
+                        f"  [yellow]?[/yellow] {name} "
+                        "already installed. Overwrite? (y/n): "
+                    )
+                    .strip()
+                    .lower()
+                    .startswith("y")
+                ):
                     console.print(f"  [dim]○ {name} (skipped)[/dim]")
                     continue
             else:
                 console.print(
-                    f"  [yellow]![/yellow] {name} "
-                    "already installed, overwriting..."
+                    f"  [yellow]![/yellow] {name} already installed, overwriting..."
                 )
 
-        if zip_file and zip_file in zf.namelist():
-            local_dir.mkdir(parents=True, exist_ok=True)
-            local_zip = local_dir / f"{name}.zip"
+        # Get zip source
+        if source_type == "dir":
+            zip_source = source_path / zip_file
+            if not zip_source.exists():
+                errors.append(f"Local plugin zip not found: {zip_file}")
+                continue
+        else:
+            with zipfile.ZipFile(source_path, "r") as zf:
+                if zip_file not in zf.namelist():
+                    errors.append(f"Local plugin zip not found in archive: {zip_file}")
+                    continue
 
+        # Copy zip to local dir
+        local_dir.mkdir(parents=True, exist_ok=True)
+        local_zip = local_dir / f"{name}.zip"
+
+        if source_type == "dir":
+            shutil.copy2(zip_source, local_zip)
+        else:
             with (
-                zipfile.ZipFile(zip_path, "r") as zf_outer,
-                zf_outer.open(zip_file) as src,
+                zipfile.ZipFile(source_path, "r") as zf,
+                zf.open(zip_file) as src,
             ):
                 local_zip.write_bytes(src.read())
 
-            import shutil
+        # Extract to addons
+        dest = addons_dir / name
+        if dest.exists():
+            shutil.rmtree(dest)
 
-            dest = addons_dir / name
-            if dest.exists():
-                shutil.rmtree(dest)
+        with zipfile.ZipFile(local_zip, "r") as local_zf:
+            local_zf.extractall(dest)
 
-            with zipfile.ZipFile(local_zip, "r") as local_zf:
-                local_zf.extractall(dest)
+        tag_plugin(addons_dir, name)
 
-            tag_plugin(addons_dir, name)
-
-            lock_updates[name] = LockEntry(name=name, version="local", source="local")
-
-            dep = Dependency.from_spec(name, "*", is_local=True)
-            config.dependencies[name] = dep
-
-            imported += 1
-            console.print(f"[green]✓[/green] Installed [bold]{name}[/bold] (local)")
+        lock_updates[name] = LockEntry(name=name, version="local", source="local")
+        dep = Dependency.from_spec(name, "*", is_local=True)
+        config.dependencies[name] = dep
+        imported += 1
+        console.print(f"[green]✓[/green] Installed [bold]{name}[/bold] (local)")
 
     # Update config and lock
     if imported:
