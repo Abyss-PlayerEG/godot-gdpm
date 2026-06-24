@@ -97,7 +97,7 @@ def info(plugin_slug: str) -> None:
                 title="[bold cyan]Info[/bold cyan]",
                 border_style="dim",
                 padding=(1, 2),
-                width=80,
+                width=120,
             )
         )
 
