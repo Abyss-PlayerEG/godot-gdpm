@@ -78,7 +78,7 @@ class GdpmGroup(click.Group):
                 show_header=True,
                 header_style="bold magenta",
                 padding=(0, 2),
-                width=terminal_width - 6,
+                width=min(terminal_width - 6, 90),
             )
             table.add_column("Command", style="green", min_width=12, justify="left")
             table.add_column("Description", justify="left")
@@ -92,7 +92,7 @@ class GdpmGroup(click.Group):
                     title=f"[bold cyan]{category}[/bold cyan]",
                     border_style="dim",
                     padding=(0, 1),
-                    width=terminal_width,
+                    width=min(terminal_width, 90),
                 )
             )
 
@@ -118,7 +118,7 @@ class GdpmGroup(click.Group):
                 title="[bold cyan]Common Options[/bold cyan]",
                 border_style="dim",
                 padding=(0, 1),
-                width=terminal_width,
+                width=min(terminal_width, 90),
             )
         )
         console.print()
@@ -166,6 +166,7 @@ class GdpmCommand(click.Command):
                 show_header=True,
                 header_style="bold",
                 padding=(0, 2),
+                width=min(80, 90),
             )
             table.add_column("Option", style="green", min_width=20, justify="left")
             table.add_column("Description", justify="left")
@@ -188,6 +189,7 @@ class GdpmCommand(click.Command):
                     title="[bold cyan]Options[/bold cyan]",
                     border_style="dim",
                     padding=(0, 1),
+                    width=min(80, 90),
                 )
             )
 
@@ -202,6 +204,7 @@ class GdpmCommand(click.Command):
                     title="[bold cyan]Examples[/bold cyan]",
                     border_style="dim",
                     padding=(0, 1),
+                    width=min(80, 90),
                 )
             )
 
