@@ -5,11 +5,7 @@ from __future__ import annotations
 import asyncio
 
 import click
-from rich import box
 from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from rich.text import Text
 
 from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import is_template
@@ -72,104 +68,40 @@ def info(plugin_slug: str) -> None:
 
         add_route = f"{author}/{slug}"
 
-        # Header
+        console.print(f"[bold cyan]{detail.name}[/bold cyan]")
+        if detail.latest_version:
+            console.print(f"  [dim]{detail.latest_version}[/dim]")
+        console.print("─" * 50)
+        console.print(detail.description)
         console.print()
-        console.print(
-            Text(f"  {detail.name}", style="bold cyan")
-            + Text(f"  {detail.latest_version}", style="dim")
-        )
-        console.print()
-
-        # Description
-        console.print(
-            Panel(
-                f"  {detail.description}",
-                title="[bold cyan]Description[/bold cyan]",
-                border_style="dim",
-                padding=(1, 2),
-            )
-        )
-
-        # Info table
-        info_table = Table(
-            box=box.SIMPLE,
-            show_header=False,
-            padding=(0, 2),
-        )
-        info_table.add_column("Key", style="bold", min_width=12)
-        info_table.add_column("Value")
 
         if detail.author:
-            info_table.add_row("Author", detail.author)
+            console.print(f"  Author:     {detail.author}")
         if detail.license:
-            info_table.add_row("License", detail.license)
-        if detail.tags:
-            info_table.add_row("Tags", ", ".join(detail.tags))
+            console.print(f"  License:    {detail.license}")
         if detail.homepage:
-            info_table.add_row(
-                "Store",
-                f"[link={detail.homepage}]{detail.homepage}[/link]",
-            )
+            console.print(f"  Store:      {detail.homepage}")
+        if detail.tags:
+            console.print(f"  Tags:       {', '.join(detail.tags)}")
+        console.print()
 
-        console.print(
-            Panel(
-                info_table,
-                title="[bold cyan]Info[/bold cyan]",
-                border_style="dim",
-                padding=(0, 1),
-            )
-        )
-
-        # Install command
         if is_template(detail.tags):
             console.print(
-                Panel(
-                    "  [yellow]Project template - "
-                    "not installable as addon[/yellow]",
-                    border_style="dim",
-                    padding=(0, 1),
-                )
+                "[yellow]Project template - not installable as addon[/yellow]"
             )
         else:
             console.print(
-                Panel(
-                    f"  [green]gdpm add {add_route}[/green]",
-                    title="[bold cyan]Install[/bold cyan]",
-                    border_style="dim",
-                    padding=(0, 1),
-                )
+                f"  [bold]Install:[/bold]  [green]gdpm add {add_route}[/green]"
             )
+        console.print()
 
-        # Versions
         if versions:
-            ver_table = Table(
-                box=box.SIMPLE,
-                show_header=True,
-                header_style="bold",
-                padding=(0, 2),
-            )
-            ver_table.add_column(
-                "Version", style="cyan", min_width=15, justify="left"
-            )
-            ver_table.add_column("Date", justify="left")
-            ver_table.add_column("Type", justify="left")
-
+            console.print("  [bold]Versions:[/bold]")
             for v in versions[:10]:
                 ver = v.get("version", "")
                 stable = "stable" if v.get("stable") == "True" else "pre"
                 date = v.get("created", "")
-                ver_table.add_row(ver, date, stable)
-
-            console.print()
-            console.print(
-                Panel(
-                    ver_table,
-                    title="[bold cyan]Versions[/bold cyan]",
-                    border_style="dim",
-                    padding=(0, 1),
-                )
-            )
-
+                console.print(f"    {ver}  {date}  [{stable}]")
         console.print()
 
     asyncio.run(_info())
