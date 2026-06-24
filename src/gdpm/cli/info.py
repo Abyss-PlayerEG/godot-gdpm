@@ -69,9 +69,13 @@ def info(plugin_slug: str) -> None:
         add_route = f"{author}/{slug}"
 
         console.print()
-        console.print(f"[bold cyan]{detail.name}[/bold cyan]")
         if detail.latest_version:
-            console.print(f"  [dim]{detail.latest_version}[/dim]")
+            console.print(
+                f"[bold cyan]{detail.name}[/bold cyan]"
+                f"  [dim]{detail.latest_version}[/dim]"
+            )
+        else:
+            console.print(f"[bold cyan]{detail.name}[/bold cyan]")
         console.print("─" * 50)
         console.print(detail.description)
         console.print()
