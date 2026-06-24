@@ -43,7 +43,9 @@ MAX_PARALLEL = 5
 )
 @click.option("--frozen", is_flag=True, help="Strict mode for CI")
 @click.option(
-    "-dr", "--check", "--dry-run",
+    "-dr",
+    "--check",
+    "--dry-run",
     is_flag=True,
     help="Preview changes without applying",
 )
@@ -54,9 +56,7 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
     ctx = get_project_context()
 
     if frozen and not ctx.lock_path.exists():
-        console.print(
-            "[red]Error:[/red] No lock file found. Run 'gdpm lock' first."
-        )
+        console.print("[red]Error:[/red] No lock file found. Run 'gdpm lock' first.")
         raise SystemExit(1)
 
     local_names = {n for n, d in ctx.all_deps.items() if d.is_local}
@@ -74,10 +74,7 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
     to_remove: set[str] = set()
     if ctx.addons_dir.exists():
         for _, tag in scan_addons(ctx.addons_dir):
-            if (
-                tag.source.endswith(f"/{tag.slug}")
-                and tag.slug not in ctx.all_deps
-            ):
+            if tag.source.endswith(f"/{tag.slug}") and tag.slug not in ctx.all_deps:
                 to_remove.add(tag.slug)
 
     if not to_install and not to_remove:
@@ -152,12 +149,12 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                 name: str, publisher: str, version: str
             ) -> tuple[str, str, str, bool, Path | None]:
                 async with semaphore:
-                    task_id = progress.add_task(
-                        "download", name=name, total=None
-                    )
+                    task_id = progress.add_task("download", name=name, total=None)
 
                     def on_progress(
-                        current: int, total: int, speed: float,
+                        current: int,
+                        total: int,
+                        speed: float,
                         _task: TaskID = task_id,
                     ) -> None:
                         if progress.tasks[_task].total is None:
@@ -166,7 +163,9 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
 
                     try:
                         zip_path, ver = await svc.manager.download(
-                            publisher, name, version,
+                            publisher,
+                            name,
+                            version,
                             on_progress=on_progress,
                         )
                         return name, ver, publisher, True, zip_path
@@ -187,17 +186,14 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                 try:
                     deps = ctx.all_deps.get(name)
                     dest_path = deps.path if deps else ""
-                    svc.manager.install_from_zip(
-                        zip_path, name, publisher, dest_path
-                    )
+                    svc.manager.install_from_zip(zip_path, name, publisher, dest_path)
                     lock_updates[name] = LockEntry(
                         name=name,
                         version=ver,
                         source=f"store+{publisher}/{name}",
                     )
                     console.print(
-                        f"  [green]✓[/green] Installed "
-                        f"[bold]{name}[/bold] {ver}"
+                        f"  [green]✓[/green] Installed [bold]{name}[/bold] {ver}"
                     )
                 except Exception as e:
                     errors.append(f"Failed to install {name}: {e}")

@@ -160,8 +160,7 @@ class GdpmCommand(click.Command):
         console.print()
 
         options = [
-            p for p in self.params
-            if p.name != "help" and isinstance(p, click.Option)
+            p for p in self.params if p.name != "help" and isinstance(p, click.Option)
         ]
         if options:
             table = Table(

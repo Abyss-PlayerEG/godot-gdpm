@@ -5,10 +5,8 @@ from __future__ import annotations
 import asyncio
 
 import click
-from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import is_template
@@ -42,14 +40,10 @@ def info(plugin_slug: str) -> None:
             if not publisher:
                 results = await client.search(slug, limit=20)
                 if not results:
-                    console.print(
-                        f"[red]Error:[/red] Plugin '{slug}' not found."
-                    )
+                    console.print(f"[red]Error:[/red] Plugin '{slug}' not found.")
                     raise SystemExit(1)
 
-                exact = next(
-                    (r for r in results if r.slug == slug), None
-                )
+                exact = next((r for r in results if r.slug == slug), None)
                 if exact:
                     author = exact.publisher_slug
                 else:
@@ -71,17 +65,16 @@ def info(plugin_slug: str) -> None:
 
         add_route = f"{author}/{slug}"
 
-        console.print()
-        if detail.latest_version:
-            console.print(
-                f"[bold cyan]{detail.name}[/bold cyan]"
-                f"  [dim]{detail.latest_version}[/dim]"
-            )
-        else:
-            console.print(f"[bold cyan]{detail.name}[/bold cyan]")
-
         # Build info content
-        info_lines = [detail.description, ""]
+        info_lines = []
+        info_lines.append(
+            f"[bold cyan]{detail.name}[/bold cyan]"
+            + (f"  [dim]{detail.latest_version}[/dim]" if detail.latest_version else "")
+        )
+        info_lines.append("")
+        info_lines.append(detail.description)
+        info_lines.append("")
+
         if detail.author:
             info_lines.append(f"  Author:     {detail.author}")
         if detail.license:
@@ -97,9 +90,17 @@ def info(plugin_slug: str) -> None:
                 "  [yellow]Project template - not installable as addon[/yellow]"
             )
         else:
-            info_lines.append(
-                f"  Install:    [green]gdpm add {add_route}[/green]"
-            )
+            info_lines.append(f"  Install:    [green]gdpm add {add_route}[/green]")
+
+        # Add versions table if available
+        if versions:
+            info_lines.append("")
+            info_lines.append("  [bold]Versions:[/bold]")
+            for v in versions[:10]:
+                ver = v.get("version", "")
+                stable = "stable" if v.get("stable") == "True" else "pre"
+                date = v.get("created", "")
+                info_lines.append(f"    {ver}  {date}  [{stable}]")
 
         console.print(
             Panel(
@@ -110,37 +111,5 @@ def info(plugin_slug: str) -> None:
                 width=120,
             )
         )
-
-        console.print()
-
-        if versions:
-            ver_table = Table(
-                box=box.SIMPLE,
-                show_header=True,
-                header_style="bold",
-                padding=(0, 2),
-            )
-            ver_table.add_column(
-                "Version", style="cyan", min_width=15, justify="left"
-            )
-            ver_table.add_column("Date", justify="left")
-            ver_table.add_column("Type", justify="left")
-
-            for v in versions[:10]:
-                ver = v.get("version", "")
-                stable = "stable" if v.get("stable") == "True" else "pre"
-                date = v.get("created", "")
-                ver_table.add_row(ver, date, stable)
-
-            console.print(
-                Panel(
-                    ver_table,
-                    title="[bold cyan]Versions[/bold cyan]",
-                    border_style="dim",
-                    padding=(0, 1),
-                    width=60,
-                )
-            )
-        console.print()
 
     asyncio.run(_info())
