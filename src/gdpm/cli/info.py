@@ -5,7 +5,10 @@ from __future__ import annotations
 import asyncio
 
 import click
+from rich import box
 from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import is_template
@@ -101,12 +104,32 @@ def info(plugin_slug: str) -> None:
         console.print()
 
         if versions:
-            console.print("  [bold]Versions:[/bold]")
+            ver_table = Table(
+                box=box.SIMPLE,
+                show_header=True,
+                header_style="bold",
+                padding=(0, 2),
+            )
+            ver_table.add_column(
+                "Version", style="cyan", min_width=15, justify="left"
+            )
+            ver_table.add_column("Date", justify="left")
+            ver_table.add_column("Type", justify="left")
+
             for v in versions[:10]:
                 ver = v.get("version", "")
                 stable = "stable" if v.get("stable") == "True" else "pre"
                 date = v.get("created", "")
-                console.print(f"    {ver}  {date}  [{stable}]")
+                ver_table.add_row(ver, date, stable)
+
+            console.print(
+                Panel(
+                    ver_table,
+                    title="[bold cyan]Versions[/bold cyan]",
+                    border_style="dim",
+                    padding=(0, 1),
+                )
+            )
         console.print()
 
     asyncio.run(_info())
