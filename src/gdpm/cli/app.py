@@ -125,7 +125,7 @@ class GdpmGroup(click.Group):
         console.print()
 
 
-def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> None:
+def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
     """Print formatted version info."""
     if not value:
         return
