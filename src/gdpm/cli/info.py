@@ -102,6 +102,7 @@ def info(plugin_slug: str) -> None:
                 date = v.get("created", "")
                 info_lines.append(f"    {ver}  {date}  [{stable}]")
 
+        console.print()
         console.print(
             Panel(
                 "\n".join(info_lines),
@@ -111,5 +112,6 @@ def info(plugin_slug: str) -> None:
                 width=120,
             )
         )
+        console.print()
 
     asyncio.run(_info())
