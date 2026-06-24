@@ -6,6 +6,15 @@ import asyncio
 
 import click
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    TaskID,
+    TextColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
 
 from gdpm.cli.app import GdpmCommand
 from gdpm.cli.context import get_project_context, get_services
@@ -110,9 +119,45 @@ def sync(frozen: bool, check: bool, no_cache: bool) -> None:
                         resolved = await resolve_publisher(svc.store, name)
                         if resolved.found:
                             try:
-                                zip_path, ver = await svc.manager.download(
-                                    resolved.publisher, name
-                                )
+                                with Progress(
+                                    TextColumn(
+                                        "[bold blue]{task.fields[name]}[/bold blue]"
+                                    ),
+                                    BarColumn(),
+                                    DownloadColumn(),
+                                    TransferSpeedColumn(),
+                                    TimeRemainingColumn(),
+                                ) as progress:
+                                    task_id = progress.add_task(
+                                        "download",
+                                        name=name,
+                                        total=None,
+                                    )
+
+                                    def on_progress(
+                                        current: int,
+                                        total: int,
+                                        speed: float,
+                                        _task: TaskID = task_id,
+                                    ) -> None:
+                                        if (
+                                            progress.tasks[_task].total
+                                            is None
+                                        ):
+                                            progress.update(
+                                                _task, total=total
+                                            )
+                                        progress.update(
+                                            _task, completed=current
+                                        )
+
+                                    zip_path, ver = (
+                                        await svc.manager.download(
+                                            resolved.publisher,
+                                            name,
+                                            on_progress=on_progress,
+                                        )
+                                    )
                                 svc.manager.install_from_zip(
                                     zip_path, name, resolved.publisher, dest_path
                                 )
