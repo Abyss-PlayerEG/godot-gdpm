@@ -6,7 +6,6 @@ import asyncio
 
 import click
 from rich.console import Console
-from rich.markdown import Markdown
 
 from gdpm.cli.common import is_template
 from gdpm.store.client import StoreClient
@@ -62,7 +61,7 @@ def info(plugin_slug: str) -> None:
         if detail.latest_version:
             console.print(f"  [dim]{detail.latest_version}[/dim]")
         console.print("─" * 50)
-        console.print(Markdown(detail.description))
+        console.print(detail.description)
         console.print()
 
         if detail.author:
