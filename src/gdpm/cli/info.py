@@ -79,19 +79,27 @@ def info(plugin_slug: str) -> None:
             )
         else:
             console.print(f"[bold cyan]{detail.name}[/bold cyan]")
-        console.print("─" * 50)
-        console.print(detail.description)
-        console.print()
 
+        # Build info content
+        info_lines = [detail.description, ""]
         if detail.author:
-            console.print(f"  Author:     {detail.author}")
+            info_lines.append(f"  Author:     {detail.author}")
         if detail.license:
-            console.print(f"  License:    {detail.license}")
+            info_lines.append(f"  License:    {detail.license}")
         if detail.homepage:
-            console.print(f"  Store:      {detail.homepage}")
+            info_lines.append(f"  Store:      {detail.homepage}")
         if detail.tags:
-            console.print(f"  Tags:       {', '.join(detail.tags)}")
-        console.print()
+            info_lines.append(f"  Tags:       {', '.join(detail.tags)}")
+
+        console.print(
+            Panel(
+                "\n".join(info_lines),
+                title="[bold cyan]Info[/bold cyan]",
+                border_style="dim",
+                padding=(1, 2),
+                width=80,
+            )
+        )
 
         if is_template(detail.tags):
             console.print(
