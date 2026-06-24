@@ -10,6 +10,7 @@ from pathlib import Path
 import click
 from rich.console import Console
 
+from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import require_project
 from gdpm.config.project import read_project_config
 from gdpm.lockfile.lock import find_lockfile, read_lockfile
@@ -19,7 +20,14 @@ from gdpm.utils.tag import scan_addons
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm export", "Export to default location"),
+        ("gdpm export -o backup.zip", "Export to custom file"),
+        ("gdpm export -o ~/backup/plugins.zip", "Export to specific path"),
+    ],
+)
 @click.option("-o", "--output", default="", help="Output file path")
 def export(output: str) -> None:
     """Export plugins to a zip archive."""

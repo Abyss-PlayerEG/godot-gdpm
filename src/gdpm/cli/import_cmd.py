@@ -12,6 +12,7 @@ import click
 from rich.console import Console
 
 from gdpm.cache.file_cache import FileCache
+from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import require_project
 from gdpm.cli.options import yes_option
 from gdpm.config.project import read_project_config, write_project_config
@@ -26,7 +27,14 @@ from gdpm.utils.local import LOCAL_DIR_NAME, tag_plugin
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm import plugins.zip", "Import from zip archive"),
+        ("gdpm import ./backup/", "Import from directory"),
+        ("gdpm import -y plugins.zip", "Import without confirmation"),
+    ],
+)
 @click.argument("source", type=click.Path(exists=True))
 @yes_option
 def import_cmd(source: str, yes: bool) -> None:

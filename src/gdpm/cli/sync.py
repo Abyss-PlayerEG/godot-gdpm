@@ -7,6 +7,7 @@ import asyncio
 import click
 from rich.console import Console
 
+from gdpm.cli.app import GdpmCommand
 from gdpm.cli.context import get_project_context, get_services
 from gdpm.lockfile.utils import update_lockfile
 from gdpm.models.lock import LockEntry
@@ -16,7 +17,14 @@ from gdpm.utils.tag import scan_addons
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm sync", "Sync all plugins"),
+        ("gdpm sync --check", "Preview changes without applying"),
+        ("gdpm sync --frozen", "Strict mode for CI"),
+    ],
+)
 @click.option("--frozen", is_flag=True, help="Strict mode for CI")
 @click.option(
     "-dr", "--check", "--dry-run", is_flag=True, help="Preview changes without applying"

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import click
 from rich import box
 from rich.console import Console
@@ -46,23 +48,22 @@ COMMANDS = {
 
 class GdpmGroup(click.Group):
     def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        banner_text = Text(BANNER, style="bold cyan")
-        version_text = Text(f"  v{__version__}", style="dim")
-
-        console.print(banner_text)
-        console.print(version_text)
         console.print()
-
+        console.print(Text(BANNER, style="bold cyan"))
+        console.print(Text(f"  v{__version__}", style="dim"))
+        console.print()
         console.print(
             Text("  [DEV] ", style="bold yellow")
             + Text("This project is under active development.", style="dim")
         )
         console.print(
             Text("  Report issues: ", style="dim")
-            + Text("https://github.com/Abyss-PlayerEG/godot-gdpm/issues", style="blue")
+            + Text(
+                "https://github.com/Abyss-PlayerEG/godot-gdpm/issues",
+                style="blue underline",
+            )
         )
         console.print()
-
         console.print(Text("  Godot Dependency Package Manager", style="bold white"))
         console.print(
             Text("  https://github.com/Abyss-PlayerEG/godot-gdpm", style="dim")
@@ -109,8 +110,6 @@ class GdpmGroup(click.Group):
             + Text(" --help", style="dim")
         )
         console.print()
-
-        # Common options
         console.print(
             Panel(
                 Text("  -h, --help     Show help message\n", style="dim")
@@ -125,6 +124,90 @@ class GdpmGroup(click.Group):
         console.print()
 
 
+class GdpmCommand(click.Command):
+    """Custom command class with Rich-formatted help."""
+
+    def __init__(
+        self,
+        *args: Any,
+        examples: list[tuple[str, str]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.examples: list[tuple[str, str]] = examples or []
+
+    def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+        console.print()
+        console.print(
+            Text(f"  gdpm {ctx.info_name}", style="bold green")
+            + Text(f"  {self.help or ''}", style="dim")
+        )
+        console.print()
+
+        usage_parts = [f"gdpm {ctx.info_name}"]
+        for param in self.params:
+            if param.name == "help":
+                continue
+            if param.required:
+                usage_parts.append(f"<{param.name}>")
+            elif isinstance(param, click.Option) and param.is_flag:
+                usage_parts.append(f"[--{param.name}]")
+            else:
+                usage_parts.append(f"[--{param.name} VALUE]")
+        console.print(
+            Text("  Usage: ", style="dim") + Text(" ".join(usage_parts), style="white")
+        )
+        console.print()
+
+        options = [p for p in self.params if p.name != "help"]
+        if options:
+            table = Table(
+                box=box.SIMPLE,
+                show_header=True,
+                header_style="bold",
+                padding=(0, 2),
+            )
+            table.add_column("Option", style="green", min_width=20)
+            table.add_column("Description")
+
+            for param in options:
+                if not isinstance(param, click.Option):
+                    continue
+                opts = ", ".join(param.opts)
+                desc = param.help or ""
+                default = ""
+                if param.default is not None and not param.is_flag:
+                    default = f" [dim](default: {param.default})[/dim]"
+                elif param.is_flag and param.default:
+                    default = " [dim](default: on)[/dim]"
+                table.add_row(f"  {opts}", f"{desc}{default}")
+
+            console.print(
+                Panel(
+                    table,
+                    title="[bold cyan]Options[/bold cyan]",
+                    border_style="dim",
+                    padding=(0, 1),
+                )
+            )
+
+        if self.examples:
+            lines = []
+            for cmd, desc in self.examples:
+                lines.append(f"  [dim]# {desc}[/dim]")
+                lines.append(f"  $ {cmd}")
+            console.print(
+                Panel(
+                    "\n".join(lines),
+                    title="[bold cyan]Examples[/bold cyan]",
+                    border_style="dim",
+                    padding=(0, 1),
+                )
+            )
+
+        console.print()
+
+
 def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
     """Print formatted version info."""
     if not value:
@@ -132,7 +215,6 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
 
     import re
 
-    # Extract base version (remove tag suffix like b1, dev1, a1, rc1)
     base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
     tag_display = f" [{__tag__}]" if __tag__ else ""
 
@@ -171,7 +253,7 @@ def main() -> None:
     """Godot Dependency Package Manager."""
 
 
-from gdpm.cli.add import add  # noqa: E402
+from gdpm.cli.add import add as add_cmd  # noqa: E402
 from gdpm.cli.export import export  # noqa: E402
 from gdpm.cli.import_cmd import import_cmd  # noqa: E402
 from gdpm.cli.info import info  # noqa: E402
@@ -184,7 +266,7 @@ from gdpm.cli.status import status  # noqa: E402
 from gdpm.cli.sync import sync  # noqa: E402
 from gdpm.cli.update import update  # noqa: E402
 
-main.add_command(add)
+main.add_command(add_cmd)  # type: ignore[has-type]
 main.add_command(export)
 main.add_command(import_cmd, "import")
 main.add_command(info)

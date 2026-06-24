@@ -17,6 +17,7 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
+from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import is_template
 from gdpm.cli.context import get_project_context, get_services
 from gdpm.cli.options import yes_option
@@ -29,7 +30,17 @@ from gdpm.store.utils import resolve_publisher
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm add limbo-ai", "Add plugin from Godot Store"),
+        ("gdpm add limbo-ai@1.5.0", "Add specific version"),
+        ("gdpm add limbo-ai@^1.0.0", "Add with version constraint"),
+        ("gdpm add --dev gdunit4", "Add as dev dependency"),
+        ("gdpm add --local", "Pack all local plugins"),
+        ("gdpm add --local plugin.zip", "Install from zip file"),
+    ],
+)
 @click.argument("plugins", nargs=-1)
 @click.option("--dev", is_flag=True, help="Add as dev dependency")
 @click.option("--local", is_flag=True, help="Pack local plugins to gdpm-local/")

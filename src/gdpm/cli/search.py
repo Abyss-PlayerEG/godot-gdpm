@@ -7,6 +7,7 @@ import asyncio
 import click
 from rich.console import Console
 
+from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import is_template, require_project
 from gdpm.cli.display import display_plugin_meta, display_version_info
 from gdpm.config.project import read_project_config
@@ -15,7 +16,15 @@ from gdpm.store.client import StoreClient
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm search mcp", "Search for MCP plugins"),
+        ("gdpm search ai --limit 5", "Show top 5 results"),
+        ("gdpm search controller --all", "Include templates"),
+        ("gdpm search input --sort downloads", "Sort by downloads"),
+    ],
+)
 @click.argument("query")
 @click.option("--limit", "-n", default=20, help="Number of results")
 @click.option(

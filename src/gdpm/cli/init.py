@@ -7,13 +7,22 @@ from pathlib import Path
 import click
 from rich.console import Console
 
+from gdpm.cli.app import GdpmCommand
 from gdpm.config.project import ProjectConfig, write_project_config
 from gdpm.utils.godot import detect_version_constraint, parse_project_godot
 
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm init", "Initialize with auto-detected settings"),
+        ("gdpm init my-game", "Initialize with custom name"),
+        ("gdpm init --godot '>=4.3'", "Specify Godot version"),
+        ("gdpm init --force", "Overwrite existing config"),
+    ],
+)
 @click.argument("name", required=False)
 @click.option("--godot", default="", help="Godot version constraint")
 @click.option("--license", "license_id", default="MIT", help="SPDX license ID")
@@ -36,7 +45,6 @@ def init(
         )
         raise SystemExit(1)
 
-    # Auto-detect from project.godot
     project_file = project_dir / "project.godot"
     godot_project = parse_project_godot(project_file)
 

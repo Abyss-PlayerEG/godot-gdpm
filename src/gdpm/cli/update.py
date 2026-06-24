@@ -7,6 +7,7 @@ import asyncio
 import click
 from rich.console import Console
 
+from gdpm.cli.app import GdpmCommand
 from gdpm.cli.context import get_project_context, get_services
 from gdpm.cli.options import yes_option
 from gdpm.lockfile.utils import update_lockfile
@@ -16,7 +17,15 @@ from gdpm.utils.version import normalize_version
 console = Console()
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm update", "Update all plugins"),
+        ("gdpm update limbo-ai", "Update specific plugin"),
+        ("gdpm update --check", "Preview updates"),
+        ("gdpm update --latest", "Ignore version constraints"),
+    ],
+)
 @click.argument("plugins", nargs=-1)
 @click.option("--latest", is_flag=True, help="Ignore version constraints")
 @click.option(
