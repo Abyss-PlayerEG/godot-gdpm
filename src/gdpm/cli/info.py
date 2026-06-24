@@ -90,6 +90,16 @@ def info(plugin_slug: str) -> None:
             info_lines.append(f"  Store:      {detail.homepage}")
         if detail.tags:
             info_lines.append(f"  Tags:       {', '.join(detail.tags)}")
+        info_lines.append("")
+
+        if is_template(detail.tags):
+            info_lines.append(
+                "  [yellow]Project template - not installable as addon[/yellow]"
+            )
+        else:
+            info_lines.append(
+                f"  Install:    [green]gdpm add {add_route}[/green]"
+            )
 
         console.print(
             Panel(
@@ -101,14 +111,6 @@ def info(plugin_slug: str) -> None:
             )
         )
 
-        if is_template(detail.tags):
-            console.print(
-                "[yellow]Project template - not installable as addon[/yellow]"
-            )
-        else:
-            console.print(
-                f"  [bold]Install:[/bold]  [green]gdpm add {add_route}[/green]"
-            )
         console.print()
 
         if versions:
