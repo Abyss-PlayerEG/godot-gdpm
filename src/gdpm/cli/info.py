@@ -128,6 +128,7 @@ def info(plugin_slug: str) -> None:
                     title="[bold cyan]Versions[/bold cyan]",
                     border_style="dim",
                     padding=(0, 1),
+                    width=60,
                 )
             )
         console.print()
