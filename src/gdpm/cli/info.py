@@ -84,6 +84,7 @@ def info(plugin_slug: str) -> None:
         console.print(
             Panel(
                 f"  {detail.description}",
+                title="[bold cyan]Description[/bold cyan]",
                 border_style="dim",
                 padding=(1, 2),
             )
