@@ -29,10 +29,18 @@ console = Console()
 @click.option(
     "-dr", "--check", "--dry-run", is_flag=True, help="Preview changes without applying"
 )
-@click.option("--no-cache", is_flag=True, help="Don't use local cache")
+@click.option("-nc", "--no-cache", is_flag=True, help="Don't use local cache")
 def sync(frozen: bool, check: bool, no_cache: bool) -> None:
     """Sync addons/ directory to lock file state."""
     ctx = get_project_context()
+
+    # frozen mode: fail if no lock file
+    if frozen and not ctx.lock_path.exists():
+        console.print(
+            "[red]Error:[/red] No lock file found. "
+            "Run 'gdpm lock' first."
+        )
+        raise SystemExit(1)
 
     # Separate local and online plugins
     local_names = {n for n, d in ctx.all_deps.items() if d.is_local}
@@ -85,6 +93,11 @@ def sync(frozen: bool, check: bool, no_cache: bool) -> None:
         removed = 0
         errors: list[str] = []
         lock_updates: dict[str, LockEntry] = {}
+
+        # Clear cache if --no-cache
+        if no_cache:
+            svc.manager._cache.clean()
+            console.print("[dim]Cache cleared.[/dim]")
 
         try:
             for name in sorted(to_install):
@@ -150,7 +163,7 @@ def sync(frozen: bool, check: bool, no_cache: bool) -> None:
                         name=name, version="local", source="local"
                     )
 
-            if lock_updates or to_remove:
+            if not frozen and (lock_updates or to_remove):
                 update_lockfile(ctx.lock_path, lock_updates, list(to_remove))
 
         finally:
