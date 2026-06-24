@@ -30,15 +30,10 @@ console = Console()
 @click.option(
     "--sort",
     type=click.Choice(
-        [
-            "relevance",
-            "updated_desc",
-            "reviews_desc",
-            "created_desc",
-        ]
+        ["relevance", "updated_desc", "reviews_desc", "created_desc"],
     ),
     default="relevance",
-    help="Sort order",
+    help="Sort order: relevance, updated_desc, reviews_desc, created_desc",
 )
 @click.option("--all", "show_all", is_flag=True, help="Include project templates")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")

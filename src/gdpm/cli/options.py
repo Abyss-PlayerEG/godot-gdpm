@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-def yes_option[**P, T](func: Callable[P, T]) -> Callable[P, T]:
+def yes_option(func: Callable[..., object]) -> Callable[..., object]:
     """Decorator to add -y/--yes option to a command.
 
     Usage:
