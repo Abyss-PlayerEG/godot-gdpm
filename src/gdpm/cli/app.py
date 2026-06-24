@@ -37,6 +37,10 @@ COMMANDS = {
         "search": "Search Godot Asset Store",
         "info": "Show plugin details",
     },
+    "Import/Export": {
+        "export": "Export plugins to zip archive",
+        "import": "Import plugins from zip archive",
+    },
 }
 
 
@@ -168,6 +172,8 @@ def main() -> None:
 
 
 from gdpm.cli.add import add  # noqa: E402
+from gdpm.cli.export import export  # noqa: E402
+from gdpm.cli.import_cmd import import_cmd  # noqa: E402
 from gdpm.cli.info import info  # noqa: E402
 from gdpm.cli.init import init  # noqa: E402
 from gdpm.cli.list import list_cmd  # noqa: E402
@@ -179,6 +185,8 @@ from gdpm.cli.sync import sync  # noqa: E402
 from gdpm.cli.update import update  # noqa: E402
 
 main.add_command(add)
+main.add_command(export)
+main.add_command(import_cmd, "import")
 main.add_command(info)
 main.add_command(init)
 main.add_command(list_cmd, "list")
