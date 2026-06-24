@@ -18,12 +18,15 @@ from rich.progress import (
 
 from gdpm.cli.app import GdpmCommand
 from gdpm.cli.context import get_project_context, get_services
+from gdpm.cli.options import yes_option
 from gdpm.lockfile.utils import update_lockfile
 from gdpm.models.lock import LockEntry
 from gdpm.store.utils import resolve_publisher
 from gdpm.utils.tag import scan_addons
 
 console = Console()
+
+MAX_PARALLEL = 5
 
 
 @click.command(
@@ -36,39 +39,42 @@ console = Console()
 )
 @click.option("--frozen", is_flag=True, help="Strict mode for CI")
 @click.option(
-    "-dr", "--check", "--dry-run", is_flag=True, help="Preview changes without applying"
+    "-dr", "--check", "--dry-run",
+    is_flag=True,
+    help="Preview changes without applying",
 )
 @click.option("-nc", "--no-cache", is_flag=True, help="Don't use local cache")
-def sync(frozen: bool, check: bool, no_cache: bool) -> None:
+@yes_option
+def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
     """Sync addons/ directory to lock file state."""
     ctx = get_project_context()
 
-    # frozen mode: fail if no lock file
     if frozen and not ctx.lock_path.exists():
         console.print(
-            "[red]Error:[/red] No lock file found. "
-            "Run 'gdpm lock' first."
+            "[red]Error:[/red] No lock file found. Run 'gdpm lock' first."
         )
         raise SystemExit(1)
 
-    # Separate local and online plugins
     local_names = {n for n, d in ctx.all_deps.items() if d.is_local}
     online_names = set(ctx.all_deps.keys()) - local_names
 
-    # Check what's installed via tag files
     installed_by_dep: set[str] = set()
-    for _, tag in scan_addons(ctx.addons_dir):
-        for name in set(ctx.all_deps.keys()):
-            if tag.source.endswith(f"/{name}") or tag.slug == name:
-                installed_by_dep.add(name)
+    if ctx.addons_dir.exists():
+        for _, tag in scan_addons(ctx.addons_dir):
+            for name in set(ctx.all_deps.keys()):
+                if tag.source.endswith(f"/{name}") or tag.slug == name:
+                    installed_by_dep.add(name)
 
     to_install = online_names - installed_by_dep
 
-    # Check what needs to be removed
     to_remove: set[str] = set()
-    for _, tag in scan_addons(ctx.addons_dir):
-        if tag.source.endswith(f"/{tag.slug}") and tag.slug not in ctx.all_deps:
-            to_remove.add(tag.slug)
+    if ctx.addons_dir.exists():
+        for _, tag in scan_addons(ctx.addons_dir):
+            if (
+                tag.source.endswith(f"/{tag.slug}")
+                and tag.slug not in ctx.all_deps
+            ):
+                to_remove.add(tag.slug)
 
     if not to_install and not to_remove:
         console.print("[green]✓[/green] Everything is up to date. Nothing to do.")
@@ -90,7 +96,6 @@ def sync(frozen: bool, check: bool, no_cache: bool) -> None:
     async def _sync() -> None:
         from gdpm.utils.local import sync_local_plugins
 
-        # Step 1: Sync local plugins
         local_synced = sync_local_plugins(ctx.root, ctx.addons_dir)
         if local_synced:
             console.print(
@@ -98,128 +103,134 @@ def sync(frozen: bool, check: bool, no_cache: bool) -> None:
             )
 
         svc = get_services(ctx)
-        installed = 0
-        removed = 0
         errors: list[str] = []
         lock_updates: dict[str, LockEntry] = {}
 
-        # Clear cache if --no-cache
         if no_cache:
             svc.manager._cache.clean()
             console.print("[dim]Cache cleared.[/dim]")
 
-        try:
-            for name in sorted(to_install):
-                entry = ctx.lock_map.get(name)
-                deps = ctx.all_deps.get(name)
-                dest_path = deps.path if deps else ""
+        # Prepare download tasks
+        download_tasks: list[tuple[str, str, str]] = []
 
-                if not entry:
-                    if deps:
-                        resolved = await resolve_publisher(svc.store, name)
-                        if resolved.found:
-                            try:
-                                with Progress(
-                                    TextColumn(
-                                        "[bold blue]{task.fields[name]}[/bold blue]"
-                                    ),
-                                    BarColumn(),
-                                    DownloadColumn(),
-                                    TransferSpeedColumn(),
-                                    TimeRemainingColumn(),
-                                ) as progress:
-                                    task_id = progress.add_task(
-                                        "download",
-                                        name=name,
-                                        total=None,
-                                    )
+        for name in sorted(to_install):
+            entry = ctx.lock_map.get(name)
+            deps = ctx.all_deps.get(name)
+            dest_path = deps.path if deps else ""
 
-                                    def on_progress(
-                                        current: int,
-                                        total: int,
-                                        speed: float,
-                                        _task: TaskID = task_id,
-                                    ) -> None:
-                                        if (
-                                            progress.tasks[_task].total
-                                            is None
-                                        ):
-                                            progress.update(
-                                                _task, total=total
-                                            )
-                                        progress.update(
-                                            _task, completed=current
-                                        )
+            if entry:
+                publisher = entry.source.replace("store+", "").split("/")[0]
+                download_tasks.append((name, publisher, entry.version.lstrip("v")))
+            elif deps:
+                resolved = await resolve_publisher(svc.store, name)
+                if resolved.found:
+                    download_tasks.append((name, resolved.publisher, ""))
+                else:
+                    errors.append(f"Plugin '{name}' not found in Store")
 
-                                    zip_path, ver = (
-                                        await svc.manager.download(
-                                            resolved.publisher,
-                                            name,
-                                            on_progress=on_progress,
-                                        )
-                                    )
-                                svc.manager.install_from_zip(
-                                    zip_path, name, resolved.publisher, dest_path
-                                )
-                                installed += 1
-                                console.print(
-                                    f"[green]✓[/green] Installed "
-                                    f"[bold]{name}[/bold] {ver}"
-                                )
-                                lock_updates[name] = LockEntry(
-                                    name=name,
-                                    version=ver,
-                                    source=f"store+{resolved.publisher}/{name}",
-                                )
-                            except Exception as e:
-                                errors.append(f"Failed to install {name}: {e}")
-                        else:
-                            errors.append(f"Plugin '{name}' not found in Store")
+        # Download in parallel
+        if download_tasks:
+            console.print(
+                f"\nDownloading {len(download_tasks)} plugin(s) "
+                f"(max {MAX_PARALLEL} parallel)...\n"
+            )
+
+            semaphore = asyncio.Semaphore(MAX_PARALLEL)
+            progress = Progress(
+                TextColumn("[bold blue]{task.fields[name]}"),
+                BarColumn(),
+                DownloadColumn(),
+                TransferSpeedColumn(),
+                TimeRemainingColumn(),
+            )
+
+            async def download_one(
+                name: str, publisher: str, version: str
+            ) -> tuple[str, str, str, bool]:
+                async with semaphore:
+                    task_id = progress.add_task(
+                        "download", name=name, total=None
+                    )
+
+                    def on_progress(
+                        current: int, total: int, speed: float,
+                        _task: TaskID = task_id,
+                    ) -> None:
+                        if progress.tasks[_task].total is None:
+                            progress.update(_task, total=total)
+                        progress.update(_task, completed=current)
+
+                    try:
+                        _zip_path, ver = await svc.manager.download(
+                            publisher, name, version, on_progress=on_progress
+                        )
+                        return name, ver, publisher, True
+                    except Exception:
+                        return name, "", publisher, False
+
+            with progress:
+                results = await asyncio.gather(
+                    *[download_one(n, p, v) for n, p, v in download_tasks]
+                )
+
+            # Install downloaded plugins
+            for name, ver, publisher, success in results:
+                if not success:
+                    errors.append(f"Failed to download {name}")
                     continue
 
-                publisher = entry.source.replace("store+", "").split("/")[0]
-                try:
-                    zip_path, ver = await svc.manager.download(
-                        publisher, name, entry.version.lstrip("v")
-                    )
-                    svc.manager.install_from_zip(zip_path, name, publisher, dest_path)
-                    installed += 1
-                    console.print(
-                        f"[green]✓[/green] Installed "
-                        f"[bold]{name}[/bold] {entry.version}"
-                    )
-                    lock_updates[name] = LockEntry(
-                        name=name,
-                        version=entry.version,
-                        source=entry.source,
-                    )
-                except Exception as e:
-                    errors.append(f"Failed to install {name}: {e}")
-
-            for name in sorted(to_remove):
-                svc.manager.remove(name)
-                removed += 1
-                console.print(f"[green]✓[/green] Removed [bold]{name}[/bold]")
-
-            # Update lock file
-            if local_synced:
-                for name in local_synced:
-                    lock_updates[name] = LockEntry(
-                        name=name, version="local", source="local"
+                zip_path_local = svc.manager._cache.get(
+                    f"{publisher}_{name}_{ver}.zip"
+                )
+                if not zip_path_local:
+                    zip_path_local = svc.manager._cache.get(
+                        f"{publisher}_{name}_{ver.lstrip('v')}.zip"
                     )
 
-            if not frozen and (lock_updates or to_remove):
-                update_lockfile(ctx.lock_path, lock_updates, list(to_remove))
+                if zip_path_local:
+                    deps = ctx.all_deps.get(name)
+                    dest_path = deps.path if deps else ""
+                    try:
+                        svc.manager.install_from_zip(
+                            zip_path_local, name, publisher, dest_path
+                        )
+                        lock_updates[name] = LockEntry(
+                            name=name,
+                            version=ver,
+                            source=f"store+{publisher}/{name}",
+                        )
+                        console.print(
+                            f"  [green]✓[/green] Installed "
+                            f"[bold]{name}[/bold] {ver}"
+                        )
+                    except Exception as e:
+                        errors.append(f"Failed to install {name}: {e}")
 
-        finally:
-            await svc.store.close()
+        # Remove plugins
+        for name in sorted(to_remove):
+            svc.manager.remove(name)
+            console.print(f"  [green]✓[/green] Removed [bold]{name}[/bold]")
+
+        # Update lock file
+        if local_synced:
+            for name in local_synced:
+                lock_updates[name] = LockEntry(
+                    name=name, version="local", source="local"
+                )
+
+        if not frozen and (lock_updates or to_remove):
+            update_lockfile(ctx.lock_path, lock_updates, list(to_remove))
+
+        await svc.store.close()
 
         console.print()
         summary = []
-        if installed:
-            summary.append(f"{installed} installed")
-        if removed:
-            summary.append(f"{removed} removed")
+        installed_count = len(lock_updates)
+        removed_count = len(to_remove)
+        if installed_count:
+            summary.append(f"{installed_count} installed")
+        if removed_count:
+            summary.append(f"{removed_count} removed")
         if errors:
             summary.append(f"{len(errors)} errors")
 
