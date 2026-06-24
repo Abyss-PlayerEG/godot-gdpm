@@ -34,6 +34,7 @@ console = Console()
     cls=GdpmCommand,
     examples=[
         ("gdpm add limbo-ai", "Add plugin from Godot Store"),
+        ("gdpm add limofeus/limbo-ai", "Add with publisher/slug"),
         ("gdpm add limbo-ai@1.5.0", "Add specific version"),
         ("gdpm add limbo-ai@^1.0.0", "Add with version constraint"),
         ("gdpm add --dev gdunit4", "Add as dev dependency"),
