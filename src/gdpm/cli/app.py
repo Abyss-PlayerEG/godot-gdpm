@@ -80,8 +80,8 @@ class GdpmGroup(click.Group):
                 padding=(0, 2),
                 width=terminal_width - 6,
             )
-            table.add_column("Command", style="green", min_width=12)
-            table.add_column("Description")
+            table.add_column("Command", style="green", min_width=12, justify="left")
+            table.add_column("Description", justify="left")
 
             for cmd_name, desc in cmds.items():
                 table.add_row(f"  {cmd_name}", desc)
@@ -167,8 +167,8 @@ class GdpmCommand(click.Command):
                 header_style="bold",
                 padding=(0, 2),
             )
-            table.add_column("Option", style="green", min_width=20)
-            table.add_column("Description")
+            table.add_column("Option", style="green", min_width=20, justify="left")
+            table.add_column("Description", justify="left")
 
             for param in options:
                 if not isinstance(param, click.Option):
