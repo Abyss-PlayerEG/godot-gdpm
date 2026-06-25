@@ -49,6 +49,7 @@ COMMANDS = {
 class GdpmGroup(click.Group):
     def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
         terminal_width = console.width
+        console.print()
 
         for category, cmds in COMMANDS.items():
             table = Table(
