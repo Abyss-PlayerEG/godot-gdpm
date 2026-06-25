@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,7 +21,11 @@ class GlobalConfig:
 
     def __post_init__(self) -> None:
         if not self.cache_dir:
-            self.cache_dir = str(Path(platformdirs.user_cache_dir("gdpm")))
+            env_dir = os.environ.get("GDPM_CACHE_DIR")
+            if env_dir:
+                self.cache_dir = env_dir
+            else:
+                self.cache_dir = str(Path.home() / ".gdpm" / "cache")
 
 
 def get_config_path() -> Path:

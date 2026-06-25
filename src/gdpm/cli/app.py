@@ -305,6 +305,7 @@ def main() -> None:
 
 
 from gdpm.cli.add import add as add_cmd  # noqa: E402
+from gdpm.cli.cache_cmd import cache as cache_cmd  # noqa: E402
 from gdpm.cli.export import export as export_cmd  # noqa: E402
 from gdpm.cli.import_cmd import import_cmd as import_cmd_  # noqa: E402
 from gdpm.cli.info import info as info_cmd  # noqa: E402
@@ -318,6 +319,7 @@ from gdpm.cli.sync import sync as sync_cmd  # noqa: E402
 from gdpm.cli.update import update as update_cmd  # noqa: E402
 
 main.add_command(add_cmd, "add")  # type: ignore[has-type]
+main.add_command(cache_cmd, "cache")
 main.add_command(export_cmd, "export")
 main.add_command(import_cmd_, "import")
 main.add_command(info_cmd, "info")

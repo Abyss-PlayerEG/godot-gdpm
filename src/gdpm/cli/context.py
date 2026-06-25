@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from gdpm.cache.file_cache import FileCache
 from gdpm.cli.common import require_project
+from gdpm.config.global_config import read_global_config
 from gdpm.config.project import ProjectConfig, read_project_config
 from gdpm.installer.manager import PluginManager
 from gdpm.lockfile.lock import find_lockfile, read_lockfile
 from gdpm.store.client import StoreClient
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from gdpm.models.dependency import Dependency
     from gdpm.models.lock import LockEntry
 
@@ -61,6 +61,7 @@ def get_project_context() -> ProjectContext:
 def get_services(ctx: ProjectContext) -> ServiceContext:
     """Create store and manager instances."""
     store = StoreClient()
-    cache = FileCache(ctx.root / ".gdpm" / "cache")
+    global_config = read_global_config()
+    cache = FileCache(Path(global_config.cache_dir))
     manager = PluginManager(ctx.addons_dir, cache, store)
     return ServiceContext(store=store, manager=manager)

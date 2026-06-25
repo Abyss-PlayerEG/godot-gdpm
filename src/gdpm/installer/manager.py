@@ -97,7 +97,7 @@ class PluginManager:
         )
 
         # Update cache index
-        self._index.put(cache_key, zip_path.name, ver, zip_path)
+        self._index.put(cache_key, zip_path.name, zip_path)
 
         return zip_path, ver
 
