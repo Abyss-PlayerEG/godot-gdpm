@@ -286,8 +286,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
         + Text(tag_display, style="dim")
     )
     info_lines.append(Text("  Godot Dependency Package Manager", style="dim"))
-    info_lines.append(Text(f"  Install: {install_type}", style="dim"))
-    info_lines.append(Text(f"  Platform: {platform_info}", style="dim"))
+    info_lines.append(Text(f"  Install: {install_type}  |  Platform: {platform_info}", style="dim"))
     info_lines.append(Text(""))
     info_lines.append(
         Text("  GitHub: ", style="dim")
