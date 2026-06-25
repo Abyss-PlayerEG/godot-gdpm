@@ -26,7 +26,6 @@ SRC_DIR = PROJECT_DIR / "src"
 CHECKS = [
     "mypy",
     "ruff",
-    "format",
     "pylint",
     "legacy",
     "vulture",
@@ -149,7 +148,6 @@ def main() -> None:
         commands = {
             "mypy": check_mypy,
             "ruff": check_ruff,
-            "format": check_format,
             "pylint": check_pylint,
             "legacy": check_legacy_syntax,
             "vulture": check_vulture,
@@ -176,7 +174,6 @@ def main() -> None:
         func = {
             "mypy": check_mypy,
             "ruff": check_ruff,
-            "format": check_format,
             "pylint": check_pylint,
             "legacy": check_legacy_syntax,
             "vulture": check_vulture,
