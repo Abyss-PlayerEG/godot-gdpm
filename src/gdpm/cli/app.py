@@ -240,9 +240,16 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
     tag_display = f"[{__tag__}]" if __tag__ else ""
 
     if tag_display:
-        console.print(f"gdpm v{base_version} {tag_display}")
+        console.print(
+            Text("gdpm", style="bold white")
+            + Text(f" v{base_version}", style="yellow")
+            + Text(f" {tag_display}", style="dim")
+        )
     else:
-        console.print(f"gdpm v{base_version}")
+        console.print(
+            Text("gdpm", style="bold white")
+            + Text(f" v{base_version}", style="yellow")
+        )
     ctx.exit()
 
 
