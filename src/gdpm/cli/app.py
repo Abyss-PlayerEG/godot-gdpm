@@ -196,21 +196,33 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
     tag_display = f" [{__tag__}]" if __tag__ else ""
 
-    console.print()
-    console.print(Text(BANNER, style="bold cyan"))
-    console.print()
-    console.print(
+    info_lines = []
+    info_lines.append(Text(BANNER, style="bold cyan"))
+    info_lines.append(Text(""))
+    info_lines.append(
         Text("  gdpm", style="bold white")
         + Text(f" v{base_version}", style="yellow")
         + Text(tag_display, style="dim")
     )
-    console.print(Text("  Godot Dependency Package Manager", style="dim"))
-    console.print()
-    console.print(
+    info_lines.append(Text("  Godot Dependency Package Manager", style="dim"))
+    info_lines.append(Text(""))
+    info_lines.append(
         Text("  GitHub: ", style="dim")
         + Text(
             "https://github.com/Abyss-PlayerEG/godot-gdpm",
             style="blue underline",
+        )
+    )
+
+    terminal_width = console.width
+    console.print()
+    console.print(
+        Panel(
+            "\n".join(str(line) for line in info_lines),
+            title="[bold cyan]gdpm[/bold cyan]",
+            border_style="dim",
+            padding=(1, 2),
+            width=min(terminal_width, 90),
         )
     )
     console.print()
