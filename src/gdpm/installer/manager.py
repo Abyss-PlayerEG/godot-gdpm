@@ -47,6 +47,7 @@ class PluginManager:
         slug: str,
         version: str = "",
         on_progress: ProgressCallback | None = None,
+        use_cache: bool = True,
     ) -> tuple[Path, str]:
         # If no version specified, get latest from API
         if not version:
@@ -60,17 +61,18 @@ class PluginManager:
                 ver = f"v{ver}"
 
         # Check cache index first
-        cache_key = make_cache_key(publisher, slug, ver)
-        entry = self._index.get(cache_key)
+        if use_cache:
+            cache_key = make_cache_key(publisher, slug, ver)
+            entry = self._index.get(cache_key)
 
-        if entry:
-            letter = publisher[0].lower() if publisher else "x"
-            cached_path = self._cache.path / letter / entry.file
-            if cached_path.exists():
-                return cached_path, ver
-            else:
-                # File missing, clean stale index entry
-                self._index.remove(cache_key)
+            if entry:
+                letter = publisher[0].lower() if publisher else "x"
+                cached_path = self._cache.path / letter / entry.file
+                if cached_path.exists():
+                    return cached_path, ver
+                else:
+                    # File missing, clean stale index entry
+                    self._index.remove(cache_key)
 
         # Cache miss - need to download
         if version:
