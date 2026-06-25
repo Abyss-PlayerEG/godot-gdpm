@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import click
+from rich import box
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand
@@ -57,15 +59,33 @@ def list_cmd(outdated: bool, as_json: bool) -> None:
         console.print("  Use [bold]gdpm add <plugin>[/bold] to install plugins.")
         return
 
-    console.print(f"[bold]Installed plugins ({len(installed)}):[/bold]\n")
+    terminal_width = console.width
 
-    table = Table(show_header=True, header_style="bold", box=None)
+    table = Table(
+        box=box.SIMPLE,
+        show_header=True,
+        header_style="bold magenta",
+        padding=(0, 2),
+        width=min(terminal_width - 6, 90),
+    )
     table.add_column("Plugin", style="cyan", min_width=20)
-    table.add_column("Version", min_width=10)
+    table.add_column("Version", style="green", min_width=10)
     table.add_column("Source", style="dim")
 
     for p in installed:
-        table.add_row(p["name"], p["version"], p["source"])
+        version = p["version"]
+        if version == "local":
+            version = f"[yellow]{version}[/yellow]"
+        table.add_row(p["name"], version, p["source"])
 
-    console.print(table)
+    console.print()
+    console.print(
+        Panel(
+            table,
+            title=f"[bold cyan]Installed Plugins ({len(installed)})[/bold cyan]",
+            border_style="dim",
+            padding=(0, 1),
+            width=min(terminal_width, 90),
+        )
+    )
     console.print()
