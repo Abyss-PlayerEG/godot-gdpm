@@ -64,9 +64,10 @@ class PluginManager:
         entry = self._index.get(cache_key)
 
         if entry:
-            cached_path = self._cache.path / entry.file
+            letter = publisher[0].lower() if publisher else "x"
+            cached_path = self._cache.path / letter / entry.file
             if cached_path.exists():
-                return cached_path, entry.version
+                return cached_path, ver
             else:
                 # File missing, clean stale index entry
                 self._index.remove(cache_key)
