@@ -221,7 +221,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     console.print(
         Panel(
             Group(*info_lines),
-            title="[bold cyan]gdpm[/bold cyan]",
+            title="[bold cyan]GDPM-Info[/bold cyan]",
             border_style="dim",
             padding=(1, 2),
             width=min(terminal_width, 90),
