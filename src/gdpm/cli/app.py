@@ -48,28 +48,6 @@ COMMANDS = {
 
 class GdpmGroup(click.Group):
     def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        console.print()
-        console.print(Text(BANNER, style="bold cyan"))
-        console.print(Text(f"  v{__version__}", style="dim"))
-        console.print()
-        console.print(
-            Text("  [DEV] ", style="bold yellow")
-            + Text("This project is under active development.", style="dim")
-        )
-        console.print(
-            Text("  Report issues: ", style="dim")
-            + Text(
-                "https://github.com/Abyss-PlayerEG/godot-gdpm/issues",
-                style="blue underline",
-            )
-        )
-        console.print()
-        console.print(Text("  Godot Dependency Package Manager", style="bold white"))
-        console.print(
-            Text("  https://github.com/Abyss-PlayerEG/godot-gdpm", style="dim")
-        )
-        console.print()
-
         terminal_width = console.width
 
         for category, cmds in COMMANDS.items():
@@ -112,9 +90,10 @@ class GdpmGroup(click.Group):
         console.print()
         console.print(
             Panel(
-                Text("  -h, --help     Show help message\n", style="dim")
-                + Text("  -V, --version  Show version\n", style="dim")
-                + Text("  -y, --yes      Skip confirmation prompts", style="dim"),
+                Text("  -h, --help      Show help message\n", style="dim")
+                + Text("  -i, --info      Show project info and version\n", style="dim")
+                + Text("  -V, --version   Show version\n", style="dim")
+                + Text("  -y, --yes       Skip confirmation prompts", style="dim"),
                 title="[bold cyan]Common Options[/bold cyan]",
                 border_style="dim",
                 padding=(0, 1),
@@ -211,8 +190,8 @@ class GdpmCommand(click.Command):
         console.print()
 
 
-def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
-    """Print formatted version info."""
+def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
+    """Print project info with banner and version."""
     if not value:
         return
 
@@ -232,6 +211,10 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
     console.print(Text("  Godot Dependency Package Manager", style="dim"))
     console.print()
     console.print(
+        Text("  [DEV] ", style="bold yellow")
+        + Text("This project is under active development.", style="dim")
+    )
+    console.print(
         Text("  Report issues: ", style="dim")
         + Text(
             "https://github.com/Abyss-PlayerEG/godot-gdpm/issues",
@@ -239,10 +222,43 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
         )
     )
     console.print()
+    console.print(
+        Text("  GitHub: ", style="dim")
+        + Text(
+            "https://github.com/Abyss-PlayerEG/godot-gdpm",
+            style="blue underline",
+        )
+    )
+    console.print()
+    ctx.exit()
+
+
+def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
+    """Print version info."""
+    if not value:
+        return
+
+    import re
+
+    base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
+    tag_display = f"[{__tag__}]" if __tag__ else ""
+
+    if tag_display:
+        console.print(f"gdpm v{base_version} {tag_display}")
+    else:
+        console.print(f"gdpm v{base_version}")
     ctx.exit()
 
 
 @click.group(cls=GdpmGroup, context_settings={"help_option_names": ["-h", "--help"]})
+@click.option(
+    "-i", "--info",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=print_info,
+    help="Show project info and version.",
+)
 @click.option(
     "-V",
     "--version",
