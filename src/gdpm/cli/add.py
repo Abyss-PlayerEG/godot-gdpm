@@ -62,10 +62,49 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
         lock_updates: dict[str, LockEntry] = {}
 
         try:
+            resolved_data: dict[str, tuple[str, str]] = {}
+            version_data: dict[str, list[dict[str, str]]] = {}
+
+            with console.status("Loading...", spinner="dots"):
+                for plugin_spec in plugins:
+                    name, version_constraint = _parse_spec(plugin_spec)
+
+                    if (
+                        name in ctx.config.dependencies
+                        or name in ctx.config.dev_dependencies
+                    ):
+                        continue
+
+                    resolved = await resolve_publisher(svc.store, name)
+                    if not resolved.found:
+                        errors.append(resolved.error)
+                        continue
+
+                    resolved_data[name] = (resolved.publisher, resolved.slug)
+
+                    try:
+                        detail = await svc.store.get_plugin(
+                            resolved.publisher, resolved.slug
+                        )
+                        if is_template(detail.tags):
+                            errors.append(
+                                f"'{resolved.slug}' is a project template,"
+                                f" not an addon."
+                            )
+                            resolved_data.pop(name, None)
+                            continue
+                    except Exception:
+                        pass
+
+                    versions = await svc.store.get_versions(
+                        resolved.publisher, resolved.slug
+                    )
+                    if versions:
+                        version_data[name] = versions
+
             for plugin_spec in plugins:
                 name, version_constraint = _parse_spec(plugin_spec)
 
-                # Check if already in dependencies
                 if (
                     name in ctx.config.dependencies
                     or name in ctx.config.dev_dependencies
@@ -76,49 +115,33 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                     )
                     continue
 
-                # Resolve publisher
-                resolved = await resolve_publisher(svc.store, name)
-                if not resolved.found:
-                    errors.append(resolved.error)
+                if name not in resolved_data:
                     continue
 
-                publisher = resolved.publisher
-                slug = resolved.slug
+                publisher, slug = resolved_data[name]
 
-                # Check if template
-                try:
-                    detail = await svc.store.get_plugin(publisher, slug)
-                    if is_template(detail.tags):
-                        errors.append(f"'{slug}' is a project template, not an addon.")
-                        continue
-                except Exception:
-                    pass
+                versions = version_data.get(name, [])
+                target_ver = versions[0].get("version", "") if versions else ""
+                if version_constraint and versions:
+                    from gdpm.models.version import Version, VersionConstraint
 
-                # Show version info
-                versions = await svc.store.get_versions(publisher, slug)
-                if versions:
-                    # Find the version that matches the constraint
-                    target_ver = versions[0].get("version", "")
-                    if version_constraint:
-                        from gdpm.models.version import Version, VersionConstraint
+                    constraint = VersionConstraint(version_constraint)
+                    for v in versions:
+                        api_ver = v.get("version", "").lstrip("v")
+                        try:
+                            if constraint.matches(Version(api_ver)):
+                                target_ver = v.get("version", "")
+                                break
+                        except Exception:
+                            pass
 
-                        constraint = VersionConstraint(version_constraint)
-                        for v in versions:
-                            api_ver = v.get("version", "").lstrip("v")
-                            try:
-                                if constraint.matches(Version(api_ver)):
-                                    target_ver = v.get("version", "")
-                                    break
-                            except Exception:
-                                pass
-
+                if target_ver:
                     if target_ver.startswith(("v", "V")):
                         ver_display = target_ver
                     else:
                         ver_display = f"v{target_ver}"
                     console.print(f"  [dim]{ver_display}[/dim]")
 
-                # Download and install
                 try:
                     with Progress(
                         TextColumn("[bold blue]{task.fields[name]}"),
@@ -166,7 +189,8 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
 
                 except Exception as e:
                     if "404" in str(e):
-                        search_results = await svc.store.search(slug, limit=5)
+                        with console.status("Loading...", spinner="dots"):
+                            search_results = await svc.store.search(slug, limit=5)
                         exact = next(
                             (r for r in search_results if r.slug == slug),
                             None,
@@ -182,7 +206,6 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                         errors.append(f"Failed to install {slug}: {e}")
                     continue
 
-                # Update config
                 dep = Dependency.from_spec(
                     slug,
                     version_constraint or result["version"],

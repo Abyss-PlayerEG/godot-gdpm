@@ -60,6 +60,31 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
         results: list[dict[str, str]] = []
 
         try:
+            version_map: dict[str, str] = {}
+            with console.status("Loading...", spinner="dots"):
+                for plugin in installed:
+                    slug = plugin["slug"]
+                    is_local = plugin.get("is_local", "False") == "True"
+
+                    if is_local:
+                        continue
+
+                    source = plugin["source"]
+                    publisher = ""
+                    if "/" in source:
+                        clean = source.replace("store+", "")
+                        parts = clean.split("/")
+                        if len(parts) >= 2:
+                            publisher = parts[0]
+
+                    if publisher:
+                        try:
+                            versions = await store.get_versions(publisher, slug)
+                            if versions:
+                                version_map[slug] = versions[0].get("version", "")
+                        except Exception:
+                            pass
+
             for plugin in installed:
                 slug = plugin["slug"]
                 current_ver = plugin["version"]
@@ -76,24 +101,7 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                     )
                     continue
 
-                source = plugin["source"]
-                publisher = ""
-                if "/" in source:
-                    clean = source.replace("store+", "")
-                    parts = clean.split("/")
-                    if len(parts) >= 2:
-                        publisher = parts[0]
-
-                latest_ver = current_ver
-                if publisher:
-                    try:
-                        versions = await store.get_versions(publisher, slug)
-                        if versions:
-                            latest_ver = versions[0].get("version", current_ver)
-                    except Exception as e:
-                        console.print(
-                            f"  [dim]Failed to fetch versions for {slug}: {e}[/dim]"
-                        )
+                latest_ver = version_map.get(slug, current_ver)
 
                 current_norm = normalize_version(current_ver.lstrip("vV"))
                 latest_norm = normalize_version(latest_ver.lstrip("vV"))

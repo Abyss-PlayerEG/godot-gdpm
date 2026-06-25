@@ -38,8 +38,29 @@ def lock(check: bool) -> None:
         try:
             console.print("Resolving dependencies...")
 
+            with console.status("Loading...", spinner="dots"):
+                version_data: dict[str, tuple[str, list[dict[str, str]]]] = {}
+                for name, dep in ctx.all_deps.items():
+                    if dep.is_local:
+                        continue
+
+                    if dep.publisher_slug:
+                        publisher = dep.publisher_slug
+                    else:
+                        resolved = await resolve_publisher(store, name)
+                        if not resolved.found:
+                            errors.append(resolved.error)
+                            continue
+                        publisher = resolved.publisher
+
+                    versions = await store.get_versions(publisher, name)
+                    if not versions:
+                        errors.append(f"No versions found for '{name}'")
+                        continue
+
+                    version_data[name] = (publisher, versions)
+
             for name, dep in ctx.all_deps.items():
-                # Local plugins
                 if dep.is_local:
                     console.print(f"  {name} (local)")
                     entries.append(
@@ -47,23 +68,11 @@ def lock(check: bool) -> None:
                     )
                     continue
 
-                # Resolve publisher
-                if dep.publisher_slug:
-                    publisher = dep.publisher_slug
-                else:
-                    resolved = await resolve_publisher(store, name)
-                    if not resolved.found:
-                        errors.append(resolved.error)
-                        continue
-                    publisher = resolved.publisher
-
-                # Get versions
-                versions = await store.get_versions(publisher, name)
-                if not versions:
-                    errors.append(f"No versions found for '{name}'")
+                if name not in version_data:
                     continue
 
-                # Match version
+                publisher, versions = version_data[name]
+
                 matched = None
                 for v in versions:
                     api_ver = v["version"].lstrip("v")

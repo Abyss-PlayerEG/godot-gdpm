@@ -113,6 +113,7 @@ disable = [
     "no-else-return",
     "cell-var-from-loop",
     "protected-access",
+    "try-except-raise",
     "unrecognized-option",
 ]
 

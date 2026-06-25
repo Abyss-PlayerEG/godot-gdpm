@@ -89,64 +89,70 @@ def import_cmd(source: str, yes: bool) -> None:
             manager = PluginManager(addons_dir, cache, store)
 
             try:
-                for p in store_plugins:
-                    name = p["name"]
-                    publisher = p.get("publisher", "")
-                    version = p.get("version", "")
+                download_results: list[
+                    tuple[dict[str, str], Path, str, str, Exception | None]
+                ] = []
 
-                    # Check if already installed
-                    existing = config.dependencies.get(name)
-                    if existing:
-                        entry = lock_entries.get(name)
-                        if entry and entry.version == version:
-                            console.print(
-                                f"  [dim]○ {name} {version} "
-                                "(already installed, skipped)[/dim]"
-                            )
-                            continue
-                        if not yes:
-                            old_ver = entry.version if entry else "?"
-                            if (
-                                not console.input(
-                                    f"  [yellow]?[/yellow] {name} "
-                                    f"v{old_ver} → v{version}? (y/n): "
-                                )
-                                .strip()
-                                .lower()
-                                .startswith("y")
-                            ):
-                                console.print(f"  [dim]○ {name} (skipped)[/dim]")
+                with console.status("Loading...", spinner="dots"):
+                    for p in store_plugins:
+                        name = p["name"]
+                        publisher = p.get("publisher", "")
+                        version = p.get("version", "")
+
+                        existing = config.dependencies.get(name)
+                        if existing:
+                            entry = lock_entries.get(name)
+                            if entry and entry.version == version:
                                 continue
+                            if not yes:
+                                old_ver = entry.version if entry else "?"
+                                if (
+                                    not console.input(
+                                        f"  [yellow]?[/yellow] {name} "
+                                        f"v{old_ver} → v{version}? (y/n): "
+                                    )
+                                    .strip()
+                                    .lower()
+                                    .startswith("y")
+                                ):
+                                    continue
 
-                    if not publisher:
-                        src = p.get("source", "")
-                        if "/" in src:
-                            publisher = src.split("/")[-2]
+                        if not publisher:
+                            src = p.get("source", "")
+                            if "/" in src:
+                                publisher = src.split("/")[-2]
 
-                    if not publisher:
-                        errors.append(f"Cannot resolve publisher for '{name}'")
+                        if not publisher:
+                            errors.append(f"Cannot resolve publisher for '{name}'")
+                            continue
+
+                        try:
+                            ver_to_get = version.lstrip("v") if version else ""
+                            zip_dl, ver = await manager.download(
+                                publisher, name, ver_to_get
+                            )
+                            download_results.append((p, zip_dl, ver, publisher, None))
+                        except Exception as e:
+                            download_results.append((p, Path(), "", publisher, e))
+
+                for p, zip_dl, ver, publisher, err in download_results:
+                    name = p["name"]
+                    if err:
+                        errors.append(f"Failed to install {name}: {err}")
                         continue
 
-                    try:
-                        ver_to_get = version.lstrip("v") if version else ""
-                        zip_dl, ver = await manager.download(
-                            publisher, name, ver_to_get
-                        )
-                        manager.install_from_zip(zip_dl, name, publisher)
-
-                        lock_updates[name] = LockEntry(
-                            name=name,
-                            version=ver,
-                            source=f"store+{publisher}/{name}",
-                        )
-                        dep = Dependency.from_spec(name, ver, publisher_slug=publisher)
-                        config.dependencies[name] = dep
-                        imported += 1
-                        console.print(
-                            f"[green]✓[/green] Installed [bold]{name}[/bold] {ver}"
-                        )
-                    except Exception as e:
-                        errors.append(f"Failed to install {name}: {e}")
+                    manager.install_from_zip(zip_dl, name, publisher)
+                    lock_updates[name] = LockEntry(
+                        name=name,
+                        version=ver,
+                        source=f"store+{publisher}/{name}",
+                    )
+                    dep = Dependency.from_spec(name, ver, publisher_slug=publisher)
+                    config.dependencies[name] = dep
+                    imported += 1
+                    console.print(
+                        f"[green]✓[/green] Installed [bold]{name}[/bold] {ver}"
+                    )
             finally:
                 await store.close()
 
