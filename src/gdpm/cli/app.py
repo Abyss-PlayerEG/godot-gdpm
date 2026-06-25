@@ -37,13 +37,11 @@ COMMANDS = {
         "update": "Update plugins to newer versions",
         "search": "Search Godot Asset Store",
         "info": "Show plugin details",
+        "cache": "Manage global cache (info, clean)",
     },
     "Import/Export": {
         "export": "Export plugins to zip archive",
         "import": "Import plugins from zip archive",
-    },
-    "Cache": {
-        "cache": "Manage global cache (info, clean)",
     },
 }
 
@@ -51,6 +49,7 @@ COMMANDS = {
 class GdpmGroup(click.Group):
     def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
         terminal_width = console.width
+        panel_width = min(terminal_width - 6, 80)
         console.print()
 
         for category, cmds in COMMANDS.items():
@@ -59,9 +58,9 @@ class GdpmGroup(click.Group):
                 show_header=True,
                 header_style="bold magenta",
                 padding=(0, 2),
-                width=min(terminal_width - 6, 90),
+                width=panel_width - 4,
             )
-            table.add_column("Command", style="green", min_width=12, justify="left")
+            table.add_column("Command", style="green", width=16, justify="left")
             table.add_column("Description", justify="left")
 
             for cmd_name, desc in cmds.items():
@@ -73,7 +72,7 @@ class GdpmGroup(click.Group):
                     title=f"[bold cyan]{category}[/bold cyan]",
                     border_style="dim",
                     padding=(0, 1),
-                    width=min(terminal_width, 90),
+                    width=panel_width,
                 )
             )
 
