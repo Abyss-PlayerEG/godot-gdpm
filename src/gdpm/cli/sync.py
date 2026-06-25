@@ -130,8 +130,8 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
         # Download in parallel
         if download_tasks:
             console.print(
-                f"\nDownloading {len(download_tasks)} plugin(s) "
-                f"(max {MAX_PARALLEL} parallel)...\n"
+                f"Downloading {len(download_tasks)} plugin(s) "
+                f"(max {MAX_PARALLEL} parallel)..."
             )
 
             semaphore = asyncio.Semaphore(MAX_PARALLEL)
