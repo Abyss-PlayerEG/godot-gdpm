@@ -61,8 +61,8 @@ class PluginManager:
                 ver = f"v{ver}"
 
         # Check cache index first
+        cache_key = make_cache_key(publisher, slug, ver)
         if use_cache:
-            cache_key = make_cache_key(publisher, slug, ver)
             entry = self._index.get(cache_key)
 
             if entry:
