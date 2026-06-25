@@ -33,12 +33,13 @@ def list_cmd(outdated: bool, as_json: bool) -> None:
 
     installed: list[dict[str, str]] = []
 
-    for _, tag in scan_addons(addons_dir):
+    for addon_path, tag in scan_addons(addons_dir):
         locked = lock_entries.get(tag.slug)
         version = "local" if tag.is_local else (locked.version if locked else "?")
 
         installed.append(
             {
+                "name": addon_path.name,
                 "slug": tag.slug,
                 "version": version,
                 "source": tag.source,
@@ -64,7 +65,7 @@ def list_cmd(outdated: bool, as_json: bool) -> None:
     table.add_column("Source", style="dim")
 
     for p in installed:
-        table.add_row(p["slug"], p["version"], p["source"])
+        table.add_row(p["name"], p["version"], p["source"])
 
     console.print(table)
     console.print()
