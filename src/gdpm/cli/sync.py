@@ -176,6 +176,7 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                 )
 
             # Install downloaded plugins
+            installed_lines = []
             for name, ver, publisher, success, zip_path in results:
                 if not success or not zip_path:
                     errors.append(f"Failed to download {name}")
@@ -190,16 +191,17 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                         version=ver,
                         source=f"store+{publisher}/{name}",
                     )
-                    console.print(
+                    installed_lines.append(
                         f"  [green]✓[/green] Installed [bold]{name}[/bold] {ver}"
                     )
                 except Exception as e:
                     errors.append(f"Failed to install {name}: {e}")
 
         # Remove plugins
+        removed_lines = []
         for name in sorted(to_remove):
             svc.manager.remove(name)
-            console.print(f"  [green]✓[/green] Removed [bold]{name}[/bold]")
+            removed_lines.append(f"  [green]✓[/green] Removed [bold]{name}[/bold]")
 
         # Update lock file
         if local_synced:
@@ -212,6 +214,11 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
             update_lockfile(ctx.lock_path, lock_updates, list(to_remove))
 
         await svc.store.close()
+
+        if installed_lines:
+            console.print("\n".join(installed_lines))
+        if removed_lines:
+            console.print("\n".join(removed_lines))
 
         summary = []
         installed_count = len(lock_updates)

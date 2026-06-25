@@ -46,64 +46,6 @@ COMMANDS = {
 }
 
 
-class GdpmGroup(click.Group):
-    def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        terminal_width = console.width
-        panel_width = min(terminal_width - 6, 80)
-        console.print()
-
-        for category, cmds in COMMANDS.items():
-            table = Table(
-                box=box.SIMPLE,
-                show_header=True,
-                header_style="bold magenta",
-                padding=(0, 2),
-                width=panel_width - 4,
-            )
-            table.add_column("Command", style="green", width=16, justify="left")
-            table.add_column("Description", justify="left")
-
-            for cmd_name, desc in cmds.items():
-                table.add_row(f"  {cmd_name}", desc)
-
-            console.print(
-                Panel(
-                    table,
-                    title=f"[bold cyan]{category}[/bold cyan]",
-                    border_style="dim",
-                    padding=(0, 1),
-                    width=panel_width,
-                )
-            )
-
-        console.print()
-        console.print(
-            Text("  Usage: ", style="dim")
-            + Text("gdpm", style="bold green")
-            + Text(" <command>", style="white")
-            + Text(" [options]", style="dim")
-        )
-        console.print(
-            Text("  Help:  ", style="dim")
-            + Text("gdpm", style="bold green")
-            + Text(" <command>", style="white")
-            + Text(" --help", style="dim")
-        )
-        console.print()
-        console.print(
-            Panel(
-                Text("  -h, --help      Show help message\n", style="dim")
-                + Text("  -i, --info      Show project info and version\n", style="dim")
-                + Text("  -V, --version   Show version\n", style="dim")
-                + Text("  -y, --yes       Skip confirmation prompts", style="dim"),
-                title="[bold cyan]Common Options[/bold cyan]",
-                border_style="dim",
-                padding=(0, 1),
-                width=panel_width,
-            )
-        )
-
-
 class GdpmCommand(click.Command):
     """Custom command class with Rich-formatted help."""
 
@@ -185,6 +127,134 @@ class GdpmCommand(click.Command):
                     border_style="dim",
                     padding=(0, 1),
                     width=min(80, 90),
+                )
+            )
+
+
+class GdpmGroup(click.Group):
+    """Custom group class with Rich-formatted help."""
+
+    def __init__(
+        self,
+        *args: Any,
+        examples: list[tuple[str, str]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.examples: list[tuple[str, str]] = examples or []
+
+    def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+        terminal_width = console.width
+        panel_width = min(terminal_width - 6, 80)
+
+        if ctx.info_name == "gdpm":
+            self._format_main_help(ctx, panel_width)
+        else:
+            self._format_group_help(ctx, panel_width)
+
+    def _format_main_help(self, ctx: click.Context, panel_width: int) -> None:
+        console.print()
+
+        for category, cmds in COMMANDS.items():
+            table = Table(
+                box=box.SIMPLE,
+                show_header=True,
+                header_style="bold magenta",
+                padding=(0, 2),
+                width=panel_width - 4,
+            )
+            table.add_column("Command", style="green", width=16, justify="left")
+            table.add_column("Description", justify="left")
+
+            for cmd_name, desc in cmds.items():
+                table.add_row(f"  {cmd_name}", desc)
+
+            console.print(
+                Panel(
+                    table,
+                    title=f"[bold cyan]{category}[/bold cyan]",
+                    border_style="dim",
+                    padding=(0, 1),
+                    width=panel_width,
+                )
+            )
+
+        console.print()
+        console.print(
+            Text("  Usage: ", style="dim")
+            + Text("gdpm", style="bold green")
+            + Text(" <command>", style="white")
+            + Text(" [options]", style="dim")
+        )
+        console.print(
+            Text("  Help:  ", style="dim")
+            + Text("gdpm", style="bold green")
+            + Text(" <command>", style="white")
+            + Text(" --help", style="dim")
+        )
+        console.print()
+        console.print(
+            Panel(
+                Text("  -h, --help      Show help message\n", style="dim")
+                + Text("  -i, --info      Show project info and version\n", style="dim")
+                + Text("  -V, --version   Show version\n", style="dim")
+                + Text("  -y, --yes       Skip confirmation prompts", style="dim"),
+                title="[bold cyan]Common Options[/bold cyan]",
+                border_style="dim",
+                padding=(0, 1),
+                width=panel_width,
+            )
+        )
+
+    def _format_group_help(self, ctx: click.Context, panel_width: int) -> None:
+        console.print()
+        console.print(
+            Text(f"  gdpm {ctx.info_name}", style="bold green")
+            + Text(f"  {self.help or ''}", style="dim")
+        )
+        console.print()
+        console.print(
+            Text("  Usage: ", style="dim")
+            + Text(f"gdpm {ctx.info_name}", style="bold green")
+            + Text(" <command>", style="white")
+        )
+        console.print()
+
+        table = Table(
+            box=box.SIMPLE,
+            show_header=True,
+            header_style="bold magenta",
+            padding=(0, 2),
+            width=panel_width - 4,
+        )
+        table.add_column("Command", style="green", width=16, justify="left")
+        table.add_column("Description", justify="left")
+
+        for name, cmd in self.commands.items():
+            table.add_row(f"  {name}", cmd.help or "")
+
+        console.print(
+            Panel(
+                table,
+                title="[bold cyan]Commands[/bold cyan]",
+                border_style="dim",
+                padding=(0, 1),
+                width=panel_width,
+            )
+        )
+
+        if self.examples:
+            lines = []
+            for cmd, desc in self.examples:
+                lines.append(f"  [dim]# {desc}[/dim]")
+                lines.append(f"  $ {cmd}")
+            console.print(
+                Panel(
+                    "\n".join(lines),
+                    title="[bold cyan]Examples[/bold cyan]",
+                    border_style="dim",
+                    padding=(0, 1),
+                    width=panel_width,
                 )
             )
 

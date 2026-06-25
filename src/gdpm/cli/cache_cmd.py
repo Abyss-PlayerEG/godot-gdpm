@@ -8,13 +8,17 @@ import click
 from rich.console import Console
 
 from gdpm.cache.file_cache import FileCache
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.app import GdpmCommand, GdpmGroup
 from gdpm.config.global_config import read_global_config
 
 console = Console()
 
 
-@click.group()
+@click.group(cls=GdpmGroup, examples=[
+    ("gdpm cache info", "Show cache size and location"),
+    ("gdpm cache clean", "Clean all cached files"),
+    ("gdpm cache clean -y", "Clean without confirmation"),
+])
 def cache() -> None:
     """Manage global cache."""
 
@@ -40,9 +44,15 @@ def cache_info() -> None:
     else:
         size_str = f"{size / (1024 * 1024):.1f} MB"
 
+    count = 0
+    for letter_dir in cache_dir.glob("downloads/*/"):
+        if letter_dir.is_dir():
+            count += len(list(letter_dir.glob("*.zip")))
+
     console.print()
     console.print(f"  Cache dir:  [cyan]{cache_dir}[/cyan]")
     console.print(f"  Cache size: [yellow]{size_str}[/yellow]")
+    console.print(f"  Plugins:    [green]{count}[/green]")
     console.print()
 
 
