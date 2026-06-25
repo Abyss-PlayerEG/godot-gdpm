@@ -41,7 +41,10 @@ def header(name: str) -> None:
 def check_mypy() -> bool:
     """Run mypy type checker."""
     header("mypy (type checking)")
-    return run(["uv", "run", "mypy", "src/"]) == 0
+    result = run(["uv", "run", "mypy", "src/"])
+    if result != 0:
+        print("  Note: mypy may fail due to pathspec/Python 3.14 compatibility issue")
+    return result == 0
 
 
 def check_ruff() -> bool:
