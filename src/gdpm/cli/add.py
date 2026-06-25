@@ -301,7 +301,7 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
         return
 
     hashes = load_hashes(ctx.root)
-    console.print(f"Scanning {len(targets)} plugin(s)...\n")
+    console.print(f"Scanning {len(targets)} plugin(s)...")
 
     packed = 0
     skipped = 0
