@@ -341,20 +341,19 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
 
     import re
 
-    base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
-    tag_display = f"[{__tag__}]" if __tag__ else ""
+    from gdpm.utils.install import get_install_type, get_platform
 
-    if tag_display:
-        console.print(
-            Text("gdpm", style="bold white")
-            + Text(f" v{base_version}", style="yellow")
-            + Text(f" {tag_display}", style="dim")
-        )
-    else:
-        console.print(
-            Text("gdpm", style="bold white")
-            + Text(f" v{base_version}", style="yellow")
-        )
+    base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
+    tag_display = f" [{__tag__}]" if __tag__ else ""
+    install_type = get_install_type()
+    platform_info = get_platform()
+
+    console.print(
+        Text("gdpm", style="bold white")
+        + Text(f" v{base_version}", style="yellow")
+        + Text(tag_display, style="dim")
+        + Text(f" ({install_type} | {platform_info})", style="dim")
+    )
     ctx.exit()
 
 
