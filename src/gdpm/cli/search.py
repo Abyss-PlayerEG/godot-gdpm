@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 
 import click
 
@@ -48,18 +47,9 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
 
         client = StoreClient()
         try:
-            with console.status("Loading...", spinner="dots"):
-                results = await client.search(
-                    query, limit=limit, sort=sort, include_projects=show_all
-                )
-
-                version_map: dict[str, list[dict[str, str]]] = {}
-                for plugin in results:
-                    if not is_template(plugin.tags):
-                        with contextlib.suppress(Exception):
-                            version_map[plugin.slug] = await client.get_versions(
-                                plugin.publisher_slug, plugin.slug
-                            )
+            results = await client.search(
+                query, limit=limit, sort=sort, include_projects=show_all
+            )
         finally:
             await client.close()
 
@@ -109,15 +99,21 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
                 store_url=plugin.store_url,
             )
 
-            versions = version_map.get(plugin.slug)
-            if versions:
-                latest = versions[0]
-                display_version_info(
-                    ver=latest.get("version", ""),
-                    min_godot=latest.get("min_godot_version", ""),
-                    max_godot=latest.get("max_godot_version", ""),
-                    project_godot=project_godot,
-                )
+            if not is_template(plugin.tags):
+                try:
+                    versions = await client.get_versions(
+                        plugin.publisher_slug, plugin.slug
+                    )
+                    if versions:
+                        latest = versions[0]
+                        display_version_info(
+                            ver=latest.get("version", ""),
+                            min_godot=latest.get("min_godot_version", ""),
+                            max_godot=latest.get("max_godot_version", ""),
+                            project_godot=project_godot,
+                        )
+                except Exception:
+                    pass
 
             if is_template(plugin.tags):
                 console.print(

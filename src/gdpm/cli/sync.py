@@ -112,21 +112,20 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
         # Prepare download tasks
         download_tasks: list[tuple[str, str, str]] = []
 
-        with console.status("Loading...", spinner="dots"):
-            for name in sorted(to_install):
-                entry = ctx.lock_map.get(name)
-                deps = ctx.all_deps.get(name)
-                dest_path = deps.path if deps else ""
+        for name in sorted(to_install):
+            entry = ctx.lock_map.get(name)
+            deps = ctx.all_deps.get(name)
+            dest_path = deps.path if deps else ""
 
-                if entry:
-                    publisher = entry.source.replace("store+", "").split("/")[0]
-                    download_tasks.append((name, publisher, entry.version.lstrip("v")))
-                elif deps:
-                    resolved = await resolve_publisher(svc.store, name)
-                    if resolved.found:
-                        download_tasks.append((name, resolved.publisher, ""))
-                    else:
-                        errors.append(f"Plugin '{name}' not found in Store")
+            if entry:
+                publisher = entry.source.replace("store+", "").split("/")[0]
+                download_tasks.append((name, publisher, entry.version.lstrip("v")))
+            elif deps:
+                resolved = await resolve_publisher(svc.store, name)
+                if resolved.found:
+                    download_tasks.append((name, resolved.publisher, ""))
+                else:
+                    errors.append(f"Plugin '{name}' not found in Store")
 
         # Download in parallel
         if download_tasks:

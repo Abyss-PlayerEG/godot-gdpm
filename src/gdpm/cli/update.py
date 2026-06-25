@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 
 import click
 
@@ -53,69 +52,74 @@ def update(plugins: tuple[str, ...], latest: bool, check: bool, yes: bool) -> No
         try:
             console.print("Checking for updates...")
 
-            with console.status("Loading...", spinner="dots"):
-                for name in targets:
-                    dep = ctx.all_deps.get(name)
-                    if not dep:
-                        errors.append(f"Plugin '{name}' not in dependencies")
+            for name in targets:
+                dep = ctx.all_deps.get(name)
+                if not dep:
+                    errors.append(f"Plugin '{name}' not in dependencies")
+                    continue
+
+                # Skip local plugins
+                if dep.is_local:
+                    console.print(f"  [dim]Skipping {name} (local plugin)[/dim]")
+                    continue
+
+                # Resolve publisher
+                if dep.publisher_slug:
+                    publisher = dep.publisher_slug
+                else:
+                    from gdpm.store.utils import resolve_publisher
+
+                    resolved = await resolve_publisher(svc.store, name)
+                    if not resolved.found:
+                        errors.append(resolved.error)
                         continue
+                    publisher = resolved.publisher
 
-                    if dep.is_local:
-                        continue
+                # Get versions
+                try:
+                    versions = await svc.store.get_versions(publisher, name)
+                except Exception as e:
+                    errors.append(f"Failed to fetch versions for '{name}': {e}")
+                    continue
 
-                    if dep.publisher_slug:
-                        publisher = dep.publisher_slug
-                    else:
-                        from gdpm.store.utils import resolve_publisher
+                if not versions:
+                    errors.append(f"No versions found for '{name}'")
+                    continue
 
-                        resolved = await resolve_publisher(svc.store, name)
-                        if not resolved.found:
-                            errors.append(resolved.error)
-                            continue
-                        publisher = resolved.publisher
+                # Find current version
+                current = ctx.lock_map.get(name)
+                current_ver = current.version.lstrip("v") if current else ""
 
-                    try:
-                        versions = await svc.store.get_versions(publisher, name)
-                    except Exception as e:
-                        errors.append(f"Failed to fetch versions for '{name}': {e}")
-                        continue
-
-                    if not versions:
-                        errors.append(f"No versions found for '{name}'")
-                        continue
-
-                    current = ctx.lock_map.get(name)
-                    current_ver = current.version.lstrip("v") if current else ""
-
-                    latest_ver = None
-                    for v in versions:
-                        api_ver = v["version"].lstrip("v")
-                        if latest or dep.constraint.matches(
-                            __import__(
-                                "gdpm.models.version", fromlist=["Version"]
-                            ).Version(api_ver)
-                        ):
-                            latest_ver = v
-                            break
-
-                    if not latest_ver:
-                        errors.append(f"No compatible version for '{name}'")
-                        continue
-
-                    new_ver = latest_ver["version"]
-                    if current_ver and normalize_version(new_ver) == normalize_version(
-                        current_ver
+                # Find latest compatible version
+                latest_ver = None
+                for v in versions:
+                    api_ver = v["version"].lstrip("v")
+                    if latest or dep.constraint.matches(
+                        __import__("gdpm.models.version", fromlist=["Version"]).Version(
+                            api_ver
+                        )
                     ):
-                        continue
+                        latest_ver = v
+                        break
 
-                    updates.append(
-                        {
-                            "name": name,
-                            "publisher": publisher,
-                            "old_version": current_ver or "none",
-                            "new_version": new_ver,
-                        }
-                    )
+                if not latest_ver:
+                    errors.append(f"No compatible version for '{name}'")
+                    continue
+
+                new_ver = latest_ver["version"]
+                if current_ver and normalize_version(new_ver) == normalize_version(
+                    current_ver
+                ):
+                    continue
+
+                updates.append(
+                    {
+                        "name": name,
+                        "publisher": publisher,
+                        "old_version": current_ver or "none",
+                        "new_version": new_ver,
+                    }
+                )
 
         finally:
             await svc.store.close()
@@ -141,26 +145,13 @@ def update(plugins: tuple[str, ...], latest: bool, check: bool, yes: bool) -> No
         lock_updates: dict[str, LockEntry] = {}
 
         try:
-            download_results: list[
-                tuple[dict[str, str], Path, str, Exception | None]
-            ] = []
-            with console.status("Loading...", spinner="dots"):
-                for u in updates:
-                    try:
-                        zip_path, _ver = await svc2.manager.download(
-                            u["publisher"],
-                            u["name"],
-                            u["new_version"].lstrip("v"),
-                        )
-                        download_results.append((u, zip_path, _ver, None))
-                    except Exception as e:
-                        download_results.append((u, Path(), "", e))
-
-            for u, zip_path, _ver, err in download_results:
-                if err:
-                    console.print(f"[red]✗[/red] Failed to update {u['name']}: {err}")
-                    continue
+            for u in updates:
                 try:
+                    zip_path, _ver = await svc2.manager.download(
+                        u["publisher"],
+                        u["name"],
+                        u["new_version"].lstrip("v"),
+                    )
                     svc2.manager.install_from_zip(zip_path, u["name"], u["publisher"])
                     lock_updates[u["name"]] = LockEntry(
                         name=u["name"],

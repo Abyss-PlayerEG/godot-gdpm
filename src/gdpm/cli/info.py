@@ -34,37 +34,26 @@ def info(plugin_slug: str) -> None:
         client = StoreClient()
 
         try:
-            error_msg = ""
-            author = ""
-            detail = None
-            versions = []
+            if not publisher:
+                results = await client.search(slug, limit=20)
+                if not results:
+                    console.print(f"[red]Error:[/red] Plugin '{slug}' not found.")
+                    raise SystemExit(1)
 
-            with console.status("Loading...", spinner="dots"):
-                if not publisher:
-                    results = await client.search(slug, limit=20)
-                    if not results:
-                        error_msg = f"Plugin '{slug}' not found."
-                    else:
-                        exact = next((r for r in results if r.slug == slug), None)
-                        if exact:
-                            author = exact.publisher_slug
-                        else:
-                            error_msg = (
-                                f"Plugin '{slug}' not found. "
-                                f"Did you mean: {results[0].slug}?"
-                            )
+                exact = next((r for r in results if r.slug == slug), None)
+                if exact:
+                    author = exact.publisher_slug
                 else:
-                    author = publisher
+                    console.print(
+                        f"[red]Error:[/red] Plugin '{slug}' not found. "
+                        f"Did you mean: {results[0].slug}?"
+                    )
+                    raise SystemExit(1)
+            else:
+                author = publisher
 
-                if not error_msg:
-                    detail = await client.get_plugin(author, slug)
-                    versions = await client.get_versions(author, slug)
-
-            if error_msg:
-                console.print(f"[red]Error:[/red] {error_msg}")
-                raise SystemExit(1)
-        except SystemExit:
-            raise
+            detail = await client.get_plugin(author, slug)
+            versions = await client.get_versions(author, slug)
         except Exception as e:
             console.print(f"[red]Error:[/red] {e}")
             raise SystemExit(1) from e
