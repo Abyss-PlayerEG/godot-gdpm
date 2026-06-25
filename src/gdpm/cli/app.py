@@ -225,6 +225,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
             style="blue underline",
         )
     )
+    console.print()
     ctx.exit()
 
 
