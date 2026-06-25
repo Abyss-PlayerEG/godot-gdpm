@@ -89,7 +89,7 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
             lines = []
             lines.append(f"  [bold cyan]{plugin.name}[/bold cyan]")
 
-            desc = plugin.description[:100]
+            desc = plugin.description.replace("\n", " ")[:100]
             if len(plugin.description) > 100:
                 desc += "..."
             lines.append(f"    {desc}")
