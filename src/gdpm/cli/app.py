@@ -207,18 +207,6 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     console.print(Text("  Godot Dependency Package Manager", style="dim"))
     console.print()
     console.print(
-        Text("  [DEV] ", style="bold yellow")
-        + Text("This project is under active development.", style="dim")
-    )
-    console.print(
-        Text("  Report issues: ", style="dim")
-        + Text(
-            "https://github.com/Abyss-PlayerEG/godot-gdpm/issues",
-            style="blue underline",
-        )
-    )
-    console.print()
-    console.print(
         Text("  GitHub: ", style="dim")
         + Text(
             "https://github.com/Abyss-PlayerEG/godot-gdpm",
