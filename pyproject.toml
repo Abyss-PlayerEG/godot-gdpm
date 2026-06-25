@@ -52,6 +52,7 @@ dev = [
     "vulture>=2.10",
     "deptry>=0.20",
     "pre-commit>=4.0",
+    "pylint>=4.0.6",
 ]
 
 [tool.mypy]
