@@ -70,6 +70,25 @@ def check_vulture() -> bool:
     return run(cmd) == 0
 
 
+def check_legacy_syntax() -> bool:
+    """Check for legacy Python 2 syntax patterns."""
+    header("legacy syntax check")
+    import re
+
+    pattern = re.compile(r"except\s+\w+\s*,\s*\w+\s*:")
+    found = False
+    for py_file in SRC_DIR.rglob("*.py"):
+        for i, line in enumerate(py_file.read_text().splitlines(), 1):
+            if pattern.search(line):
+                print(f"  {py_file}:{i}: {line.strip()}")
+                found = True
+    if found:
+        print("\n  Use 'except (A, B):' instead of 'except A, B:'")
+        return False
+    print("  No legacy syntax found.")
+    return True
+
+
 def check_deptry() -> bool:
     """Run deptry dependency checker."""
     header("deptry (dependencies)")
@@ -102,6 +121,7 @@ def main() -> None:
             "mypy": check_mypy,
             "ruff": check_ruff,
             "format": check_format,
+            "legacy": check_legacy_syntax,
             "vulture": check_vulture,
             "deptry": check_deptry,
             "test": check_test,
@@ -126,6 +146,7 @@ def main() -> None:
     results["mypy"] = check_mypy()
     results["ruff"] = check_ruff()
     results["format"] = check_format()
+    results["legacy"] = check_legacy_syntax()
     results["vulture"] = check_vulture()
     results["deptry"] = check_deptry()
 
