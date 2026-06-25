@@ -42,6 +42,10 @@ COMMANDS = {
         "export": "Export plugins to zip archive",
         "import": "Import plugins from zip archive",
     },
+    "Cache": {
+        "cache info": "Show cache size and location",
+        "cache clean": "Clean all cached files",
+    },
 }
 
 
