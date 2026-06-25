@@ -43,8 +43,7 @@ COMMANDS = {
         "import": "Import plugins from zip archive",
     },
     "Cache": {
-        "cache info": "Show cache size and location",
-        "cache clean": "Clean all cached files",
+        "cache": "Manage global cache (info, clean)",
     },
 }
 
