@@ -5,16 +5,14 @@ from __future__ import annotations
 import asyncio
 
 import click
-from rich.console import Console
 
 from gdpm.cli.app import GdpmCommand
+from gdpm.cli.common import console
 from gdpm.cli.context import get_project_context, get_services
 from gdpm.cli.options import yes_option
 from gdpm.lockfile.utils import update_lockfile
 from gdpm.models.lock import LockEntry
 from gdpm.utils.version import normalize_version
-
-console = Console()
 
 
 @click.command(
@@ -140,8 +138,6 @@ def update(plugins: tuple[str, ...], latest: bool, check: bool, yes: bool) -> No
         if check:
             console.print("\n[yellow]Dry run complete.[/yellow]")
             return
-
-        console.print()
 
         # Apply updates
         svc2 = get_services(ctx)

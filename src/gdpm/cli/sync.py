@@ -6,7 +6,6 @@ import asyncio
 from typing import TYPE_CHECKING
 
 import click
-from rich.console import Console
 from rich.progress import (
     BarColumn,
     DownloadColumn,
@@ -18,6 +17,7 @@ from rich.progress import (
 )
 
 from gdpm.cli.app import GdpmCommand
+from gdpm.cli.common import console
 from gdpm.cli.context import get_project_context, get_services
 from gdpm.cli.options import yes_option
 from gdpm.lockfile.utils import update_lockfile
@@ -27,8 +27,6 @@ from gdpm.utils.tag import scan_addons
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-console = Console()
 
 MAX_PARALLEL = 5
 
@@ -215,7 +213,6 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
 
         await svc.store.close()
 
-        console.print()
         summary = []
         installed_count = len(lock_updates)
         removed_count = len(to_remove)

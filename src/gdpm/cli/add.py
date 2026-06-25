@@ -6,7 +6,6 @@ import asyncio
 from pathlib import Path
 
 import click
-from rich.console import Console
 from rich.progress import (
     BarColumn,
     DownloadColumn,
@@ -18,7 +17,7 @@ from rich.progress import (
 )
 
 from gdpm.cli.app import GdpmCommand
-from gdpm.cli.common import is_template
+from gdpm.cli.common import console, is_template
 from gdpm.cli.context import get_project_context, get_services
 from gdpm.cli.options import yes_option
 from gdpm.config.project import write_project_config
@@ -26,8 +25,6 @@ from gdpm.lockfile.utils import update_lockfile
 from gdpm.models.dependency import Dependency
 from gdpm.models.lock import LockEntry
 from gdpm.store.utils import resolve_publisher
-
-console = Console()
 
 
 @click.command(
@@ -382,7 +379,6 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
 
         write_lockfile(list(lock_entries.values()), lock_path)
 
-        console.print()
         if packed:
             console.print(f"  Packed: {packed}")
         if renamed:

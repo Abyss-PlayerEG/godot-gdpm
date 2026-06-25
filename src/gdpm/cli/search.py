@@ -5,15 +5,12 @@ from __future__ import annotations
 import asyncio
 
 import click
-from rich.console import Console
 
 from gdpm.cli.app import GdpmCommand
-from gdpm.cli.common import is_template, require_project
+from gdpm.cli.common import console, is_template, require_project
 from gdpm.cli.display import display_plugin_meta, display_version_info
 from gdpm.config.project import read_project_config
 from gdpm.store.client import StoreClient
-
-console = Console()
 
 
 @click.command(
@@ -79,7 +76,7 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
                 }
                 for p in results
             ]
-            click.echo(json.dumps(output, indent=2))
+            console.print(json.dumps(output, indent=2))
             return
 
         console.print(
@@ -124,6 +121,5 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
                 )
             else:
                 console.print(f"    [green]gdpm add {add_route}[/green]")
-            console.print()
 
     asyncio.run(_search())

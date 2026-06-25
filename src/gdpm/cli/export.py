@@ -8,16 +8,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import click
-from rich.console import Console
 
 from gdpm.cli.app import GdpmCommand
-from gdpm.cli.common import require_project
+from gdpm.cli.common import console, require_project
 from gdpm.config.project import read_project_config
 from gdpm.lockfile.lock import find_lockfile, read_lockfile
 from gdpm.utils.local import LOCAL_DIR_NAME
 from gdpm.utils.tag import scan_addons
-
-console = Console()
 
 
 @click.command(

@@ -6,18 +6,15 @@ import configparser
 from typing import TYPE_CHECKING
 
 import click
-from rich.console import Console
 
 from gdpm.cli.app import GdpmCommand
-from gdpm.cli.common import require_project
+from gdpm.cli.common import console, require_project
 from gdpm.cli.options import yes_option
 from gdpm.config.project import read_project_config, write_project_config
 from gdpm.lockfile.lock import find_lockfile, read_lockfile, write_lockfile
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-console = Console()
 
 
 @click.command(

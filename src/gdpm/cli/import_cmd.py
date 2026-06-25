@@ -9,11 +9,10 @@ import zipfile
 from pathlib import Path
 
 import click
-from rich.console import Console
 
 from gdpm.cache.file_cache import FileCache
 from gdpm.cli.app import GdpmCommand
-from gdpm.cli.common import require_project
+from gdpm.cli.common import console, require_project
 from gdpm.cli.options import yes_option
 from gdpm.config.project import read_project_config, write_project_config
 from gdpm.installer.manager import PluginManager
@@ -23,8 +22,6 @@ from gdpm.models.dependency import Dependency
 from gdpm.models.lock import LockEntry
 from gdpm.store.client import StoreClient
 from gdpm.utils.local import LOCAL_DIR_NAME, tag_plugin
-
-console = Console()
 
 
 @click.command(
@@ -225,7 +222,6 @@ def import_cmd(source: str, yes: bool) -> None:
         write_project_config(config, root / "gdproject.toml")
         update_lockfile(find_lockfile(root), lock_updates)
 
-        console.print()
         console.print(f"[green]✓[/green] Imported {imported} plugin(s)")
         console.print("  Updated [cyan]gdproject.toml[/cyan]")
         console.print("  Updated [cyan]gdpm.lock[/cyan]")

@@ -5,16 +5,14 @@ from __future__ import annotations
 import asyncio
 
 import click
-from rich.console import Console
 from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand
+from gdpm.cli.common import console
 from gdpm.cli.context import get_project_context
 from gdpm.store.client import StoreClient
 from gdpm.utils.tag import scan_addons
 from gdpm.utils.version import normalize_version
-
-console = Console()
 
 
 @click.command(
@@ -119,7 +117,7 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
         if as_json:
             import json
 
-            click.echo(json.dumps(results, indent=2))
+            console.print(json.dumps(results, indent=2))
             return
 
         console.print(f"[bold]Plugin status ({len(results)}):[/bold]\n")
@@ -147,7 +145,5 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                 f"\n[yellow]{len(updates)} update(s) available. "
                 f"Run 'gdpm update' to update.[/yellow]"
             )
-
-        console.print()
 
     asyncio.run(_status())

@@ -5,13 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import click
-from rich.console import Console
 
 from gdpm.cli.app import GdpmCommand
+from gdpm.cli.common import console
 from gdpm.config.project import ProjectConfig, write_project_config
 from gdpm.utils.godot import detect_version_constraint, parse_project_godot
-
-console = Console()
 
 
 @click.command(

@@ -4,17 +4,14 @@ from __future__ import annotations
 
 import click
 from rich import box
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand
-from gdpm.cli.common import require_project
+from gdpm.cli.common import console, require_project
 from gdpm.config.project import read_project_config
 from gdpm.lockfile.lock import find_lockfile, read_lockfile
 from gdpm.utils.tag import scan_addons
-
-console = Console()
 
 
 @click.command(

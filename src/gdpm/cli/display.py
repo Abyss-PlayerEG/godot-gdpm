@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-from rich.console import Console
-
+from gdpm.cli.common import console
 from gdpm.utils.version import is_compatible
-
-console = Console()
 
 
 def display_version_info(
@@ -61,6 +58,4 @@ def output_json(data: object) -> None:
     """Output data as JSON."""
     import json
 
-    import click
-
-    click.echo(json.dumps(data, indent=2, ensure_ascii=False))
+    console.print(json.dumps(data, indent=2, ensure_ascii=False))
