@@ -8,7 +8,7 @@ import click
 
 from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import console, is_template, require_project
-from gdpm.cli.display import display_plugin_meta, display_version_info
+from gdpm.cli.display import format_plugin_meta, format_version_info
 from gdpm.config.project import read_project_config
 from gdpm.store.client import StoreClient
 
@@ -85,19 +85,22 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
 
         for plugin in results:
             add_route = f"{plugin.publisher_slug}/{plugin.slug}"
-            console.print(f"  [bold cyan]{plugin.name}[/bold cyan]")
+
+            lines = []
+            lines.append(f"  [bold cyan]{plugin.name}[/bold cyan]")
 
             desc = plugin.description[:100]
             if len(plugin.description) > 100:
                 desc += "..."
-            console.print(f"    {desc}")
+            lines.append(f"    {desc}")
 
-            display_plugin_meta(
+            meta = format_plugin_meta(
                 license_name=plugin.license,
                 stars=plugin.stars,
                 tags=plugin.tags,
                 store_url=plugin.store_url,
             )
+            lines.extend(meta)
 
             if not is_template(plugin.tags):
                 try:
@@ -106,20 +109,24 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
                     )
                     if versions:
                         latest = versions[0]
-                        display_version_info(
+                        ver_info = format_version_info(
                             ver=latest.get("version", ""),
                             min_godot=latest.get("min_godot_version", ""),
                             max_godot=latest.get("max_godot_version", ""),
                             project_godot=project_godot,
                         )
+                        if ver_info:
+                            lines.extend(ver_info)
                 except Exception:
                     pass
 
             if is_template(plugin.tags):
-                console.print(
+                lines.append(
                     "    [dim]Project template - not installable as addon[/dim]"
                 )
             else:
-                console.print(f"    [green]gdpm add {add_route}[/green]")
+                lines.append(f"    [green]gdpm add {add_route}[/green]")
+
+            console.print("\n".join(lines))
 
     asyncio.run(_search())
