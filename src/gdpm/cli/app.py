@@ -229,7 +229,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     )
 
     try:
-        resp = httpx.get(f"{GITHUB_API_URL}contributors", timeout=5)
+        resp = httpx.get(f"{GITHUB_API_URL}contributors", timeout=5, verify=False)
         if resp.status_code == 200:
             contributors = sorted(
                 [c["login"] for c in resp.json()],
