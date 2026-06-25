@@ -150,7 +150,8 @@ def import_cmd(source: str, yes: bool) -> None:
             finally:
                 await store.close()
 
-        asyncio.run(_import_store())
+        with console.status("Loading...", spinner="dots"):
+            asyncio.run(_import_store())
 
     # Import local plugins
     for p in local_plugins:

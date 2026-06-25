@@ -100,4 +100,5 @@ def lock(check: bool) -> None:
         elif not errors:
             console.print("[yellow]![/yellow] No dependencies to lock")
 
-    asyncio.run(_lock())
+    with console.status("Loading...", spinner="dots"):
+        asyncio.run(_lock())
