@@ -70,13 +70,20 @@ def list_cmd(outdated: bool, as_json: bool) -> None:
     )
     table.add_column("Plugin", style="cyan", min_width=20)
     table.add_column("Version", style="green", min_width=10)
-    table.add_column("Source", style="dim")
+    table.add_column("Source", min_width=10)
 
     for p in installed:
         version = p["version"]
         if version == "local":
             version = f"[yellow]{version}[/yellow]"
-        table.add_row(p["name"], version, p["source"])
+
+        source = p["source"]
+        if source.startswith("store+"):
+            source = "[blue]store[/blue]+" + source[6:]
+        elif source.startswith("local+"):
+            source = "[yellow]local[/yellow]+" + source[6:]
+
+        table.add_row(p["name"], version, source)
 
     console.print()
     console.print(
