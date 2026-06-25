@@ -253,7 +253,8 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
 
 @click.group(cls=GdpmGroup, context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
-    "-i", "--info",
+    "-i",
+    "--info",
     is_flag=True,
     is_eager=True,
     expose_value=False,
