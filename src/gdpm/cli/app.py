@@ -12,6 +12,7 @@ from rich.table import Table
 from rich.text import Text
 
 from gdpm import __tag__, __version__
+from gdpm.constants import REPO_URL
 
 console = Console()
 
@@ -210,10 +211,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     info_lines.append(Text(""))
     info_lines.append(
         Text("  GitHub: ", style="dim")
-        + Text(
-            "https://github.com/Abyss-PlayerEG/godot-gdpm",
-            style="blue underline",
-        )
+        + Text(REPO_URL, style="blue underline")
     )
 
     terminal_width = console.width
