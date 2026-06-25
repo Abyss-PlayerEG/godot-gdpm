@@ -117,9 +117,9 @@ class GdpmCommand(click.Command):
 
         if self.examples:
             lines = []
-            for cmd, desc in self.examples:
-                lines.append(f"  [dim]# {desc}[/dim]")
-                lines.append(f"  $ {cmd}")
+            for example_cmd, example_desc in self.examples:
+                lines.append(f"  [dim]# {example_desc}[/dim]")
+                lines.append(f"  $ {example_cmd}")
             console.print(
                 Panel(
                     "\n".join(lines),
@@ -245,9 +245,9 @@ class GdpmGroup(click.Group):
 
         if self.examples:
             lines = []
-            for cmd, desc in self.examples:
-                lines.append(f"  [dim]# {desc}[/dim]")
-                lines.append(f"  $ {cmd}")
+            for example_cmd, example_desc in self.examples:
+                lines.append(f"  [dim]# {example_desc}[/dim]")
+                lines.append(f"  $ {example_cmd}")
             console.print(
                 Panel(
                     "\n".join(lines),

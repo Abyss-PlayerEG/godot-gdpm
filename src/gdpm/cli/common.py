@@ -19,7 +19,7 @@ class GdpmConsole(Console):
         if self._first_print:
             super().print()
             self._first_print = False
-        super().print(*args, **kwargs)
+        super().print(*args, **kwargs)  # type: ignore[arg-type]
         super().print()
 
 

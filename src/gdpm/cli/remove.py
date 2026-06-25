@@ -69,9 +69,9 @@ def remove(plugins: tuple[str, ...], recursive: bool, yes: bool) -> None:
         if is_local:
             local_zip = local_dir / f"{slug}.zip"
             if local_zip.exists():
-                delete_zip = yes or console.input(
-                    f"  Delete {local_dir.name}/{slug}.zip? (y/n): "
-                ).strip().lower().startswith("y")
+                delete_zip = yes or click.confirm(
+                    f"  Delete {local_dir.name}/{slug}.zip?"
+                )
                 if delete_zip:
                     local_zip.unlink()
                     console.print(f"  [dim]Removed {local_dir.name}/{slug}.zip[/dim]")

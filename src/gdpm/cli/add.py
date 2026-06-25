@@ -202,13 +202,14 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
             write_project_config(ctx.config, ctx.config_path)
             update_lockfile(ctx.lock_path, lock_updates)
 
+            added_lines = []
             for r in results:
-                console.print(
+                added_lines.append(
                     f"[green]✓[/green] Added [bold]{r['name']}[/bold] {r['version']}"
                 )
-
-            console.print("  Updated [cyan]gdproject.toml[/cyan]")
-            console.print("  Updated [cyan]gdpm.lock[/cyan]")
+            added_lines.append("  Updated [cyan]gdproject.toml[/cyan]")
+            added_lines.append("  Updated [cyan]gdpm.lock[/cyan]")
+            console.print("\n".join(added_lines))
 
         if errors:
             for err in errors:
@@ -385,9 +386,11 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
             console.print(f"  Renamed: {renamed}")
         if skipped:
             console.print(f"  Skipped: {skipped}")
-        console.print("  Updated [cyan]gdproject.toml[/cyan]")
-        console.print("  Updated [cyan]gdpm.lock[/cyan]")
-        console.print(f"  Updated [cyan]{LOCAL_DIR_NAME}/.hashes[/cyan]")
+        console.print(
+            "  Updated [cyan]gdproject.toml[/cyan]"
+            "  Updated [cyan]gdpm.lock[/cyan]"
+            f"  Updated [cyan]{LOCAL_DIR_NAME}/.hashes[/cyan]"
+        )
 
 
 def _parse_spec(spec: str) -> tuple[str, str]:
