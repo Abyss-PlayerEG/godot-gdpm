@@ -249,7 +249,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
                     title="[bold cyan]Contributors[/bold cyan]",
                     border_style="dim",
                     padding=(1, 2),
-                    width=min(terminal_width, 90),
+                width=panel_width,
                 )
             )
     except Exception:
