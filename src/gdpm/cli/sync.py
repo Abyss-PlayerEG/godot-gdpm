@@ -178,6 +178,7 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
 
             # Install downloaded plugins
             installed_lines = []
+            console.print()
             for name, ver, publisher, success, zip_path in results:
                 if not success or not zip_path:
                     errors.append(f"Failed to download {name}")
