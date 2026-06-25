@@ -172,5 +172,4 @@ def update(plugins: tuple[str, ...], latest: bool, check: bool, yes: bool) -> No
             update_lockfile(ctx.lock_path, lock_updates)
             console.print(f"\n[green]✓[/green] Updated {applied} plugin(s)")
 
-    with console.status("Loading...", spinner="dots"):
-        asyncio.run(_update())
+    asyncio.run(_update())

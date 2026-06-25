@@ -228,5 +228,4 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
         for err in errors:
             console.print(f"  [red]✗[/red] {err}")
 
-    with console.status("Loading...", spinner="dots"):
-        asyncio.run(_sync())
+    asyncio.run(_sync())

@@ -122,5 +122,4 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
             else:
                 console.print(f"    [green]gdpm add {add_route}[/green]")
 
-    with console.status("Loading...", spinner="dots"):
-        asyncio.run(_search())
+    asyncio.run(_search())

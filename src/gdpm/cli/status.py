@@ -146,5 +146,4 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                 f"Run 'gdpm update' to update.[/yellow]"
             )
 
-    with console.status("Loading...", spinner="dots"):
-        asyncio.run(_status())
+    asyncio.run(_status())

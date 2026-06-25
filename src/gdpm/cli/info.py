@@ -109,5 +109,4 @@ def info(plugin_slug: str) -> None:
             )
         )
 
-    with console.status("Loading...", spinner="dots"):
-        asyncio.run(_info())
+    asyncio.run(_info())

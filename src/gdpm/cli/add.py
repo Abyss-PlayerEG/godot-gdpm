@@ -217,8 +217,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
         if not results and errors:
             raise SystemExit(1)
 
-    with console.status("Loading...", spinner="dots"):
-        asyncio.run(_add())
+    asyncio.run(_add())
 
 
 def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
