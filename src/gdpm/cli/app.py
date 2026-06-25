@@ -196,6 +196,8 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
     tag_display = f" [{__tag__}]" if __tag__ else ""
 
+    from rich.console import Group
+
     info_lines = []
     info_lines.append(Text(BANNER, style="bold cyan"))
     info_lines.append(Text(""))
@@ -218,7 +220,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     console.print()
     console.print(
         Panel(
-            "\n".join(str(line) for line in info_lines),
+            Group(*info_lines),
             title="[bold cyan]gdpm[/bold cyan]",
             border_style="dim",
             padding=(1, 2),
