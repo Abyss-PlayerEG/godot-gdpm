@@ -24,9 +24,8 @@ console = Console()
         ("gdpm list --json", "Output as JSON"),
     ],
 )
-@click.option("--outdated", is_flag=True, help="Show only outdated plugins")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-def list_cmd(outdated: bool, as_json: bool) -> None:
+def list_cmd(as_json: bool) -> None:
     """List installed plugins."""
     root = require_project()
     config = read_project_config(root / "gdproject.toml")
