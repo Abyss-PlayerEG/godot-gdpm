@@ -104,10 +104,11 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
         svc = get_services(ctx)
         errors: list[str] = []
         lock_updates: dict[str, LockEntry] = {}
+        cache_cleared = False
 
         if no_cache:
             svc.manager._cache.clean()
-            console.print("[dim]Cache cleared.[/dim]")
+            cache_cleared = True
 
         # Prepare download tasks
         download_tasks: list[tuple[str, str, str]] = []
@@ -219,6 +220,8 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
             console.print("\n".join(installed_lines))
         if removed_lines:
             console.print("\n".join(removed_lines))
+        if cache_cleared:
+            console.print("[dim]Cache cleared.[/dim]")
 
         summary = []
         installed_count = len(lock_updates)
