@@ -33,7 +33,7 @@ class PluginManager:
         self._addons = addons_dir
         self._project_root = addons_dir.parent
         self._cache = cache
-        self._index = CacheIndex(cache.path.parent)
+        self._index = CacheIndex(cache.path)
         self._store = store or StoreClient()
         self._owns_store = store is None
 
@@ -88,11 +88,13 @@ class PluginManager:
             target = releases[0]
 
         ver = target["version"]
+        letter = publisher[0].lower() if publisher else "x"
+        dest_dir = self._cache.path / letter
         zip_path = await self._store.download(
             publisher,
             slug,
             ver,
-            self._cache.path,
+            dest_dir,
             on_progress=on_progress,
         )
 

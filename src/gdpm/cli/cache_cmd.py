@@ -14,7 +14,7 @@ from gdpm.config.global_config import read_global_config
 console = Console()
 
 
-@click.group(cls=GdpmCommand)
+@click.group()
 def cache() -> None:
     """Manage global cache."""
 
