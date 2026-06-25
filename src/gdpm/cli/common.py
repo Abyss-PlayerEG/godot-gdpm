@@ -3,12 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from rich.console import Console
-
-if TYPE_CHECKING:
-    from rich.panel import Panel
 
 console = Console()
 
@@ -26,10 +22,10 @@ TEMPLATE_TAGS = {
 }
 
 
-def print_panel(panel: Panel) -> None:
-    """Print a panel with empty lines before and after."""
+def print_out(*args: object, **kwargs: object) -> None:
+    """Print with empty lines before and after."""
     console.print()
-    console.print(panel)
+    console.print(*args, **kwargs)
     console.print()
 
 
