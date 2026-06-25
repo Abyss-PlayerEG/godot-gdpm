@@ -99,7 +99,7 @@ class GdpmGroup(click.Group):
                 title="[bold cyan]Common Options[/bold cyan]",
                 border_style="dim",
                 padding=(0, 1),
-                width=min(terminal_width, 90),
+                width=panel_width,
             )
         )
 
@@ -249,7 +249,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
                     title="[bold cyan]Contributors[/bold cyan]",
                     border_style="dim",
                     padding=(1, 2),
-                width=panel_width,
+                width=min(terminal_width, 90),
                 )
             )
     except Exception:
