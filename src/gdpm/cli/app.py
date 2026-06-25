@@ -259,6 +259,25 @@ class GdpmGroup(click.Group):
             )
 
 
+def _version_text() -> Text:
+    """Build version text with tag and platform info."""
+    import re
+
+    from gdpm.utils.install import get_install_type, get_platform
+
+    base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
+    tag_display = f" [{__tag__}]" if __tag__ else ""
+    install_type = get_install_type()
+    platform_info = get_platform()
+
+    return (
+        Text("gdpm", style="bold white")
+        + Text(f" v{base_version}", style="yellow")
+        + Text(tag_display, style="dim")
+        + Text(f" ({install_type} | {platform_info})", style="dim")
+    )
+
+
 def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
     """Print project info with banner and version."""
     if not value:
@@ -268,24 +287,12 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
 
     import httpx
 
-    from gdpm.utils.install import get_install_type, get_platform
-
-    base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
-    tag_display = f" [{__tag__}]" if __tag__ else ""
-    install_type = get_install_type()
-    platform_info = get_platform()
-
     from rich.console import Group
 
     info_lines = []
     info_lines.append(Text(BANNER, style="bold cyan"))
     info_lines.append(Text(""))
-    info_lines.append(
-        Text("  gdpm", style="bold white")
-        + Text(f" v{base_version}", style="yellow")
-        + Text(tag_display, style="dim")
-        + Text(f" ({install_type} | {platform_info})", style="dim")
-    )
+    info_lines.append(Text("  ") + _version_text())
     info_lines.append(Text("  Godot Dependency Package Manager", style="dim"))
     info_lines.append(Text(""))
     info_lines.append(
@@ -339,21 +346,7 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
     if not value:
         return
 
-    import re
-
-    from gdpm.utils.install import get_install_type, get_platform
-
-    base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
-    tag_display = f" [{__tag__}]" if __tag__ else ""
-    install_type = get_install_type()
-    platform_info = get_platform()
-
-    console.print(
-        Text("gdpm", style="bold white")
-        + Text(f" v{base_version}", style="yellow")
-        + Text(tag_display, style="dim")
-        + Text(f" ({install_type} | {platform_info})", style="dim")
-    )
+    console.print(_version_text())
     ctx.exit()
 
 
