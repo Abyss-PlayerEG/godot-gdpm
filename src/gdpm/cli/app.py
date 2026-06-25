@@ -201,8 +201,8 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     console.print()
     console.print(
         Text("  gdpm", style="bold white")
-        + Text(f" v{base_version}", style="bold green")
-        + Text(tag_display, style="bold yellow")
+        + Text(f" v{base_version}", style="yellow")
+        + Text(tag_display, style="dim")
     )
     console.print(Text("  Godot Dependency Package Manager", style="dim"))
     console.print()
