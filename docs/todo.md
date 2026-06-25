@@ -12,4 +12,5 @@
 - [ ] [Godot 引擎版本管理](todo/Godot引擎版本管理.md)
 - [ ] [下载优化](todo/下载优化.md)
 - [ ] [其他待开发功能](todo/其他待开发功能.md)
+- [ ] [安装类型检测](todo/安装类型检测.md)
 - [ ] 加载动画（Rich spinner，解决 console.status 与 console.print 冲突问题）
