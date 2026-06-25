@@ -101,7 +101,6 @@ class GdpmGroup(click.Group):
                 width=min(terminal_width, 90),
             )
         )
-        console.print()
 
 
 class GdpmCommand(click.Command):
