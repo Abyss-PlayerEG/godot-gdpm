@@ -187,8 +187,6 @@ class GdpmCommand(click.Command):
                 )
             )
 
-        console.print()
-
 
 def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
     """Print project info with banner and version."""
@@ -229,7 +227,6 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
             style="blue underline",
         )
     )
-    console.print()
     ctx.exit()
 
 
