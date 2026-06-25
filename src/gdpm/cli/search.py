@@ -80,7 +80,7 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
             return
 
         console.print(
-            f"Search results for [bold]{query}[/bold] ({len(results)} found):\n"
+            f"Search results for [bold]{query}[/bold] ({len(results)} found):"
         )
 
         for plugin in results:
