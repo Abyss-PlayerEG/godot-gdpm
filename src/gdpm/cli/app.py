@@ -12,7 +12,7 @@ from rich.table import Table
 from rich.text import Text
 
 from gdpm import __tag__, __version__
-from gdpm.constants import REPO_URL
+from gdpm.constants import GITHUB_API_URL, REPO_URL
 
 console = Console()
 
@@ -194,6 +194,8 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
 
     import re
 
+    import httpx
+
     base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
     tag_display = f" [{__tag__}]" if __tag__ else ""
 
@@ -225,6 +227,32 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
             width=min(terminal_width, 90),
         )
     )
+
+    try:
+        resp = httpx.get(f"{GITHUB_API_URL}contributors", timeout=5)
+        if resp.status_code == 200:
+            contributors = sorted(
+                [c["login"] for c in resp.json()],
+                key=str.lower,
+            )
+            contrib_text = Text()
+            for i, name in enumerate(contributors):
+                if i > 0:
+                    contrib_text.append("  ")
+                contrib_text.append(f"@{name}", style="cyan")
+            console.print()
+            console.print(
+                Panel(
+                    contrib_text,
+                    title="[bold cyan]Contributors[/bold cyan]",
+                    border_style="dim",
+                    padding=(1, 2),
+                    width=min(terminal_width, 90),
+                )
+            )
+    except Exception:
+        pass
+
     console.print()
     ctx.exit()
 

@@ -11,3 +11,4 @@ HASHES_FILE = ".hashes"
 
 REPO_URL = "https://github.com/Abyss-PlayerEG/godot-gdpm"
 ISSUES_URL = "https://github.com/Abyss-PlayerEG/godot-gdpm/issues"
+GITHUB_API_URL = "https://api.github.com/repos/Abyss-PlayerEG/godot-gdpm/"
