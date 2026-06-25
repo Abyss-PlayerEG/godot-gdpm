@@ -50,7 +50,7 @@ def list_cmd(as_json: bool) -> None:
     if as_json:
         import json
 
-        click.echo(json.dumps(installed, indent=2))
+        console.print(json.dumps(installed, indent=2))
         return
 
     if not installed:
