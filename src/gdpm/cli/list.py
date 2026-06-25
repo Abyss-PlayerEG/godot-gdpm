@@ -76,6 +76,7 @@ def list_cmd(outdated: bool, as_json: bool) -> None:
         version = p["version"]
         if version == "local":
             version = f"[yellow]{version}[/yellow]"
+        p["version_display"] = version
 
         source = p["source"]
         if source.startswith("store+"):
@@ -83,7 +84,12 @@ def list_cmd(outdated: bool, as_json: bool) -> None:
         elif source.startswith("local+"):
             source = "[yellow]local[/yellow]+" + source[6:]
 
-        table.add_row(p["name"], version, source)
+        p["source_display"] = source
+
+    installed.sort(key=lambda p: p["source"])
+
+    for p in installed:
+        table.add_row(p["name"], p["version_display"], p["source_display"])
 
     console.print()
     console.print(
