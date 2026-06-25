@@ -10,13 +10,19 @@ from rich.console import Console
 class GdpmConsole(Console):
     """Console that adds empty lines before and after output."""
 
+    _last_was_blank: bool = False
+
     def print(self, *args: object, **kwargs: object) -> None:
         if not args:
-            super().print()
+            if not self._last_was_blank:
+                super().print()
+                self._last_was_blank = True
             return
-        super().print()
+        if not self._last_was_blank:
+            super().print()
         super().print(*args, **kwargs)
         super().print()
+        self._last_was_blank = False
 
 
 console = GdpmConsole()
