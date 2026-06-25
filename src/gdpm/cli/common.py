@@ -6,7 +6,20 @@ from pathlib import Path
 
 from rich.console import Console
 
-console = Console()
+
+class GdpmConsole(Console):
+    """Console that adds empty lines before and after output."""
+
+    def print(self, *args: object, **kwargs: object) -> None:
+        if not args:
+            super().print()
+            return
+        super().print()
+        super().print(*args, **kwargs)
+        super().print()
+
+
+console = GdpmConsole()
 
 CONFIG_FILENAME = "gdproject.toml"
 LOCK_FILENAME = "gdpm.lock"
@@ -20,13 +33,6 @@ TEMPLATE_TAGS = {
     "boilerplate",
     "sample",
 }
-
-
-def print_out(*args: object, **kwargs: object) -> None:
-    """Print with empty lines before and after."""
-    console.print()
-    console.print(*args, **kwargs)
-    console.print()
 
 
 def is_template(tags: list[str]) -> bool:

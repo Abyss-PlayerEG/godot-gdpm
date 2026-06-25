@@ -9,7 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand
-from gdpm.cli.common import print_out, require_project
+from gdpm.cli.common import require_project
 from gdpm.config.project import read_project_config
 from gdpm.lockfile.lock import find_lockfile, read_lockfile
 from gdpm.utils.tag import scan_addons
@@ -90,7 +90,7 @@ def list_cmd(as_json: bool) -> None:
     for p in installed:
         table.add_row(p["name"], p["version_display"], p["source_display"])
 
-    print_out(
+    console.print(
         Panel(
             table,
             title=f"[bold cyan]Installed Plugins ({len(installed)})[/bold cyan]",
