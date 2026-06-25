@@ -99,11 +99,7 @@ def check_legacy_syntax() -> bool:
     header("legacy syntax check")
     import re
 
-    # except A, B: is valid Python 3 syntax (catches both A and B)
-    # ruff format prefers this style, so we don't flag it
-    # Only flag the Python 2 binding syntax: except A, var:
-    # where var is a lowercase identifier (not an exception class)
-    pattern = re.compile(r"except\s+\w+\s*,\s*[a-z]\w*\s*:")
+    pattern = re.compile(r"except\s+\w+\s*,\s*\w+\s*:")
     found = False
     for py_file in SRC_DIR.rglob("*.py"):
         for i, line in enumerate(py_file.read_text().splitlines(), 1):
@@ -111,7 +107,7 @@ def check_legacy_syntax() -> bool:
                 print(f"  {py_file}:{i}: {line.strip()}")
                 found = True
     if found:
-        print("\n  Use 'except A as var:' instead of 'except A, var:'")
+        print("\n  Use 'except (A, B):' or 'except A as B:' instead of 'except A, B:'")
         return False
     print("  No legacy syntax found.")
     return True

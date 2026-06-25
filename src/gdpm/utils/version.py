@@ -112,7 +112,7 @@ def version_matches(version: str, constraint: str) -> bool:
         ver = parse_version(version)
         spec = parse_specifier_set(constraint)
         return ver in spec
-    except InvalidVersion, InvalidSpecifier:
+    except (InvalidVersion, InvalidSpecifier):
         # Fallback: string comparison
         return normalize_version(version) == normalize_version(constraint)
 
@@ -163,7 +163,7 @@ def is_compatible(
                     f"but project uses {project_godot}"
                 )
 
-    except InvalidVersion, ValueError:
+    except (InvalidVersion, ValueError):
         pass
 
     return True, ""
