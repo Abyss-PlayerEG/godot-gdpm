@@ -92,7 +92,32 @@ select = [
 [tool.ruff.lint.isort]
 known-first-party = ["gdpm"]
 
-[tool.pytest.ini_options]
+[tool.pylint.messages_control]
+disable = [
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "too-many-instance-attributes",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-branches",
+    "too-many-statements",
+    "too-many-nested-blocks",
+    "broad-exception-caught",
+    "unused-argument",
+    "import-outside-toplevel",
+    "wrong-import-position",
+    "cyclic-import",
+    "duplicate-code",
+    "redefined-outer-name",
+    "reimported",
+    "no-else-return",
+    "cell-var-from-loop",
+    "protected-access",
+    "unrecognized-option",
+]
+
+[tool.pylint.format]
+max-line-length = 100
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
