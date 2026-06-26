@@ -569,36 +569,67 @@ def godot_info() -> None:
     import json
 
     from gdpm.cli.common import require_project
+    from gdpm.config.local_engines import get_default_engine, get_local_engine
+    from gdpm.utils.path import shorten_path
 
     root = require_project()
     conf_path = root / ".engines-conf.json"
 
-    if not conf_path.exists():
-        console.print(
-            "[red]Error:[/red] No Godot engine configured for this project.\n"
-            "  Use [bold]gdpm godot use <id>[/bold] to set an engine."
-        )
-        return
+    name = ""
+    version = ""
+    path = ""
 
-    try:
-        conf = json.loads(conf_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, TypeError):
-        console.print("[red]Error:[/red] Invalid .engines-conf.json")
-        return
+    # 1. Try project config
+    if conf_path.exists():
+        try:
+            conf = json.loads(conf_path.read_text(encoding="utf-8"))
+            godot = conf.get("godot", {})
+            if godot:
+                name = godot.get("name", "")
+                version = godot.get("version", "")
+                path = godot.get("path", "")
+        except (json.JSONDecodeError, TypeError):
+            pass
 
-    godot = conf.get("godot", {})
-    if not godot:
+    # 2. Try default engine
+    if not name:
+        default_id = get_default_engine()
+        if default_id:
+            default_name, default_ver = default_id.split("@", 1)
+            name = default_name
+            version = default_ver
+
+            if default_name == "gdpm-godot":
+                engines_dir = _get_engines_dir()
+                tag = _normalize_version(default_ver)
+                ver_dir = engines_dir / tag
+                if ver_dir.exists():
+                    for app in ver_dir.glob("*.app"):
+                        b = app / "Contents" / "MacOS" / "Godot"
+                        if b.exists():
+                            path = str(b)
+                            break
+                    if not path:
+                        for f in ver_dir.iterdir():
+                            if f.is_file() and not f.suffix:
+                                path = str(f)
+                                break
+            else:
+                engine = get_local_engine(default_name)
+                if engine:
+                    path = engine.path
+
+    # 3. No engine found
+    if not name:
         console.print(
             "[red]Error:[/red] No Godot engine configured.\n"
-            "  Use [bold]gdpm godot use <id>[/bold] to set an engine."
+            "  Use [bold]gdpm godot use <id>[/bold] for this project,\n"
+            "  or [bold]gdpm godot default <id>[/bold] to set a default engine.\n"
+            "\n"
+            "  Available engines:\n"
+            "    [bold]gdpm godot list -id[/bold]"
         )
         return
-
-    from gdpm.utils.path import shorten_path
-
-    name = godot.get("name", "?")
-    version = godot.get("version", "?")
-    path = shorten_path(godot.get("path", "?"), max_len=50)
 
     terminal_width = console.width
 
@@ -613,7 +644,7 @@ def godot_info() -> None:
 
     table.add_row("Name", name)
     table.add_row("Version", version)
-    table.add_row("Path", path)
+    table.add_row("Path", shorten_path(path, max_len=50) if path else "-")
     table.add_row("ID", f"{name}@{version}")
 
     console.print(
