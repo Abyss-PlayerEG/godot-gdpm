@@ -372,10 +372,9 @@ def godot_install(version: str, csharp: bool) -> None:
     url = _build_download_url(tag, csharp)
     if not url:
         console.print(
-            f"[red]Error:[/red] Could not find download URL for "
+            f"[red]Error:[/red] Failed to fetch download URL for "
             f"[cyan]{tag}{suffix}[/cyan].\n"
-            "  Possible causes: GitHub API rate limit or version not found.\n"
-            "  Use [bold]gdpm godot list -r[/bold] to see available versions."
+            "  GitHub API may be rate-limited. Try again later."
         )
         return
 
