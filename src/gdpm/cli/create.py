@@ -16,26 +16,32 @@ from gdpm.config.project import ProjectConfig, write_project_config
 
 
 def _get_installed_versions() -> list[str]:
-    """Get all installed Godot versions, sorted."""
-    versions = []
+    """Get all installed Godot versions, sorted and deduplicated.
+
+    Filters out csharp/mono variants and keeps only unique versions.
+    """
+    versions: set[str] = set()
 
     # Downloaded engines
     engines_dir = _get_engines_dir()
     if engines_dir.exists():
         for d in engines_dir.iterdir():
-            if d.is_dir() and d.name[0].isdigit():
-                versions.append(d.name)
+            is_engine = d.is_dir() and d.name[0].isdigit()
+            is_standard = "-csharp" not in d.name and "-mono" not in d.name
+            if is_engine and is_standard:
+                versions.add(d.name)
 
     # Local engines
     from gdpm.config.local_engines import load_local_engines
 
     for _, engine in load_local_engines().items():
-        if engine.version and engine.version not in versions:
-            versions.append(engine.version)
+        v = engine.version
+        if v and "-csharp" not in v and "-mono" not in v:
+            versions.add(v)
 
-    # Sort: stable first, then by version
-    stable = sorted([v for v in versions if "stable" in v])
-    other = sorted([v for v in versions if "stable" not in v])
+    # Sort: stable first, then by version descending
+    stable = sorted([v for v in versions if "stable" in v], reverse=True)
+    other = sorted([v for v in versions if "stable" not in v], reverse=True)
     return stable + other
 
 
