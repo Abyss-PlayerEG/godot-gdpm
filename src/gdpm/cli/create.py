@@ -150,11 +150,13 @@ config/version="{version_tag}.0"
     )
     write_project_config(config, config_path)
 
-    console.print(f"[green]✓[/green] Created project [bold]{name}[/bold]")
-    console.print(f"  Godot: [cyan]>={version_tag}.0[/cyan]")
-    console.print("  Created [cyan]project.godot[/cyan]")
-    console.print("  Created [cyan]gdproject.toml[/cyan]")
-    console.print("  Created [cyan]addons/[/cyan]")
+    console.print(
+        f"[green]✓[/green] Created project [bold]{name}[/bold]\n"
+        f"  Godot: [cyan]>={version_tag}.0[/cyan]\n"
+        "  Created [cyan]project.godot[/cyan]\n"
+        "  Created [cyan]gdproject.toml[/cyan]\n"
+        "  Created [cyan]addons/[/cyan]"
+    )
 
     # Open Godot
     if open_editor:

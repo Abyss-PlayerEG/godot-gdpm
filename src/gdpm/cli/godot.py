@@ -112,8 +112,8 @@ def _list_local(show_id: bool = False) -> None:
         })
 
     if not rows:
-        console.print("[dim]No Godot versions installed.[/dim]")
         console.print(
+            "[dim]No Godot versions installed.[/dim]\n"
             "  Use [bold]gdpm godot install <version>[/bold] to install.\n"
             "  Use [bold]gdpm godot add <path>[/bold] to add a local engine."
         )
@@ -942,8 +942,8 @@ def godot_default(engine_id: str | None, unset: bool) -> None:
         if default:
             console.print(f"Default engine: [cyan]{default}[/cyan]")
         else:
-            console.print("[dim]No default engine configured.[/dim]")
             console.print(
+                "[dim]No default engine configured.[/dim]\n"
                 "  Use [bold]gdpm godot default <id>[/bold] to set one.\n"
                 "  Use [bold]gdpm godot list -id[/bold] to see available engines."
             )
