@@ -99,7 +99,8 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
         godot_ver = click.prompt("  Godot version", default=default_ver, type=str)
 
     # Normalize version
-    godot_ver = godot_ver.replace("-stable", "").replace("-csharp", "").replace("-mono", "")
+    for suffix in ("-stable", "-csharp", "-mono"):
+        godot_ver = godot_ver.replace(suffix, "")
     version_tag = _get_godot_version_tag(godot_ver)
 
     # Create directory
@@ -107,8 +108,11 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
 
     # Create project.godot
     project_godot = target_dir / "project.godot"
-    project_godot.write_text(
-        f"""; Engine configuration file.
+
+    major = int(version_tag.split(".")[0])
+    if major >= 4:
+        project_godot.write_text(
+            f"""; Engine configuration file.
 ; It's best edited using the editor UI and not directly.
 
 config_version=5
@@ -118,8 +122,22 @@ config_version=5
 config/name="{name}"
 config/features=PackedStringArray("{version_tag}")
 """,
-        encoding="utf-8",
-    )
+            encoding="utf-8",
+        )
+    else:
+        project_godot.write_text(
+            f"""; Engine configuration file.
+; It's best edited using the editor UI and not directly.
+
+config_version=4
+
+[application]
+
+config/name="{name}"
+config/version="{version_tag}.0"
+""",
+            encoding="utf-8",
+        )
 
     # Create addons/
     addons_dir = target_dir / "addons"
