@@ -572,7 +572,9 @@ def godot_info() -> None:
     """Show current Godot engine configuration."""
     import json
 
-    root = find_project_root()
+    from gdpm.cli.common import require_project
+
+    root = require_project()
     conf_path = root / ".engines-conf.json"
 
     if not conf_path.exists():
