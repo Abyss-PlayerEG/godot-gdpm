@@ -431,13 +431,21 @@ def godot_add(path: str, name: str) -> None:
     else:
         console.print("  [dim]⚠ Could not detect version[/dim]")
 
+    # Check if path already exists
+    engines = load_local_engines()
+    for existing_name, engine in engines.items():
+        if engine.path == str(engine_path):
+            console.print(
+                f"[yellow]This path is already added as '{existing_name}'.[/yellow]"
+            )
+            return
+
     # Get alias
     if not name:
         default_name = version or engine_path.stem
         name = click.prompt("  Alias", default=default_name, type=str)
 
     # Check if name already exists
-    engines = load_local_engines()
     if name in engines and not click.confirm(
         f"  [yellow]'{name}' already exists. Overwrite?[/yellow]"
     ):
