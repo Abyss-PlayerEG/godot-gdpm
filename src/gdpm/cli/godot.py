@@ -192,7 +192,7 @@ def _build_download_url(version: str, csharp: bool = False) -> str:
     ],
 )
 @click.argument("version")
-@click.option("--csharp", "-c", is_flag=True, help="Install C# (mono) version")
+@click.option("--csharp", "-cs", is_flag=True, help="Install C# (mono) version")
 def godot_install(version: str, csharp: bool) -> None:
     """Install a Godot engine version."""
     import httpx
