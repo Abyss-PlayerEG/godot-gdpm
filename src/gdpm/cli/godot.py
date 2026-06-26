@@ -129,10 +129,12 @@ def _list_local() -> None:
     )
     table.add_column("Name", style="cyan", min_width=15)
     table.add_column("Version", style="green", min_width=15)
+    table.add_column("ID", style="yellow", min_width=25)
     table.add_column("Source", style="dim")
 
     for row in rows:
-        table.add_row(row["name"], row["version"], row["source"])
+        engine_id = f"{row['name']}@{row['version']}"
+        table.add_row(row["name"], row["version"], engine_id, row["source"])
 
     console.print(
         Panel(
