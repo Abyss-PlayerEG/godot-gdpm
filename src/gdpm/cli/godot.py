@@ -22,6 +22,7 @@ from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand, GdpmGroup
 from gdpm.cli.common import console as gdpm_console
+from gdpm.cli.common import find_project_root
 from gdpm.constants import GODOT_DOWNLOAD_URL, GODOT_RELEASES_URL
 from gdpm.utils.install import get_godot_ext, get_godot_platform
 
@@ -459,3 +460,93 @@ def godot_add(path: str, name: str) -> None:
 
     add_local_engine(name, str(engine_path), version)
     console.print(f"[green]✓[/green] Added Godot [bold]{name}[/bold]")
+
+
+def _find_engine(name: str, version: str) -> str | None:
+    """Find Godot binary path by name and version.
+
+    Returns:
+        Path string to Godot binary, or None if not found.
+    """
+    from gdpm.config.local_engines import load_local_engines
+
+    engines_dir = _get_engines_dir()
+
+    # Check local engines first
+    local_engines = load_local_engines()
+    if name in local_engines:
+        engine = local_engines[name]
+        if not version or engine.version == version:
+            return engine.path
+
+    # Check downloaded engines
+    if name == "gdpm-godot":
+        tag = _normalize_version(version) if version else ""
+        if tag:
+            ver_dir = engines_dir / tag
+            if ver_dir.exists():
+                # Find binary
+                for app in ver_dir.glob("*.app"):
+                    binary = app / "Contents" / "MacOS" / "Godot"
+                    if binary.exists():
+                        return str(binary)
+                for f in ver_dir.iterdir():
+                    if f.is_file() and not f.suffix:
+                        return str(f)
+
+    return None
+
+
+@godot.command(
+    name="use",
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm godot use gdpm-godot@4.7-stable", "Use downloaded engine"),
+        ("gdpm godot use steam@4.7-stable", "Use local engine"),
+    ],
+)
+@click.argument("spec")
+def godot_use(spec: str) -> None:
+    """Set the Godot engine for the current project."""
+    import json
+
+    # Parse spec: Name@Version
+    if "@" not in spec:
+        console.print(
+            "[red]Error:[/red] Invalid format. Use [cyan]Name@Version[/cyan]\n"
+            "  Example: gdpm godot use gdpm-godot@4.7-stable"
+        )
+        return
+
+    name, version = spec.split("@", 1)
+
+    # Find engine
+    engine_path = _find_engine(name, version)
+    if not engine_path:
+        console.print(
+            f"[red]Error:[/red] Engine [cyan]{spec}[/cyan] not found.\n"
+            "  Use [bold]gdpm godot list[/bold] to see available engines."
+        )
+        return
+
+    # Write .engines-conf.json
+    root = find_project_root()
+    conf_path = root / ".engines-conf.json"
+
+    conf = {}
+    if conf_path.exists():
+        try:
+            conf = json.loads(conf_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, TypeError):
+            conf = {}
+
+    conf["godot"] = {"name": name, "version": version, "path": engine_path}
+
+    conf_path.write_text(
+        json.dumps(conf, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    console.print(
+        f"[green]✓[/green] Set Godot engine to [bold]{name}@{version}[/bold]"
+    )
