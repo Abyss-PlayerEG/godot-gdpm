@@ -69,7 +69,9 @@ def godot() -> None:
     "-id", "show_id", is_flag=True,
     help="Show ID column instead of Name and Version",
 )
-def godot_list(remote: bool, version_filter: str, show_all: bool, show_id: bool) -> None:
+def godot_list(
+    remote: bool, version_filter: str, show_all: bool, show_id: bool
+) -> None:
     """List Godot engine versions."""
     if remote:
         _list_remote(version_filter, show_all)
@@ -556,4 +558,70 @@ def godot_use(spec: str) -> None:
 
     console.print(
         f"[green]✓[/green] Set Godot engine to [bold]{name}@{version}[/bold]"
+    )
+
+
+@godot.command(
+    name="info",
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm godot info", "Show current Godot engine info"),
+    ],
+)
+def godot_info() -> None:
+    """Show current Godot engine configuration."""
+    import json
+
+    root = find_project_root()
+    conf_path = root / ".engines-conf.json"
+
+    if not conf_path.exists():
+        console.print(
+            "[red]Error:[/red] No Godot engine configured for this project.\n"
+            "  Use [bold]gdpm godot use <id>[/bold] to set an engine."
+        )
+        return
+
+    try:
+        conf = json.loads(conf_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, TypeError):
+        console.print("[red]Error:[/red] Invalid .engines-conf.json")
+        return
+
+    godot = conf.get("godot", {})
+    if not godot:
+        console.print(
+            "[red]Error:[/red] No Godot engine configured.\n"
+            "  Use [bold]gdpm godot use <id>[/bold] to set an engine."
+        )
+        return
+
+    name = godot.get("name", "?")
+    version = godot.get("version", "?")
+    path = godot.get("path", "?")
+
+    terminal_width = console.width
+
+    table = Table(
+        box=box.SIMPLE,
+        show_header=False,
+        padding=(0, 2),
+        width=min(terminal_width - 6, 90),
+    )
+    table.add_column("Key", style="dim", min_width=12)
+    table.add_column("Value", style="cyan")
+
+    table.add_row("Name", name)
+    table.add_row("Version", version)
+    table.add_row("Path", path)
+    table.add_row("ID", f"{name}@{version}")
+
+    console.print(
+        Panel(
+            table,
+            title="[bold cyan]Godot Engine[/bold cyan]",
+            border_style="dim",
+            padding=(0, 1),
+            width=min(terminal_width, 90),
+        )
     )
