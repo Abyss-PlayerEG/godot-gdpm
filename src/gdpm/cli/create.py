@@ -76,6 +76,10 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
     """Create a new Godot project."""
     project_dir = Path.cwd()
 
+    console.print()
+    console.print("[bold cyan]✦ Create a new Godot project[/bold cyan]")
+    console.print()
+
     # Get project name
     if not name:
         if yes:
@@ -94,7 +98,7 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
 
     if config_path.exists():
         console.print(
-            f"[red]Error:[/red] Project already exists "
+            f"  [red]✖[/red] Project already exists "
             f"([cyan]{config_path}[/cyan])"
         )
         return
@@ -173,13 +177,20 @@ config/version="{version_tag}.0"
     )
     write_project_config(config, config_path)
 
+    # Show success
+    console.print()
     console.print(
-        f"[green]✓[/green] Created project [bold]{name}[/bold]\n"
-        f"  Godot: [cyan]>={version_tag}.0[/cyan]\n"
-        "  Created [cyan]project.godot[/cyan]\n"
-        "  Created [cyan]gdproject.toml[/cyan]\n"
-        "  Created [cyan]addons/[/cyan]"
+        f"  [green]✔[/green] Project [bold]{name}[/bold] created successfully!"
     )
+    console.print()
+    console.print(f"  [dim]Godot:[/dim]     [cyan]>={version_tag}.0[/cyan]")
+    console.print(f"  [dim]Directory:[/dim] [cyan]{target_dir}[/cyan]")
+    console.print()
+    console.print("  [dim]Files created:[/dim]")
+    console.print("    [cyan]project.godot[/cyan]")
+    console.print("    [cyan]gdproject.toml[/cyan]")
+    console.print("    [cyan]addons/[/cyan]")
+    console.print()
 
     # Open Godot
     if open_editor:
