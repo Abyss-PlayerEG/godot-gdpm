@@ -294,6 +294,7 @@ def print_completion(ctx: click.Context, _param: click.Parameter, value: str) ->
         env=env,
         capture_output=True,
         text=True,
+        check=False,
     )
     click.echo(result.stdout)
     ctx.exit()

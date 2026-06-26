@@ -124,3 +124,4 @@ asyncio_mode = "auto"
 
 [tool.deptry]
 ignore = ["DEP003"]
+exclude = ["scripts"]
