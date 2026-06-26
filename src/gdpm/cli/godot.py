@@ -308,8 +308,18 @@ def godot_install(version: str, csharp: bool) -> None:
         with zipfile.ZipFile(zip_path) as zf:
             zf.extractall(ver_dir)
 
-        # macOS: move .app bundle to version dir
+        # macOS: fix .app bundle
+        import platform
+        import subprocess
+
         for app in ver_dir.glob("*.app"):
+            # Remove quarantine attribute (Gatekeeper)
+            if platform.system() == "Darwin":
+                subprocess.run(
+                    ["xattr", "-cr", str(app)],
+                    check=False,
+                    capture_output=True,
+                )
             # Make executable
             binary = app / "Contents" / "MacOS" / app.stem
             if binary.exists():
