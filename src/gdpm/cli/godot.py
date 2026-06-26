@@ -88,8 +88,6 @@ def _list_local() -> None:
 
 def _list_remote(limit: int) -> None:
     """List available Godot versions from GitHub."""
-    console.print("[dim]Fetching versions from GitHub...[/dim]")
-
     try:
         resp = httpx.get(
             f"{GODOT_RELEASES_URL}?per_page={limit}",
