@@ -156,24 +156,49 @@ def _list_local(show_id: bool = False) -> None:
 def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
     """List available Godot versions from GitHub."""
     try:
-        resp = httpx.get(
-            GODOT_RELEASES_URL,
-            params={"per_page": 30, "page": page},
-            timeout=10,
-            verify=False,
-        )
-        resp.raise_for_status()
-        releases = resp.json()
+        # If filtering by version, fetch all pages
+        if version_filter:
+            releases = []
+            current_page = 1
+            while True:
+                resp = httpx.get(
+                    GODOT_RELEASES_URL,
+                    params={"per_page": 100, "page": current_page},
+                    timeout=10,
+                    verify=False,
+                )
+                resp.raise_for_status()
+                page_data = resp.json()
+                if not page_data:
+                    break
+                releases.extend(page_data)
 
-        # Parse Link header for pagination
-        total_pages = 1
-        link_header = resp.headers.get("link", "")
-        if 'rel="last"' in link_header:
-            import re
+                # Check if more pages
+                link_header = resp.headers.get("link", "")
+                if 'rel="next"' not in link_header:
+                    break
+                current_page += 1
 
-            match = re.search(r"page=(\d+)>; rel=\"last\"", link_header)
-            if match:
-                total_pages = int(match.group(1))
+            total_pages = 1
+        else:
+            resp = httpx.get(
+                GODOT_RELEASES_URL,
+                params={"per_page": 30, "page": page},
+                timeout=10,
+                verify=False,
+            )
+            resp.raise_for_status()
+            releases = resp.json()
+
+            # Parse Link header for pagination
+            total_pages = 1
+            link_header = resp.headers.get("link", "")
+            if 'rel="last"' in link_header:
+                import re
+
+                match = re.search(r"page=(\d+)>; rel=\"last\"", link_header)
+                if match:
+                    total_pages = int(match.group(1))
     except Exception as e:
         console.print(f"[red]Error:[/red] Failed to fetch releases: {e}")
         return
