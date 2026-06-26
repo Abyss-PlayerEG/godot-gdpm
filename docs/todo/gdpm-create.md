@@ -36,9 +36,6 @@ $ gdpm create
 |------|--------|------|
 | Project name | 目录名 | 项目名称 |
 | Godot version | 已安装最新版 | 指定版本 |
-| Description | 空 | 项目描述 |
-| Author | 空 | 作者 |
-| License | MIT | 许可证 |
 
 ## 参数
 
@@ -82,9 +79,6 @@ config/features=PackedStringArray("4.7")
 ```toml
 name = "my-game"
 godot = ">=4.7.0"
-description = "My awesome game"
-author = "playereg"
-license = "MIT"
 addons_dir = "addons"
 ```
 
