@@ -15,12 +15,12 @@ from gdpm.config.local_engines import get_default_engine, get_local_engine
 from gdpm.config.project import ProjectConfig, write_project_config
 
 
-def _get_installed_versions() -> list[str]:
-    """Get all installed Godot versions, sorted and deduplicated.
+def _get_installed_engines() -> list[str]:
+    """Get all installed engine IDs.
 
-    Filters out csharp/mono variants and keeps only unique versions.
+    Returns list of IDs like ['gdpm-godot@4.7-stable', 'steam@4.7-stable']
     """
-    versions: set[str] = set()
+    engines: list[str] = []
 
     # Downloaded engines
     engines_dir = _get_engines_dir()
@@ -29,20 +29,23 @@ def _get_installed_versions() -> list[str]:
             is_engine = d.is_dir() and d.name[0].isdigit()
             is_standard = "-csharp" not in d.name and "-mono" not in d.name
             if is_engine and is_standard:
-                versions.add(d.name)
+                engines.append(f"gdpm-godot@{d.name}")
 
     # Local engines
     from gdpm.config.local_engines import load_local_engines
 
-    for _, engine in load_local_engines().items():
-        v = engine.version
-        if v and "-csharp" not in v and "-mono" not in v:
-            versions.add(v)
+    for name, engine in load_local_engines().items():
+        if engine.version:
+            engines.append(f"{name}@{engine.version}")
 
     # Sort: stable first, then by version descending
-    stable = sorted([v for v in versions if "stable" in v], reverse=True)
-    other = sorted([v for v in versions if "stable" not in v], reverse=True)
-    return stable + other
+    def sort_key(item: str) -> tuple[int, str]:
+        ver = item.split("@", 1)[1]
+        is_stable = 0 if "stable" in ver else 1
+        return (is_stable, ver)
+
+    engines.sort(key=sort_key, reverse=True)
+    return engines
 
 
 def _get_godot_version_tag(version: str) -> str:
@@ -102,19 +105,21 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
         return
 
     # Get Godot version
-    versions = _get_installed_versions()
-    default_ver = versions[0] if versions else "4.7-stable"
+    engines = _get_installed_engines()
+    default_engine = engines[0] if engines else ""
+    default_ver = default_engine.split("@", 1)[1] if default_engine else "4.7-stable"
 
     if yes:
         godot_ver = default_ver
-    elif versions:
-        godot_ver = questionary.select(
+    elif engines:
+        selected = questionary.select(
             "Godot version:",
-            choices=versions,
-            default=default_ver,
+            choices=engines,
+            default=default_engine,
         ).ask()
-        if not godot_ver:
+        if not selected:
             return
+        godot_ver = selected.split("@", 1)[1]
     else:
         godot_ver = questionary.text(
             "Godot version:",
@@ -187,8 +192,8 @@ config/version="{version_tag}.0"
     )
 
     # Optional: set engine for this project
-    versions = _get_installed_versions()
-    if versions and not yes:
+    engines = _get_installed_engines()
+    if engines and not yes:
         set_engine = questionary.confirm(
             "Set Godot engine for this project?",
             default=True,
@@ -196,16 +201,14 @@ config/version="{version_tag}.0"
 
         if set_engine:
             engine_id = ""
-            if len(versions) == 1:
-                engine_id = f"gdpm-godot@{versions[0]}"
+            if len(engines) == 1:
+                engine_id = engines[0]
             else:
-                selected = questionary.select(
+                engine_id = questionary.select(
                     "Select engine:",
-                    choices=versions,
-                    default=versions[0],
+                    choices=engines,
+                    default=engines[0],
                 ).ask()
-                if selected:
-                    engine_id = f"gdpm-godot@{selected}"
 
             if engine_id:
                 _set_project_engine(target_dir, engine_id)
