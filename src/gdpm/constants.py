@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 CONFIG_FILENAME = "gdproject.toml"
@@ -19,15 +18,14 @@ GODOT_RELEASES_URL = "https://api.github.com/repos/godotengine/godot/releases"
 
 
 def get_github_token() -> str:
-    """Read GitHub token from ~/.gdpm/conf.json."""
-    conf_path = Path.home() / ".gdpm" / "conf.json"
-    if not conf_path.exists():
+    """Read GitHub token from ~/.gdpm/github_token.txt."""
+    token_path = Path.home() / ".gdpm" / "github_token.txt"
+    if not token_path.exists():
         return ""
 
     try:
-        data = json.loads(conf_path.read_text(encoding="utf-8"))
-        return data.get("github_token", "")
-    except (json.JSONDecodeError, TypeError):
+        return token_path.read_text(encoding="utf-8").strip()
+    except Exception:
         return ""
 
 
