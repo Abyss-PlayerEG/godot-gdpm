@@ -80,16 +80,18 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
         return
 
     if check:
+        lines = []
         for name in sorted(to_install):
             entry = ctx.lock_map.get(name)
             v = entry.version if entry else "?"
-            console.print(f"  [dim]Would install:[/dim] {name} {v}")
+            lines.append(f"  [dim]Would install:[/dim] {name} {v}")
         for name in sorted(to_remove):
-            console.print(f"  [dim]Would remove:[/dim]  {name}")
-        console.print(
+            lines.append(f"  [dim]Would remove:[/dim]  {name}")
+        lines.append(
             f"\n[yellow]Dry run complete.[/yellow] "
             f"{len(to_install)} install, {len(to_remove)} remove."
         )
+        console.print("\n".join(lines))
         return
 
     async def _sync() -> None:

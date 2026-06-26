@@ -139,13 +139,13 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
 
         updates = [r for r in results if "⬆" in r["status"]]
 
-        console.print(header)
-        console.print(table)
-
+        update_msg = ""
         if updates:
-            console.print(
+            update_msg = (
                 f"\n[yellow]{len(updates)} update(s) available. "
                 f"Run 'gdpm update' to update.[/yellow]"
             )
+
+        console.print(f"{header}\n{table}{update_msg}")
 
     asyncio.run(_status())
