@@ -1,13 +1,11 @@
 """Godot project.godot file parser.
 
 Detects Godot engine version from project.godot files.
-Supports Godot 1.x through 4.x formats.
+Supports Godot 3.x and 4.x formats.
 
 Version detection by config_version:
 - config_version=5 → Godot 4.x: config/features=PackedStringArray("4.7", "Forward Plus")
 - config_version=4 → Godot 3.x: config/version="3.5.2"
-- config_version=2 → Godot 2.x: version="2.1.6"
-- config_version=1 → Godot 1.x: version="1.1.0"
 """
 
 from __future__ import annotations
@@ -34,7 +32,7 @@ class GodotProject:
     def version_constraint(self) -> str:
         """Return a version constraint string for gdproject.toml."""
         if not self.godot_version:
-            return ">=4.0"
+            return ">=3.0"
 
         parts = self.godot_version.split(".")
         if len(parts) >= 2:
@@ -46,12 +44,20 @@ class GodotProject:
 
 
 def parse_project_godot(path: Path) -> GodotProject:
-    """Parse a project.godot file and extract project information."""
+    """Parse a project.godot file and extract project information.
+
+    Supports Godot 3.x (config_version=4) and 4.x (config_version=5).
+    """
     if not path.exists():
         return GodotProject()
 
     content = path.read_text(encoding="utf-8")
-    return _parse_content(content)
+    project = _parse_content(content)
+
+    if project.config_version > 0 and project.config_version < 4:
+        return GodotProject()
+
+    return project
 
 
 def _parse_content(content: str) -> GodotProject:
@@ -115,12 +121,6 @@ def _parse_content(content: str) -> GodotProject:
             project.renderer = "GLES2"
         elif "GLES3" in content:
             project.renderer = "GLES3"
-
-    elif project.config_version <= 2:
-        # Godot 2.x/1.x: version="2.1.6"
-        match = re.search(r'^version="([^"]+)"', content, re.MULTILINE)
-        if match:
-            project.godot_version = match.group(1)
 
     return project
 
