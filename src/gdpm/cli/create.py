@@ -106,20 +106,27 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
 
     # Get Godot version
     engines = _get_installed_engines()
-    default_engine = engines[0] if engines else ""
-    default_ver = default_engine.split("@", 1)[1] if default_engine else "4.7-stable"
+    versions = [e.split("@", 1)[1] for e in engines]
+    # Deduplicate
+    seen: set[str] = set()
+    unique_versions: list[str] = []
+    for v in versions:
+        if v not in seen:
+            seen.add(v)
+            unique_versions.append(v)
+
+    default_ver = unique_versions[0] if unique_versions else "4.7-stable"
 
     if yes:
         godot_ver = default_ver
-    elif engines:
-        selected = questionary.select(
+    elif unique_versions:
+        godot_ver = questionary.select(
             "Godot version:",
-            choices=engines,
-            default=default_engine,
+            choices=unique_versions,
+            default=default_ver,
         ).ask()
-        if not selected:
+        if not godot_ver:
             return
-        godot_ver = selected.split("@", 1)[1]
     else:
         godot_ver = questionary.text(
             "Godot version:",
