@@ -190,6 +190,27 @@ def _build_download_url(version: str, csharp: bool = False) -> str:
     return f"{GODOT_DOWNLOAD_URL}/{tag}/Godot_v{tag}{mono}_{plat}.{ext}"
 
 
+def _get_asset_hash(tag: str, filename: str) -> str:
+    """Get SHA256 hash for a release asset from GitHub API."""
+    try:
+        resp = httpx.get(
+            f"{GODOT_RELEASES_URL}/tags/{tag}",
+            timeout=10,
+            verify=False,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        for asset in data.get("assets", []):
+            if asset.get("name") == filename:
+                digest = asset.get("digest", "")
+                if digest.startswith("sha256:"):
+                    return digest[7:]
+        return ""
+    except Exception:
+        return ""
+
+
 @godot.command(
     name="install",
     cls=GdpmCommand,
@@ -203,6 +224,8 @@ def _build_download_url(version: str, csharp: bool = False) -> str:
 @click.option("--csharp", "-cs", is_flag=True, help="Install C# (mono) version")
 def godot_install(version: str, csharp: bool) -> None:
     """Install a Godot engine version."""
+    import hashlib
+
     import httpx
 
     engines_dir = _get_engines_dir()
@@ -223,6 +246,9 @@ def godot_install(version: str, csharp: bool) -> None:
     ext = get_godot_ext()
     filename = f"Godot_v{tag}{suffix}_{plat}.{ext}"
     zip_path = engines_dir / filename
+
+    # Get expected hash from GitHub API
+    expected_hash = _get_asset_hash(tag, filename)
 
     progress = Progress(
         TextColumn("[bold blue]{task.fields[name]}"),
@@ -249,10 +275,25 @@ def godot_install(version: str, csharp: bool) -> None:
                 total = int(resp.headers.get("content-length", 0))
                 progress.update(task_id, total=total)
 
+                sha256 = hashlib.sha256()
                 with open(zip_path, "wb") as f:
                     for chunk in resp.iter_bytes(8192):
                         f.write(chunk)
+                        sha256.update(chunk)
                         progress.update(task_id, advance=len(chunk))
+
+        # Verify hash
+        if expected_hash:
+            actual_hash = sha256.hexdigest()
+            if actual_hash != expected_hash:
+                zip_path.unlink()
+                console.print(
+                    "[red]Error:[/red] Hash verification failed.\n"
+                    f"  Expected: [dim]{expected_hash}[/dim]\n"
+                    f"  Actual:   [dim]{actual_hash}[/dim]"
+                )
+                return
+            console.print("[dim]  Hash verified ✓[/dim]")
 
     except Exception as e:
         console.print(f"[red]Error:[/red] Download failed: {e}")
