@@ -320,10 +320,11 @@ def godot_install(version: str, csharp: bool) -> None:
                     check=False,
                     capture_output=True,
                 )
-            # Make executable
-            binary = app / "Contents" / "MacOS" / app.stem
-            if binary.exists():
-                binary.chmod(0o755)
+            # Make all binaries executable
+            macos_dir = app / "Contents" / "MacOS"
+            if macos_dir.exists():
+                for binary in macos_dir.iterdir():
+                    binary.chmod(0o755)
 
         zip_path.unlink()
         console.print(f"[green]✓[/green] Installed Godot [bold]{tag}[/bold]")
