@@ -515,8 +515,8 @@ def _find_engine(name: str, version: str) -> str | None:
         ("gdpm godot list -id", "List available engine IDs"),
     ],
 )
-@click.argument("spec")
-def godot_use(spec: str) -> None:
+@click.argument("id")
+def godot_use(id: str) -> None:
     """Set the Godot engine for the current project.
 
     Use 'gdpm godot list -id' to see available engine IDs.
@@ -524,21 +524,21 @@ def godot_use(spec: str) -> None:
     import json
 
     # Parse spec: Name@Version
-    if "@" not in spec:
+    if "@" not in id:
         console.print(
             "[red]Error:[/red] Invalid format. Use [cyan]Name@Version[/cyan]\n"
             "  Example: gdpm godot use gdpm-godot@4.7-stable"
         )
         return
 
-    name, version = spec.split("@", 1)
+    name, version = id.split("@", 1)
 
     # Find engine
     engine_path = _find_engine(name, version)
     if not engine_path:
         console.print(
-            f"[red]Error:[/red] Engine [cyan]{spec}[/cyan] not found.\n"
-            "  Use [bold]gdpm godot list[/bold] to see available engines."
+            f"[red]Error:[/red] Engine [cyan]{id}[/cyan] not found.\n"
+            "  Use [bold]gdpm godot list -id[/bold] to see available engines."
         )
         return
 
