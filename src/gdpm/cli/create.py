@@ -186,9 +186,79 @@ config/version="{version_tag}.0"
         f"    [cyan]addons/[/cyan]"
     )
 
+    # Optional: set engine for this project
+    versions = _get_installed_versions()
+    if versions and not yes:
+        set_engine = questionary.confirm(
+            "Set Godot engine for this project?",
+            default=True,
+        ).ask()
+
+        if set_engine:
+            engine_id = ""
+            if len(versions) == 1:
+                engine_id = f"gdpm-godot@{versions[0]}"
+            else:
+                selected = questionary.select(
+                    "Select engine:",
+                    choices=versions,
+                    default=versions[0],
+                ).ask()
+                if selected:
+                    engine_id = f"gdpm-godot@{selected}"
+
+            if engine_id:
+                _set_project_engine(target_dir, engine_id)
+
     # Open Godot
     if open_editor:
         _open_godot(target_dir, godot_ver)
+
+
+def _set_project_engine(project_dir: Path, engine_id: str) -> None:
+    """Set the Godot engine for a project."""
+    import json
+
+    from gdpm.cli.godot import _get_engines_dir, _normalize_version
+
+    name, version = engine_id.split("@", 1)
+
+    # Find engine binary
+    binary = ""
+    if name == "gdpm-godot":
+        engines_dir = _get_engines_dir()
+        tag = _normalize_version(version)
+        ver_dir = engines_dir / tag
+        if ver_dir.exists():
+            for app in ver_dir.glob("*.app"):
+                b = app / "Contents" / "MacOS" / "Godot"
+                if b.exists():
+                    binary = str(b)
+                    break
+            if not binary:
+                for f in ver_dir.iterdir():
+                    if f.is_file() and not f.suffix:
+                        binary = str(f)
+                        break
+    else:
+        from gdpm.config.local_engines import get_local_engine
+
+        engine = get_local_engine(name)
+        if engine:
+            binary = engine.path
+
+    if not binary:
+        console.print("  [dim]Skipping engine setup: engine not found[/dim]")
+        return
+
+    # Write .engines-conf.json
+    conf_path = project_dir / ".engines-conf.json"
+    conf = {"godot": {"name": name, "version": version, "path": binary}}
+    conf_path.write_text(
+        json.dumps(conf, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    console.print(f"  [dim]Engine:[/dim] [cyan]{name}@{version}[/cyan]")
 
 
 def _open_godot(project_dir: Path, version: str) -> None:
