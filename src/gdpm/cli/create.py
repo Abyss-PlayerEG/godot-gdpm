@@ -46,6 +46,22 @@ def _get_installed_engines() -> list[str]:
     return engines
 
 
+def _get_installed_versions(engines: list[str]) -> list[str]:
+    """Get unique versions from engine IDs, filtering out csharp/mono."""
+    versions: list[str] = []
+    seen: set[str] = set()
+
+    for engine_id in engines:
+        ver = engine_id.split("@", 1)[1]
+        if "-csharp" in ver or "-mono" in ver:
+            continue
+        if ver not in seen:
+            seen.add(ver)
+            versions.append(ver)
+
+    return versions
+
+
 def _get_godot_version_tag(version: str) -> str:
     """Convert version to features tag.
 
@@ -104,23 +120,15 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
 
     # Get Godot version
     engines = _get_installed_engines()
-    versions = [e.split("@", 1)[1] for e in engines]
-    # Deduplicate
-    seen: set[str] = set()
-    unique_versions: list[str] = []
-    for v in versions:
-        if v not in seen:
-            seen.add(v)
-            unique_versions.append(v)
-
-    default_ver = unique_versions[0] if unique_versions else "4.7-stable"
+    versions = _get_installed_versions(engines)
+    default_ver = versions[0] if versions else "4.7-stable"
 
     if yes:
         godot_ver = default_ver
-    elif unique_versions:
+    elif versions:
         godot_ver = questionary.select(
             "Godot version:",
-            choices=unique_versions,
+            choices=versions,
             default=default_ver,
         ).ask()
         if not godot_ver:
@@ -197,11 +205,7 @@ config/version="{version_tag}.0"
     )
 
     # Optional: set engine for this project
-    engines = _get_installed_engines()
-    # Filter engines by selected version
-    matching_engines = [e for e in engines if godot_ver in e]
-
-    if matching_engines and not yes:
+    if engines and not yes:
         set_engine = questionary.confirm(
             "Set Godot engine for this project?",
             default=True,
@@ -209,13 +213,13 @@ config/version="{version_tag}.0"
 
         if set_engine:
             engine_id = ""
-            if len(matching_engines) == 1:
-                engine_id = matching_engines[0]
+            if len(engines) == 1:
+                engine_id = engines[0]
             else:
                 engine_id = questionary.select(
                     "Select engine:",
-                    choices=matching_engines,
-                    default=matching_engines[0],
+                    choices=engines,
+                    default=engines[0],
                 ).ask()
 
             if engine_id:
