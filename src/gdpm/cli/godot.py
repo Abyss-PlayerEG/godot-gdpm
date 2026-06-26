@@ -173,12 +173,13 @@ def _normalize_version(version: str) -> str:
     return f"{version}-stable"
 
 
-def _build_download_url(version: str) -> str:
+def _build_download_url(version: str, csharp: bool = False) -> str:
     """Build Godot download URL."""
     tag = _normalize_version(version)
     plat = get_godot_platform()
     ext = get_godot_ext()
-    return f"{GODOT_DOWNLOAD_URL}/{tag}/Godot_v{tag}_{plat}.{ext}"
+    mono = "_mono" if csharp else ""
+    return f"{GODOT_DOWNLOAD_URL}/{tag}/Godot_v{tag}{mono}_{plat}.{ext}"
 
 
 @godot.command(
@@ -186,23 +187,28 @@ def _build_download_url(version: str) -> str:
     cls=GdpmCommand,
     examples=[
         ("gdpm godot install 4.7", "Install latest 4.7 stable"),
+        ("gdpm godot install 4.7 --csharp", "Install C# version"),
         ("gdpm godot install 3.6.2-stable", "Install specific version"),
     ],
 )
 @click.argument("version")
-def godot_install(version: str) -> None:
+@click.option("--csharp", "-c", is_flag=True, help="Install C# (mono) version")
+def godot_install(version: str, csharp: bool) -> None:
     """Install a Godot engine version."""
     import httpx
 
     engines_dir = _get_engines_dir()
     tag = _normalize_version(version)
-    ver_dir = engines_dir / tag
+    suffix = "-csharp" if csharp else ""
+    ver_dir = engines_dir / f"{tag}{suffix}"
 
     if ver_dir.exists():
-        console.print(f"[yellow]Godot {tag} is already installed.[/yellow]")
+        console.print(
+            f"[yellow]Godot {tag}{suffix} is already installed.[/yellow]"
+        )
         return
 
-    url = _build_download_url(version)
+    url = _build_download_url(version, csharp)
     plat = get_godot_platform()
     ext = get_godot_ext()
     filename = f"Godot_v{tag}_{plat}.{ext}"
