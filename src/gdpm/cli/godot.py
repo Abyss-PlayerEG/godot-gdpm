@@ -568,11 +568,11 @@ def godot_info() -> None:
     """Show current Godot engine configuration."""
     import json
 
-    from gdpm.cli.common import require_project
+    from gdpm.cli.common import find_project_root
     from gdpm.config.local_engines import get_default_engine, get_local_engine
     from gdpm.utils.path import shorten_path
 
-    root = require_project()
+    root = find_project_root()
     conf_path = root / ".engines-conf.json"
 
     name = ""
