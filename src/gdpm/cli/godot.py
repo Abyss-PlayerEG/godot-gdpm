@@ -114,8 +114,8 @@ def _list_remote(limit: int) -> None:
         pre = r.get("prerelease", False)
         date = r.get("published_at", "")[:10]
 
-        # Only show Godot 3.x and 4.x
-        if not tag.startswith(("3.", "4.")):
+        # Only show Godot 3.x, 4.x and 5.x
+        if not tag.startswith(("3.", "4.", "5.")):
             continue
 
         ver_type = "[yellow]Pre-release[/yellow]" if pre else "[green]Stable[/green]"
