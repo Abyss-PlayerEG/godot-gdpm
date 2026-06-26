@@ -65,15 +65,19 @@ def godot() -> None:
     "-a", "--all", "show_all", is_flag=True,
     help="Show all versions including 1.x/2.x",
 )
-def godot_list(remote: bool, version_filter: str, show_all: bool) -> None:
+@click.option(
+    "-id", "show_id", is_flag=True,
+    help="Show ID column instead of Name and Version",
+)
+def godot_list(remote: bool, version_filter: str, show_all: bool, show_id: bool) -> None:
     """List Godot engine versions."""
     if remote:
         _list_remote(version_filter, show_all)
     else:
-        _list_local()
+        _list_local(show_id)
 
 
-def _list_local() -> None:
+def _list_local(show_id: bool = False) -> None:
     """List installed Godot versions."""
     from gdpm.config.local_engines import load_local_engines
 
@@ -86,8 +90,6 @@ def _list_local() -> None:
     if engines_dir.exists():
         for d in sorted(engines_dir.iterdir()):
             if d.is_dir():
-                has_binary = any(d.iterdir())
-                status = "✓" if has_binary else "✗"
                 source = str(d).replace(str(Path.home()), "~")
                 if len(source) > 35:
                     source = source[:32] + "..."
@@ -95,7 +97,6 @@ def _list_local() -> None:
                     "name": "gdpm-godot",
                     "version": d.name,
                     "source": source,
-                    "status": status,
                 })
 
     # Local engines
@@ -107,7 +108,6 @@ def _list_local() -> None:
             "name": name,
             "version": engine.version or "-",
             "source": source,
-            "status": "✓",
         })
 
     if not rows:
@@ -127,14 +127,21 @@ def _list_local() -> None:
         padding=(0, 2),
         width=min(terminal_width - 6, 90),
     )
-    table.add_column("Name", style="cyan", min_width=15)
-    table.add_column("Version", style="green", min_width=15)
-    table.add_column("ID", style="yellow", min_width=25)
-    table.add_column("Source", style="dim")
 
-    for row in rows:
-        engine_id = f"{row['name']}@{row['version']}"
-        table.add_row(row["name"], row["version"], engine_id, row["source"])
+    if show_id:
+        table.add_column("ID", style="yellow", min_width=25)
+        table.add_column("Source", style="dim")
+        for row in rows:
+            engine_id = f"{row['name']}@{row['version']}"
+            table.add_row(engine_id, row["source"])
+    else:
+        table.add_column("Name", style="cyan", min_width=15)
+        table.add_column("Version", style="green", min_width=15)
+        table.add_column("ID", style="yellow", min_width=25)
+        table.add_column("Source", style="dim")
+        for row in rows:
+            engine_id = f"{row['name']}@{row['version']}"
+            table.add_row(row["name"], row["version"], engine_id, row["source"])
 
     console.print(
         Panel(
