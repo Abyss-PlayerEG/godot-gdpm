@@ -66,15 +66,19 @@ def godot() -> None:
     help="Show all versions including 1.x/2.x",
 )
 @click.option(
+    "-p", "--page", "page", default=1, type=int,
+    help="Page number for remote list",
+)
+@click.option(
     "-id", "show_id", is_flag=True,
     help="Show ID column instead of Name and Version",
 )
 def godot_list(
-    remote: bool, version_filter: str, show_all: bool, show_id: bool
+    remote: bool, version_filter: str, show_all: bool, page: int, show_id: bool
 ) -> None:
     """List Godot engine versions."""
     if remote:
-        _list_remote(version_filter, show_all)
+        _list_remote(version_filter, show_all, page)
     else:
         _list_local(show_id)
 
@@ -149,16 +153,27 @@ def _list_local(show_id: bool = False) -> None:
     )
 
 
-def _list_remote(version_filter: str, show_all: bool) -> None:
+def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
     """List available Godot versions from GitHub."""
     try:
         resp = httpx.get(
             GODOT_RELEASES_URL,
+            params={"per_page": 30, "page": page},
             timeout=10,
             verify=False,
         )
         resp.raise_for_status()
         releases = resp.json()
+
+        # Parse Link header for pagination
+        total_pages = 1
+        link_header = resp.headers.get("link", "")
+        if 'rel="last"' in link_header:
+            import re
+
+            match = re.search(r"page=(\d+)>; rel=\"last\"", link_header)
+            if match:
+                total_pages = int(match.group(1))
     except Exception as e:
         console.print(f"[red]Error:[/red] Failed to fetch releases: {e}")
         return
@@ -193,7 +208,10 @@ def _list_remote(version_filter: str, show_all: bool) -> None:
     console.print(
         Panel(
             table,
-            title="[bold cyan]Available Godot Versions[/bold cyan]",
+            title=(
+                f"[bold cyan]Available Godot Versions "
+                f"(page {page}/{total_pages})[/bold cyan]"
+            ),
             border_style="dim",
             padding=(0, 1),
             width=min(terminal_width, 90),
