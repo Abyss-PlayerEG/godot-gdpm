@@ -12,9 +12,10 @@ from rich.panel import Panel
 from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand, GdpmGroup
+from gdpm.cli.common import console as gdpm_console
 from gdpm.constants import GODOT_RELEASES_URL
 
-console = Console()
+console = gdpm_console
 
 
 def _get_engines_dir() -> Path:
