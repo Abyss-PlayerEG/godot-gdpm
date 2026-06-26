@@ -370,6 +370,15 @@ def godot_install(version: str, csharp: bool) -> None:
         shutil.rmtree(ver_dir, onerror=lambda *args: None)
 
     url = _build_download_url(tag, csharp)
+    if not url:
+        console.print(
+            f"[red]Error:[/red] Could not find download URL for "
+            f"[cyan]{tag}{suffix}[/cyan].\n"
+            "  Possible causes: GitHub API rate limit or version not found.\n"
+            "  Use [bold]gdpm godot list -r[/bold] to see available versions."
+        )
+        return
+
     plat = get_godot_platform()
     ext = get_godot_ext()
     filename = f"Godot_v{tag}{suffix}_{plat}.{ext}"
