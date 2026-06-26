@@ -477,15 +477,21 @@ def godot_install(version: str, csharp: bool) -> None:
 def godot_uninstall(version: str) -> None:
     """Uninstall a Godot engine version."""
     engines_dir = _get_engines_dir()
+    suffix = ""
+    if "-csharp" in version or "-mono" in version:
+        suffix = "-csharp"
+        version = version.replace("-csharp", "").replace("-mono", "")
     tag = _normalize_version(version)
-    ver_dir = engines_dir / tag
+    ver_dir = engines_dir / f"{tag}{suffix}"
 
     if not ver_dir.exists():
-        console.print(f"[red]Error:[/red] Godot [cyan]{tag}[/cyan] is not installed.")
+        console.print(
+            f"[red]Error:[/red] Godot [cyan]{tag}{suffix}[/cyan] is not installed."
+        )
         return
 
     shutil.rmtree(ver_dir)
-    console.print(f"[green]✓[/green] Uninstalled Godot [bold]{tag}[/bold]")
+    console.print(f"[green]✓[/green] Uninstalled Godot [bold]{tag}{suffix}[/bold]")
 
 
 @godot.command(
