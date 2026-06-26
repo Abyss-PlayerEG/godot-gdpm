@@ -74,17 +74,41 @@ def godot_list(remote: bool, version_filter: str, show_all: bool) -> None:
 
 def _list_local() -> None:
     """List installed Godot versions."""
+    from gdpm.config.local_engines import load_local_engines
+
     engines_dir = _get_engines_dir()
+    local_engines = load_local_engines()
 
-    versions = []
-    for d in sorted(engines_dir.iterdir()):
-        if d.is_dir():
-            has_binary = any(d.iterdir())
-            versions.append((d.name, has_binary))
+    rows: list[dict[str, str]] = []
 
-    if not versions:
+    # Downloaded engines
+    if engines_dir.exists():
+        for d in sorted(engines_dir.iterdir()):
+            if d.is_dir():
+                has_binary = any(d.iterdir())
+                status = "✓" if has_binary else "✗"
+                rows.append({
+                    "name": "gdpm-godot",
+                    "version": d.name,
+                    "source": str(d),
+                    "status": status,
+                })
+
+    # Local engines
+    for name, path in sorted(local_engines.items()):
+        rows.append({
+            "name": name,
+            "version": "-",
+            "source": path,
+            "status": "✓",
+        })
+
+    if not rows:
         console.print("[dim]No Godot versions installed.[/dim]")
-        console.print("  Use [bold]gdpm godot install <version>[/bold] to install.")
+        console.print(
+            "  Use [bold]gdpm godot install <version>[/bold] to install.\n"
+            "  Use [bold]gdpm godot add <path>[/bold] to add a local engine."
+        )
         return
 
     terminal_width = console.width
@@ -96,20 +120,17 @@ def _list_local() -> None:
         padding=(0, 2),
         width=min(terminal_width - 6, 90),
     )
-    table.add_column("Version", style="cyan", min_width=15)
-    table.add_column("Status", min_width=10)
+    table.add_column("Name", style="cyan", min_width=15)
+    table.add_column("Version", style="green", min_width=15)
+    table.add_column("Source", style="dim")
 
-    for ver, has_binary in versions:
-        status = (
-            "[green]✓ Installed[/green]"
-            if has_binary else "[red]✗ Incomplete[/red]"
-        )
-        table.add_row(ver, status)
+    for row in rows:
+        table.add_row(row["name"], row["version"], row["source"])
 
     console.print(
         Panel(
             table,
-            title=f"[bold cyan]Installed Godot ({len(versions)})[/bold cyan]",
+            title=f"[bold cyan]Installed Godot ({len(rows)})[/bold cyan]",
             border_style="dim",
             padding=(0, 1),
             width=min(terminal_width, 90),
@@ -366,3 +387,57 @@ def godot_uninstall(version: str) -> None:
 
     shutil.rmtree(ver_dir)
     console.print(f"[green]✓[/green] Uninstalled Godot [bold]{tag}[/bold]")
+
+
+@godot.command(
+    name="add",
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm godot add /Applications/Godot.app", "Add macOS Godot"),
+        ("gdpm godot add /usr/local/bin/godot", "Add Linux Godot"),
+        ("gdpm godot add /path/to/Godot --name 4.7-custom", "Add with alias"),
+    ],
+)
+@click.argument("path", type=click.Path(exists=True))
+@click.option("--name", "-n", default="", help="Alias for the engine")
+def godot_add(path: str, name: str) -> None:
+    """Add a local Godot engine."""
+    from gdpm.config.local_engines import add_local_engine, load_local_engines
+    from gdpm.utils.godot import detect_godot_binary, get_godot_version
+
+    engine_path = Path(path).resolve()
+
+    # Detect binary
+    binary = detect_godot_binary(engine_path)
+    if not binary:
+        console.print(
+            "[red]Error:[/red] Not a valid Godot application.\n"
+            "  macOS: provide path to .app bundle\n"
+            "  Linux: provide path to executable"
+        )
+        return
+
+    console.print(f"  [dim]✓ Path exists: {engine_path}[/dim]")
+    console.print(f"  [dim]✓ Binary found: {binary.name}[/dim]")
+
+    # Get version
+    version = get_godot_version(binary)
+    if version:
+        console.print(f"  [dim]✓ Version: {version}[/dim]")
+    else:
+        console.print("  [dim]⚠ Could not detect version[/dim]")
+
+    # Get alias
+    if not name:
+        default_name = version or engine_path.stem
+        name = click.prompt("  Alias", default=default_name, type=str)
+
+    # Check if name already exists
+    engines = load_local_engines()
+    if name in engines and not click.confirm(
+        f"  [yellow]'{name}' already exists. Overwrite?[/yellow]"
+    ):
+        return
+
+    add_local_engine(name, str(engine_path))
+    console.print(f"[green]✓[/green] Added Godot [bold]{name}[/bold]")
