@@ -43,11 +43,18 @@ def godot() -> None:
     "--remote", "-r", is_flag=True,
     help="List available versions from GitHub",
 )
-@click.option("--limit", "-n", default=20, help="Number of remote versions to show")
-def godot_list(remote: bool, limit: int) -> None:
+@click.option(
+    "-V", "--version", "version_filter", default="", metavar="VERSION",
+    help="Filter by version (e.g. '4.7', '3.6')",
+)
+@click.option(
+    "-a", "--all", "show_all", is_flag=True,
+    help="Show all versions including 1.x/2.x",
+)
+def godot_list(remote: bool, version_filter: str, show_all: bool) -> None:
     """List Godot engine versions."""
     if remote:
-        _list_remote(limit)
+        _list_remote(version_filter, show_all)
     else:
         _list_local()
 
@@ -86,11 +93,11 @@ def _list_local() -> None:
     console.print(table)
 
 
-def _list_remote(limit: int) -> None:
+def _list_remote(version_filter: str, show_all: bool) -> None:
     """List available Godot versions from GitHub."""
     try:
         resp = httpx.get(
-            f"{GODOT_RELEASES_URL}?per_page={limit}",
+            GODOT_RELEASES_URL,
             timeout=10,
             verify=False,
         )
@@ -114,9 +121,14 @@ def _list_remote(limit: int) -> None:
         pre = r.get("prerelease", False)
         date = r.get("published_at", "")[:10]
 
-        # Only show Godot 3.x, 4.x and 5.x
-        if not tag.startswith(("3.", "4.", "5.")):
-            continue
+        # Filter by version
+        if version_filter:
+            if not tag.startswith(version_filter):
+                continue
+        elif not show_all:
+            # Default: only 3.x, 4.x, 5.x
+            if not tag.startswith(("3.", "4.", "5.")):
+                continue
 
         ver_type = "[yellow]Pre-release[/yellow]" if pre else "[green]Stable[/green]"
         table.add_row(tag, ver_type, date)
