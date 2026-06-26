@@ -337,7 +337,7 @@ def godot_install(version: str, csharp: bool) -> None:
                     binary.chmod(0o755)
 
         zip_path.unlink()
-        console.print(f"[green]✓[/green] Installed Godot [bold]{tag}[/bold]")
+        console.print(f"[green]✓[/green] Installed Godot [bold]{tag}{suffix}[/bold]")
     except Exception as e:
         console.print(f"[red]Error:[/red] Extraction failed: {e}")
         if ver_dir.exists():
