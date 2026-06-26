@@ -7,10 +7,13 @@
 ## 命令设计
 
 ```bash
-gdpm godot install 4.3    # 安装 Godot 4.3
-gdpm godot use 4.3        # 设置项目版本
 gdpm godot list           # 列出已安装版本
-gdpm godot run -- --editor # 运行项目 Godot
+gdpm godot list-remote    # 列出可用版本（GitHub API）
+gdpm godot install 4.7    # 安装指定版本
+gdpm godot uninstall 4.3  # 卸载指定版本
+gdpm godot use 4.7        # 设置项目版本
+gdpm godot run            # 运行项目对应的 Godot
+gdpm godot info           # 显示当前版本信息
 ```
 
 ## 存储结构
@@ -34,33 +37,25 @@ gdpm godot run -- --editor # 运行项目 Godot
 
 ## 实现步骤
 
-### gdpm godot install
+### 第一阶段：核心功能
 
-- [ ] 下载 Godot 官方二进制（GitHub Releases）
-- [ ] 存储到 ~/.gdpm/engines/{version}/
-- [ ] 支持平台检测（macOS/Linux/Windows）
-- [ ] 支持 Godot 3.x 和 4.x
+- [ ] `gdpm godot list` 列出已安装版本
+- [ ] `gdpm godot install 4.7` 安装指定版本
+- [ ] `gdpm godot use 4.7` 设置项目版本
+- [ ] `gdpm godot run` 运行项目 Godot
+
+### 第二阶段：扩展功能
+
+- [ ] `gdpm godot list-remote` 列出可用版本
+- [ ] `gdpm godot uninstall 4.3` 卸载指定版本
+- [ ] `gdpm godot info` 显示当前版本信息
+
+### 第三阶段：高级功能
+
 - [ ] 支持 --pre（预发布版本）
-
-### gdpm godot use
-
-- [ ] 设置项目使用的 Godot 版本
-- [ ] 写入 .gdpm-godot 文件
-- [ ] 自动检测 project.godot 兼容性
+- [ ] 自动下载缺失版本
 - [ ] 版本约束匹配（">=4.2"）
-
-### gdpm godot list
-
-- [ ] 列出已安装的 Godot 版本
-- [ ] 标记当前项目使用的版本
-- [ ] 显示最新可用版本
-
-### gdpm godot run
-
-- [ ] 运行项目对应的 Godot 版本
-- [ ] 传递参数给 Godot（如 --editor）
-- [ ] 支持 gdproject.toml 中的 scripts
-- [ ] 自动下载缺失版本（可选）
+- [ ] Steam 版 Godot 检测
 
 ## 下载源
 
