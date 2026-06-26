@@ -279,6 +279,15 @@ def _normalize_version(version: str) -> str:
 def _build_download_url(tag: str, csharp: bool = False) -> str:
     """Get Godot download URL from GitHub API."""
     mono = "_mono" if csharp else ""
+    system = get_godot_platform()
+
+    # Platform keywords to match
+    if "macos" in system:
+        keywords = ("osx", "macos")
+    elif "linux" in system:
+        keywords = ("linux",)
+    else:
+        keywords = ("win",)
 
     try:
         resp = httpx.get(
@@ -296,9 +305,8 @@ def _build_download_url(tag: str, csharp: bool = False) -> str:
                 continue
             if not mono and "_mono" in name:
                 continue
-            # Match platform files (zip for macOS/Linux, exe.zip for Windows)
-            platforms = ("osx", "macos", "linux", "win")
-            if name.endswith(".zip") and any(p in name for p in platforms):
+            # Match platform
+            if name.endswith(".zip") and any(k in name for k in keywords):
                 return asset["browser_download_url"]
     except Exception:
         pass
