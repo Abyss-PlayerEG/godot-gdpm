@@ -22,13 +22,11 @@ def _get_installed_engines() -> list[str]:
     """
     engines: list[str] = []
 
-    # Downloaded engines
+    # Downloaded engines (including csharp)
     engines_dir = _get_engines_dir()
     if engines_dir.exists():
         for d in engines_dir.iterdir():
-            is_engine = d.is_dir() and d.name[0].isdigit()
-            is_standard = "-csharp" not in d.name and "-mono" not in d.name
-            if is_engine and is_standard:
+            if d.is_dir() and d.name[0].isdigit():
                 engines.append(f"gdpm-godot@{d.name}")
 
     # Local engines
@@ -200,7 +198,10 @@ config/version="{version_tag}.0"
 
     # Optional: set engine for this project
     engines = _get_installed_engines()
-    if engines and not yes:
+    # Filter engines by selected version
+    matching_engines = [e for e in engines if godot_ver in e]
+
+    if matching_engines and not yes:
         set_engine = questionary.confirm(
             "Set Godot engine for this project?",
             default=True,
@@ -208,13 +209,13 @@ config/version="{version_tag}.0"
 
         if set_engine:
             engine_id = ""
-            if len(engines) == 1:
-                engine_id = engines[0]
+            if len(matching_engines) == 1:
+                engine_id = matching_engines[0]
             else:
                 engine_id = questionary.select(
                     "Select engine:",
-                    choices=engines,
-                    default=engines[0],
+                    choices=matching_engines,
+                    default=matching_engines[0],
                 ).ask()
 
             if engine_id:
