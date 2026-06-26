@@ -625,3 +625,64 @@ def godot_info() -> None:
             width=min(terminal_width, 90),
         )
     )
+
+
+@godot.command(
+    name="open",
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm godot open", "Open Godot editor"),
+        ("gdpm godot open --run", "Run the project"),
+    ],
+)
+@click.option(
+    "--run", "-r", is_flag=True,
+    help="Run the project instead of opening editor",
+)
+def godot_open(run: bool) -> None:
+    """Open Godot editor for the current project."""
+    import json
+    import subprocess
+
+    from gdpm.cli.common import require_project
+
+    root = require_project()
+    conf_path = root / ".engines-conf.json"
+
+    if not conf_path.exists():
+        console.print(
+            "[red]Error:[/red] No Godot engine configured.\n"
+            "  Use [bold]gdpm godot use <id>[/bold] to set an engine."
+        )
+        return
+
+    try:
+        conf = json.loads(conf_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, TypeError):
+        console.print("[red]Error:[/red] Invalid .engines-conf.json")
+        return
+
+    godot = conf.get("godot", {})
+    binary = godot.get("path", "")
+    if not binary:
+        console.print("[red]Error:[/red] No Godot binary path in config.")
+        return
+
+    args = [binary]
+    if run:
+        args.extend(["--path", str(root)])
+    else:
+        args.extend(["-e", "--path", str(root)])
+
+    engine_name = godot.get("name", "?")
+    engine_ver = godot.get("version", "?")
+    console.print(f"Opening [cyan]{engine_name}@{engine_ver}[/cyan]...")
+
+    try:
+        subprocess.Popen(
+            args,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception as e:
+        console.print(f"[red]Error:[/red] Failed to open Godot: {e}")
