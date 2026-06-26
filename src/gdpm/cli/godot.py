@@ -247,7 +247,7 @@ def godot_install(version: str, csharp: bool) -> None:
             "Reinstall?"
         ):
             return
-        shutil.rmtree(ver_dir)
+        shutil.rmtree(ver_dir, onerror=lambda *args: None)
 
     url = _build_download_url(tag, csharp)
     plat = get_godot_platform()
