@@ -372,7 +372,7 @@ def godot_install(version: str, csharp: bool) -> None:
             "Reinstall?"
         ):
             return
-        shutil.rmtree(ver_dir, onerror=lambda *args: None)  # noqa: PTH108
+        shutil.rmtree(ver_dir, onexc=lambda *args: None)
 
     url = _build_download_url(tag, csharp)
     if not url:
@@ -903,11 +903,12 @@ def godot_open(run: bool) -> None:
     console.print(f"Opening [cyan]{engine_name}@{engine_ver}[/cyan]...")
 
     try:
-        subprocess.Popen(
+        with subprocess.Popen(
             args,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-        )
+        ):
+            pass
     except Exception as e:
         console.print(f"[red]Error:[/red] Failed to open Godot: {e}")
 

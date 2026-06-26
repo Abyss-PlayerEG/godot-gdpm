@@ -312,11 +312,12 @@ def _open_godot(project_dir: Path, version: str) -> None:
         return
 
     try:
-        subprocess.Popen(
+        with subprocess.Popen(
             [binary, "-e", "--path", str(project_dir)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-        )
+        ):
+            pass
         console.print("  Opening [cyan]Godot[/cyan]...")
     except Exception as e:
         console.print(f"  [yellow]Warning:[/yellow] Failed to open Godot: {e}")
