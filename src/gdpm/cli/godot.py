@@ -175,7 +175,11 @@ def _normalize_version(version: str) -> str:
     '4.7' -> '4.7-stable'
     '4.7-stable' -> '4.7-stable'
     '3.6.2' -> '3.6.2-stable'
+    '4.7-stable-csharp' -> '4.7-stable'
     """
+    # Strip -csharp suffix if present
+    version = version.replace("-csharp", "").replace("-mono", "")
+
     if "-stable" in version or "-rc" in version or "-beta" in version:
         return version
     return f"{version}-stable"
@@ -227,6 +231,10 @@ def godot_install(version: str, csharp: bool) -> None:
     import hashlib
 
     import httpx
+
+    # Auto-detect csharp from version string
+    if "-csharp" in version or "-mono" in version:
+        csharp = True
 
     engines_dir = _get_engines_dir()
     tag = _normalize_version(version)
