@@ -23,6 +23,13 @@ def init() -> None:
     project_dir = Path.cwd()
     config_path = project_dir / "gdproject.toml"
 
+    if config_path.exists():
+        console.print(
+            "[red]Error:[/red] Project is already initialized "
+            f"([cyan]{config_path}[/cyan] exists)"
+        )
+        raise SystemExit(1)
+
     project_file = project_dir / "project.godot"
     godot_project = parse_project_godot(project_file)
 
