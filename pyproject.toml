@@ -24,6 +24,7 @@ dependencies = [
     "rich>=13.0",
     "platformdirs>=4.0",
     "packaging>=24.0",
+    "questionary>=2.1.1",
 ]
 
 [project.scripts]

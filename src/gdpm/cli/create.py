@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 import click
+import questionary
 
 from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import console
@@ -14,33 +15,28 @@ from gdpm.config.local_engines import get_default_engine, get_local_engine
 from gdpm.config.project import ProjectConfig, write_project_config
 
 
-def _get_latest_version() -> str:
-    """Get the latest installed Godot version.
-
-    Priority: default engine > downloaded engines
-    """
-    # Check default engine first
-    default = get_default_engine()
-    if default:
-        _, ver = default.split("@", 1)
-        return ver
-
-    engines_dir = _get_engines_dir()
-
+def _get_installed_versions() -> list[str]:
+    """Get all installed Godot versions, sorted."""
     versions = []
+
+    # Downloaded engines
+    engines_dir = _get_engines_dir()
     if engines_dir.exists():
         for d in engines_dir.iterdir():
             if d.is_dir() and d.name[0].isdigit():
                 versions.append(d.name)
 
-    if not versions:
-        return ""
+    # Local engines
+    from gdpm.config.local_engines import load_local_engines
 
-    # Sort and return latest stable
-    stable = [v for v in versions if "stable" in v]
-    if stable:
-        return sorted(stable)[-1]
-    return sorted(versions)[-1]
+    for _, engine in load_local_engines().items():
+        if engine.version and engine.version not in versions:
+            versions.append(engine.version)
+
+    # Sort: stable first, then by version
+    stable = sorted([v for v in versions if "stable" in v])
+    other = sorted([v for v in versions if "stable" not in v])
+    return stable + other
 
 
 def _get_godot_version_tag(version: str) -> str:
@@ -79,7 +75,12 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
         if yes:
             name = "gdpm-project"
         else:
-            name = click.prompt("  Project name", default="gdpm-project", type=str)
+            name = questionary.text(
+                "Project name:",
+                default="gdpm-project",
+            ).ask()
+            if not name:
+                return
 
     # Check if directory already exists
     target_dir = project_dir / name if name != project_dir.name else project_dir
@@ -93,13 +94,26 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
         return
 
     # Get Godot version
-    latest = _get_latest_version()
-    default_ver = latest or "4.7"
+    versions = _get_installed_versions()
+    default_ver = versions[0] if versions else "4.7-stable"
 
     if yes:
         godot_ver = default_ver
+    elif versions:
+        godot_ver = questionary.select(
+            "Godot version:",
+            choices=versions,
+            default=default_ver,
+        ).ask()
+        if not godot_ver:
+            return
     else:
-        godot_ver = click.prompt("  Godot version", default=default_ver, type=str)
+        godot_ver = questionary.text(
+            "Godot version:",
+            default="4.7-stable",
+        ).ask()
+        if not godot_ver:
+            return
 
     # Normalize version
     for suffix in ("-stable", "-csharp", "-mono"):
