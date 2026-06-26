@@ -580,8 +580,10 @@ def godot_add(path: str, name: str) -> None:
         )
         return
 
-    console.print(f"  [dim]✓ Path exists: {engine_path}[/dim]")
-    console.print(f"  [dim]✓ Binary found: {binary.name}[/dim]")
+    console.print(
+        f"  [dim]✓ Path exists: {engine_path}[/dim]\n"
+        f"  [dim]✓ Binary found: {binary.name}[/dim]"
+    )
 
     # Get version
     version = get_godot_version(binary)
