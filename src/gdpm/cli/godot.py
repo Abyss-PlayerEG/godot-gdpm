@@ -114,6 +114,10 @@ def _list_remote(limit: int) -> None:
         pre = r.get("prerelease", False)
         date = r.get("published_at", "")[:10]
 
+        # Only show Godot 3.x and 4.x
+        if not tag.startswith(("3.", "4.")):
+            continue
+
         ver_type = "[yellow]Pre-release[/yellow]" if pre else "[green]Stable[/green]"
         table.add_row(tag, ver_type, date)
 
