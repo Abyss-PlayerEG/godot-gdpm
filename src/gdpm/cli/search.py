@@ -7,7 +7,7 @@ import asyncio
 import click
 
 from gdpm.cli.app import GdpmCommand
-from gdpm.cli.common import console, is_template, require_project
+from gdpm.cli.common import console, is_template
 from gdpm.cli.display import format_plugin_meta, format_version_info
 from gdpm.config.project import read_project_config
 from gdpm.store.client import StoreClient
@@ -38,12 +38,18 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
     """Search for plugins in the Godot Asset Store."""
 
     async def _search() -> None:
-        try:
-            root = require_project()
-            config = read_project_config(root / "gdproject.toml")
-            project_godot = config.godot
-        except Exception:
-            project_godot = ""
+        from gdpm.cli.common import find_project_root
+
+        root = find_project_root()
+        config_path = root / "gdproject.toml"
+        project_godot = ""
+
+        if config_path.exists():
+            try:
+                config = read_project_config(config_path)
+                project_godot = config.godot
+            except Exception:
+                pass
 
         client = StoreClient()
         try:
@@ -124,7 +130,7 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
                 lines.append(
                     "    [dim]Project template - not installable as addon[/dim]"
                 )
-            else:
+            elif project_godot:
                 lines.append(f"    [green]gdpm add {add_route}[/green]")
 
             console.print("\n".join(lines))
