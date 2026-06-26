@@ -462,7 +462,7 @@ def godot_add(path: str, name: str) -> None:
     ):
         return
 
-    add_local_engine(name, str(engine_path), version)
+    add_local_engine(name, str(binary), version)
     console.print(f"[green]✓[/green] Added Godot [bold]{name}[/bold]")
 
 
@@ -667,6 +667,13 @@ def godot_open(run: bool) -> None:
     if not binary:
         console.print("[red]Error:[/red] No Godot binary path in config.")
         return
+
+    # macOS: resolve .app bundle to binary
+    binary_path = Path(binary)
+    if binary_path.suffix == ".app":
+        macos_binary = binary_path / "Contents" / "MacOS" / "Godot"
+        if macos_binary.exists():
+            binary = str(macos_binary)
 
     args = [binary]
     if run:
