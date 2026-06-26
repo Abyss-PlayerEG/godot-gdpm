@@ -211,10 +211,12 @@ def godot_install(version: str, csharp: bool) -> None:
     ver_dir = engines_dir / f"{tag}{suffix}"
 
     if ver_dir.exists():
-        console.print(
-            f"[yellow]Godot {tag}{suffix} is already installed.[/yellow]"
-        )
-        return
+        if not click.confirm(
+            f"  Godot [cyan]{tag}{suffix}[/cyan] is already installed. "
+            "Reinstall?"
+        ):
+            return
+        shutil.rmtree(ver_dir)
 
     url = _build_download_url(version, csharp)
     plat = get_godot_platform()
