@@ -10,6 +10,14 @@ import click
 import httpx
 from rich import box
 from rich.panel import Panel
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    TextColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
 from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand, GdpmGroup
@@ -211,34 +219,39 @@ def godot_install(version: str, csharp: bool) -> None:
     url = _build_download_url(version, csharp)
     plat = get_godot_platform()
     ext = get_godot_ext()
-    filename = f"Godot_v{tag}_{plat}.{ext}"
+    filename = f"Godot_v{tag}{suffix}_{plat}.{ext}"
     zip_path = engines_dir / filename
 
-    console.print(f"Downloading Godot [cyan]{tag}[/cyan]...")
+    progress = Progress(
+        TextColumn("[bold blue]{task.fields[name]}"),
+        BarColumn(),
+        DownloadColumn(),
+        TransferSpeedColumn(),
+        TimeRemainingColumn(),
+    )
 
     try:
-        with httpx.stream("GET", url, follow_redirects=True, verify=False) as resp:
-            if resp.status_code == 404:
-                console.print(
-                    f"[red]Error:[/red] Version [cyan]{tag}[/cyan] not found.\n"
-                    "  Use [bold]gdpm godot list -r[/bold] to see available versions."
-                )
-                return
-            resp.raise_for_status()
+        with progress:
+            task_id = progress.add_task("download", name=f"Godot {tag}", total=None)
 
-            total = int(resp.headers.get("content-length", 0))
-            downloaded = 0
+            with httpx.stream("GET", url, follow_redirects=True, verify=False) as resp:
+                if resp.status_code == 404:
+                    console.print(
+                        f"[red]Error:[/red] Version [cyan]{tag}[/cyan] not found.\n"
+                        "  Use [bold]gdpm godot list -r[/bold] "
+                        "to see available versions."
+                    )
+                    return
+                resp.raise_for_status()
 
-            with open(zip_path, "wb") as f:
-                for chunk in resp.iter_bytes(8192):
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if total:
-                        pct = downloaded * 100 // total
-                        kb = downloaded // 1024
-                        print(f"\r  {pct}% ({kb}KB)", end="", flush=True)
+                total = int(resp.headers.get("content-length", 0))
+                progress.update(task_id, total=total)
 
-            print()
+                with open(zip_path, "wb") as f:
+                    for chunk in resp.iter_bytes(8192):
+                        f.write(chunk)
+                        progress.update(task_id, advance=len(chunk))
+
     except Exception as e:
         console.print(f"[red]Error:[/red] Download failed: {e}")
         if zip_path.exists():
