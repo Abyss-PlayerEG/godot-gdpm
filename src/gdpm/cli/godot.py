@@ -6,7 +6,9 @@ from pathlib import Path
 
 import click
 import httpx
+from rich import box
 from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand, GdpmGroup
@@ -66,7 +68,6 @@ def _list_local() -> None:
     versions = []
     for d in sorted(engines_dir.iterdir()):
         if d.is_dir():
-            # Check if it has a Godot binary
             has_binary = any(d.iterdir())
             versions.append((d.name, has_binary))
 
@@ -75,10 +76,14 @@ def _list_local() -> None:
         console.print("  Use [bold]gdpm godot install <version>[/bold] to install.")
         return
 
+    terminal_width = console.width
+
     table = Table(
+        box=box.SIMPLE,
         show_header=True,
         header_style="bold magenta",
-        box=None,
+        padding=(0, 2),
+        width=min(terminal_width - 6, 90),
     )
     table.add_column("Version", style="cyan", min_width=15)
     table.add_column("Status", min_width=10)
@@ -90,7 +95,15 @@ def _list_local() -> None:
         )
         table.add_row(ver, status)
 
-    console.print(table)
+    console.print(
+        Panel(
+            table,
+            title=f"[bold cyan]Installed Godot ({len(versions)})[/bold cyan]",
+            border_style="dim",
+            padding=(0, 1),
+            width=min(terminal_width, 90),
+        )
+    )
 
 
 def _list_remote(version_filter: str, show_all: bool) -> None:
@@ -107,10 +120,14 @@ def _list_remote(version_filter: str, show_all: bool) -> None:
         console.print(f"[red]Error:[/red] Failed to fetch releases: {e}")
         return
 
+    terminal_width = console.width
+
     table = Table(
+        box=box.SIMPLE,
         show_header=True,
         header_style="bold magenta",
-        box=None,
+        padding=(0, 2),
+        width=min(terminal_width - 6, 90),
     )
     table.add_column("Version", style="cyan", min_width=20)
     table.add_column("Type", min_width=10)
@@ -121,16 +138,22 @@ def _list_remote(version_filter: str, show_all: bool) -> None:
         pre = r.get("prerelease", False)
         date = r.get("published_at", "")[:10]
 
-        # Filter by version
         if version_filter:
             if not tag.startswith(version_filter):
                 continue
         elif not show_all:
-            # Default: only 3.x, 4.x, 5.x
             if not tag.startswith(("3.", "4.", "5.")):
                 continue
 
         ver_type = "[yellow]Pre-release[/yellow]" if pre else "[green]Stable[/green]"
         table.add_row(tag, ver_type, date)
 
-    console.print(table)
+    console.print(
+        Panel(
+            table,
+            title="[bold cyan]Available Godot Versions[/bold cyan]",
+            border_style="dim",
+            padding=(0, 1),
+            width=min(terminal_width, 90),
+        )
+    )
