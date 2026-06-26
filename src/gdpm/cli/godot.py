@@ -510,6 +510,45 @@ def godot_uninstall(version: str, csharp: bool) -> None:
 
 
 @godot.command(
+    name="remove",
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm godot remove steam-godot", "Remove by name"),
+        ("gdpm godot remove steam-godot@4.7-stable", "Remove by ID"),
+    ],
+)
+@click.argument("name_or_id")
+def godot_remove(name_or_id: str) -> None:
+    """Remove a local Godot engine."""
+    from gdpm.config.local_engines import (
+        get_default_engine,
+        load_local_engines,
+        remove_local_engine,
+        set_default_engine,
+    )
+
+    # Parse name or id
+    name = name_or_id.split("@")[0] if "@" in name_or_id else name_or_id
+
+    engines = load_local_engines()
+    if name not in engines:
+        console.print(
+            f"[red]Error:[/red] Local engine [cyan]{name}[/cyan] not found.\n"
+            "  Use [bold]gdpm godot list -id[/bold] to see available engines."
+        )
+        return
+
+    remove_local_engine(name)
+
+    # Clear default if it was the removed engine
+    default = get_default_engine()
+    if default and default.startswith(f"{name}@"):
+        set_default_engine("")
+
+    console.print(f"[green]✓[/green] Removed engine [bold]{name}[/bold]")
+
+
+@godot.command(
     name="add",
     cls=GdpmCommand,
     examples=[

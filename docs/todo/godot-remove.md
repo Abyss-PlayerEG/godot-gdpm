@@ -7,14 +7,14 @@
 ## 命令设计
 
 ```bash
-gdpm godot remove <name>           # 移除指定引擎
+gdpm godot remove <name|id>        # 移除指定引擎
 ```
 
 ## 示例
 
 ```bash
 gdpm godot remove steam-godot
-# ✓ Removed engine 'steam-godot'
+gdpm godot remove steam-godot@4.7-stable
 ```
 
 ## 限制
@@ -25,6 +25,6 @@ gdpm godot remove steam-godot
 
 ## 实现步骤
 
-- [ ] 实现 `gdpm godot remove <name>` 命令
+- [ ] 实现 `gdpm godot remove <name|id>` 命令
 - [ ] 移除引擎配置
 - [ ] 如果是默认引擎，清除默认配置
