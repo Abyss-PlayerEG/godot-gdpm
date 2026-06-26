@@ -268,7 +268,9 @@ def godot_install(version: str, csharp: bool) -> None:
 
     try:
         with progress:
-            task_id = progress.add_task("download", name=f"Godot {tag}", total=None)
+            task_id = progress.add_task(
+                "download", name=f"Godot {tag}{suffix}", total=None
+            )
 
             with httpx.stream("GET", url, follow_redirects=True, verify=False) as resp:
                 if resp.status_code == 404:
