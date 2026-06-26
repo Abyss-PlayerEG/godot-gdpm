@@ -74,9 +74,9 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
     # Get project name
     if not name:
         if yes:
-            name = project_dir.name
+            name = "gdpm-project"
         else:
-            name = click.prompt("  Project name", default=project_dir.name, type=str)
+            name = click.prompt("  Project name", default="gdpm-project", type=str)
 
     # Check if directory already exists
     target_dir = project_dir / name if name != project_dir.name else project_dir
