@@ -239,6 +239,13 @@ def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
         ver_type = "[yellow]Pre-release[/yellow]" if pre else "[green]Stable[/green]"
         table.add_row(tag, ver_type, date)
 
+    if not table.row_count:
+        console.print(
+            "[dim]No versions on this page. "
+            "Use [bold]-a[/bold] to show all versions.[/dim]"
+        )
+        return
+
     console.print(
         Panel(
             table,
