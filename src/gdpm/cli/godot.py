@@ -220,9 +220,13 @@ def _normalize_version(version: str) -> str:
 def _build_download_url(version: str, csharp: bool = False) -> str:
     """Build Godot download URL."""
     tag = _normalize_version(version)
-    plat = get_godot_platform()
     ext = get_godot_ext()
     mono = "_mono" if csharp else ""
+
+    # Godot 3.x uses 'osx' instead of 'macos'
+    major = int(tag.split(".")[0])
+    plat = "osx.universal" if major < 4 else get_godot_platform()
+
     return f"{GODOT_DOWNLOAD_URL}/{tag}/Godot_v{tag}{mono}_{plat}.{ext}"
 
 
