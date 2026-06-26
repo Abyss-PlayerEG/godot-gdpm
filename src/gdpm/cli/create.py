@@ -15,7 +15,16 @@ from gdpm.config.project import ProjectConfig, write_project_config
 
 
 def _get_latest_version() -> str:
-    """Get the latest installed Godot version."""
+    """Get the latest installed Godot version.
+
+    Priority: default engine > downloaded engines
+    """
+    # Check default engine first
+    default = get_default_engine()
+    if default:
+        _, ver = default.split("@", 1)
+        return ver
+
     engines_dir = _get_engines_dir()
 
     versions = []
@@ -23,12 +32,6 @@ def _get_latest_version() -> str:
         for d in engines_dir.iterdir():
             if d.is_dir() and d.name[0].isdigit():
                 versions.append(d.name)
-
-    # Also check local engines
-    default = get_default_engine()
-    if default:
-        _, ver = default.split("@", 1)
-        versions.append(ver)
 
     if not versions:
         return ""
