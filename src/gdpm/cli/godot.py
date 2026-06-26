@@ -398,14 +398,18 @@ def godot_uninstall(version: str) -> None:
         ("gdpm godot add /path/to/Godot --name 4.7-custom", "Add with alias"),
     ],
 )
-@click.argument("path", type=click.Path(exists=True))
+@click.argument("path")
 @click.option("--name", "-n", default="", help="Alias for the engine")
 def godot_add(path: str, name: str) -> None:
     """Add a local Godot engine."""
     from gdpm.config.local_engines import add_local_engine, load_local_engines
     from gdpm.utils.godot import detect_godot_binary, get_godot_version
 
-    engine_path = Path(path).resolve()
+    engine_path = Path(path).expanduser().resolve()
+
+    if not engine_path.exists():
+        console.print(f"[red]Error:[/red] Path [cyan]{path}[/cyan] does not exist.")
+        return
 
     # Detect binary
     binary = detect_godot_binary(engine_path)
