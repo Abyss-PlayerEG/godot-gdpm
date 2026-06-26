@@ -31,7 +31,34 @@ def init() -> None:
         raise SystemExit(1)
 
     project_file = project_dir / "project.godot"
+
+    if not project_file.exists():
+        console.print(
+            "[red]Error:[/red] No [cyan]project.godot[/cyan] found "
+            "in current directory.\n"
+            "  Run this command in a Godot project directory, "
+            "or use [bold]gdpm create[/bold]."
+        )
+        raise SystemExit(1)
+
     godot_project = parse_project_godot(project_file)
+
+    if not godot_project.name:
+        console.print(
+            "[red]Error:[/red] Invalid [cyan]project.godot[/cyan] "
+            "- no project name found.\n"
+            "  Make sure the file contains "
+            "[dim]config/name=\"...\"[/dim]"
+        )
+        raise SystemExit(1)
+
+    if godot_project.config_version < 4:
+        console.print(
+            f"[red]Error:[/red] Unsupported Godot version "
+            f"(config_version={godot_project.config_version}).\n"
+            "  gdpm supports Godot 3.x and 4.x only."
+        )
+        raise SystemExit(1)
 
     name = godot_project.name or project_dir.name
 
