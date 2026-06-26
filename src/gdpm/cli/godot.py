@@ -512,11 +512,15 @@ def _find_engine(name: str, version: str) -> str | None:
     examples=[
         ("gdpm godot use gdpm-godot@4.7-stable", "Use downloaded engine"),
         ("gdpm godot use steam@4.7-stable", "Use local engine"),
+        ("gdpm godot list -id", "List available engine IDs"),
     ],
 )
 @click.argument("spec")
 def godot_use(spec: str) -> None:
-    """Set the Godot engine for the current project."""
+    """Set the Godot engine for the current project.
+
+    Use 'gdpm godot list -id' to see available engine IDs.
+    """
     import json
 
     # Parse spec: Name@Version
