@@ -249,7 +249,7 @@ def godot_install(version: str, csharp: bool) -> None:
             return
         shutil.rmtree(ver_dir)
 
-    url = _build_download_url(version, csharp)
+    url = _build_download_url(tag, csharp)
     plat = get_godot_platform()
     ext = get_godot_ext()
     filename = f"Godot_v{tag}{suffix}_{plat}.{ext}"
