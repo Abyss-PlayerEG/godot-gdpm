@@ -82,6 +82,7 @@ def godot_list(
 def _list_local(show_id: bool = False) -> None:
     """List installed Godot versions."""
     from gdpm.config.local_engines import load_local_engines
+    from gdpm.utils.path import shorten_path
 
     engines_dir = _get_engines_dir()
     local_engines = load_local_engines()
@@ -92,24 +93,18 @@ def _list_local(show_id: bool = False) -> None:
     if engines_dir.exists():
         for d in sorted(engines_dir.iterdir()):
             if d.is_dir():
-                source = str(d).replace(str(Path.home()), "~")
-                if len(source) > 35:
-                    source = source[:32] + "..."
                 rows.append({
                     "name": "gdpm-godot",
                     "version": d.name,
-                    "source": source,
+                    "source": shorten_path(str(d)),
                 })
 
     # Local engines
     for name, engine in sorted(local_engines.items()):
-        source = engine.path.replace(str(Path.home()), "~")
-        if len(source) > 35:
-            source = source[:32] + "..."
         rows.append({
             "name": name,
             "version": engine.version or "-",
-            "source": source,
+            "source": shorten_path(engine.path),
         })
 
     if not rows:
@@ -599,9 +594,11 @@ def godot_info() -> None:
         )
         return
 
+    from gdpm.utils.path import shorten_path
+
     name = godot.get("name", "?")
     version = godot.get("version", "?")
-    path = godot.get("path", "?")
+    path = shorten_path(godot.get("path", "?"), max_len=50)
 
     terminal_width = console.width
 
