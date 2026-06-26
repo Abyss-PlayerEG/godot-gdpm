@@ -18,48 +18,59 @@ def get_config_path() -> Path:
     return Path.home() / ".gdpm" / "local-engines.json"
 
 
-def load_local_engines() -> dict[str, LocalEngine]:
-    """Load local engines config.
-
-    Returns:
-        Dict of {name: LocalEngine}
-    """
+def load_config() -> dict:
+    """Load raw config dict."""
     path = get_config_path()
     if not path.exists():
         return {}
 
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(data, dict):
-            return {}
-
-        result: dict[str, LocalEngine] = {}
-        for name, value in data.items():
-            if isinstance(value, str):
-                # Legacy format: just a path string
-                result[name] = LocalEngine(path=value)
-            elif isinstance(value, dict):
-                result[name] = LocalEngine(
-                    path=value.get("path", ""),
-                    version=value.get("version", ""),
-                )
-        return result
+        return data if isinstance(data, dict) else {}
     except (json.JSONDecodeError, TypeError):
         return {}
 
 
-def save_local_engines(engines: dict[str, LocalEngine]) -> None:
-    """Save local engines config."""
+def save_config(config: dict) -> None:
+    """Save raw config dict."""
     path = get_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    data = {
+    path.write_text(
+        json.dumps(config, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def load_local_engines() -> dict[str, LocalEngine]:
+    """Load local engines config.
+
+    Returns:
+        Dict of {name: LocalEngine}
+    """
+    config = load_config()
+    engines = config.get("engines", {})
+
+    result: dict[str, LocalEngine] = {}
+    for name, value in engines.items():
+        if isinstance(value, str):
+            # Legacy format: just a path string
+            result[name] = LocalEngine(path=value)
+        elif isinstance(value, dict):
+            result[name] = LocalEngine(
+                path=value.get("path", ""),
+                version=value.get("version", ""),
+            )
+    return result
+
+
+def save_local_engines(engines: dict[str, LocalEngine]) -> None:
+    """Save local engines config."""
+    config = load_config()
+    config["engines"] = {
         name: {"path": eng.path, "version": eng.version}
         for name, eng in engines.items()
     }
-    path.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    save_config(config)
 
 
 def add_local_engine(name: str, path: str, version: str = "") -> None:
@@ -90,3 +101,27 @@ def get_local_engine(name: str) -> LocalEngine | None:
         LocalEngine or None if not found.
     """
     return load_local_engines().get(name)
+
+
+def get_default_engine() -> str:
+    """Get default engine ID.
+
+    Returns:
+        Engine ID string (e.g., 'steam@4.7-stable'), or empty string.
+    """
+    config = load_config()
+    return config.get("default", "")
+
+
+def set_default_engine(engine_id: str) -> None:
+    """Set default engine ID."""
+    config = load_config()
+    config["default"] = engine_id
+    save_config(config)
+
+
+def unset_default_engine() -> None:
+    """Remove default engine setting."""
+    config = load_config()
+    config.pop("default", None)
+    save_config(config)

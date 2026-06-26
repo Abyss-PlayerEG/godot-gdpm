@@ -644,28 +644,64 @@ def godot_open(run: bool) -> None:
     import json
     import subprocess
 
-    from gdpm.cli.common import require_project
+    from gdpm.cli.common import find_project_root
+    from gdpm.config.local_engines import get_default_engine, get_local_engine
 
-    root = require_project()
+    root = find_project_root()
     conf_path = root / ".engines-conf.json"
+    binary = ""
 
-    if not conf_path.exists():
+    # 1. Try project config
+    if conf_path.exists():
+        try:
+            conf = json.loads(conf_path.read_text(encoding="utf-8"))
+            godot = conf.get("godot", {})
+            binary = godot.get("path", "")
+            engine_name = godot.get("name", "?")
+            engine_ver = godot.get("version", "?")
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # 2. Try default engine
+    if not binary:
+        default_id = get_default_engine()
+        if default_id:
+            name, version = default_id.split("@", 1)
+            if name == "gdpm-godot":
+                # Downloaded engine
+                engines_dir = _get_engines_dir()
+                tag = _normalize_version(version)
+                ver_dir = engines_dir / tag
+                if ver_dir.exists():
+                    for app in ver_dir.glob("*.app"):
+                        b = app / "Contents" / "MacOS" / "Godot"
+                        if b.exists():
+                            binary = str(b)
+                            break
+                    if not binary:
+                        for f in ver_dir.iterdir():
+                            if f.is_file() and not f.suffix:
+                                binary = str(f)
+                                break
+            else:
+                # Local engine
+                engine = get_local_engine(name)
+                if engine:
+                    binary = engine.path
+
+            engine_name = name
+            engine_ver = version
+
+    # 3. No engine found
+    if not binary:
         console.print(
             "[red]Error:[/red] No Godot engine configured.\n"
-            "  Use [bold]gdpm godot use <id>[/bold] to set an engine."
+            "  Use [bold]gdpm godot use <id>[/bold] for this project,\n"
+            "  or [bold]gdpm godot default <id>[/bold] to set a default engine.\n"
+            "\n"
+            "  Available engines:\n"
+            "    [bold]gdpm godot list -id[/bold]"
         )
-        return
-
-    try:
-        conf = json.loads(conf_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, TypeError):
-        console.print("[red]Error:[/red] Invalid .engines-conf.json")
-        return
-
-    godot = conf.get("godot", {})
-    binary = godot.get("path", "")
-    if not binary:
-        console.print("[red]Error:[/red] No Godot binary path in config.")
         return
 
     # macOS: resolve .app bundle to binary
@@ -681,8 +717,6 @@ def godot_open(run: bool) -> None:
     else:
         args.extend(["-e", "--path", str(root)])
 
-    engine_name = godot.get("name", "?")
-    engine_ver = godot.get("version", "?")
     console.print(f"Opening [cyan]{engine_name}@{engine_ver}[/cyan]...")
 
     try:
@@ -693,3 +727,70 @@ def godot_open(run: bool) -> None:
         )
     except Exception as e:
         console.print(f"[red]Error:[/red] Failed to open Godot: {e}")
+
+
+@godot.command(
+    name="default",
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm godot default", "Show current default engine"),
+        ("gdpm godot default steam@4.7-stable", "Set default engine"),
+        ("gdpm godot default --unset", "Remove default engine"),
+    ],
+)
+@click.argument("engine_id", required=False)
+@click.option("--unset", is_flag=True, help="Remove default engine")
+def godot_default(engine_id: str | None, unset: bool) -> None:
+    """Set or show the default Godot engine."""
+    from gdpm.config.local_engines import (
+        get_default_engine,
+        load_local_engines,
+        set_default_engine,
+        unset_default_engine,
+    )
+
+    if unset:
+        unset_default_engine()
+        console.print("[green]✓[/green] Default engine removed")
+        return
+
+    if not engine_id:
+        default = get_default_engine()
+        if default:
+            console.print(f"Default engine: [cyan]{default}[/cyan]")
+        else:
+            console.print("[dim]No default engine configured.[/dim]")
+            console.print(
+                "  Use [bold]gdpm godot default <id>[/bold] to set one.\n"
+                "  Use [bold]gdpm godot list -id[/bold] to see available engines."
+            )
+        return
+
+    # Validate engine exists
+    if "@" not in engine_id:
+        console.print(
+            "[red]Error:[/red] Invalid format. Use [cyan]Name@Version[/cyan]"
+        )
+        return
+
+    name, version = engine_id.split("@", 1)
+    engines = load_local_engines()
+
+    # Check local engines
+    if name in engines:
+        engine = engines[name]
+        if engine.version and engine.version != version:
+            console.print(
+                f"[red]Error:[/red] Version mismatch. "
+                f"Local engine '{name}' is version [cyan]{engine.version}[/cyan]"
+            )
+            return
+    elif name != "gdpm-godot":
+        console.print(
+            f"[red]Error:[/red] Engine [cyan]{name}[/cyan] not found.\n"
+            "  Use [bold]gdpm godot list -id[/bold] to see available engines."
+        )
+        return
+
+    set_default_engine(engine_id)
+    console.print(f"[green]✓[/green] Default engine set to [bold]{engine_id}[/bold]")
