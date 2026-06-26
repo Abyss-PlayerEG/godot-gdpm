@@ -23,7 +23,7 @@ from rich.table import Table
 from gdpm.cli.app import GdpmCommand, GdpmGroup
 from gdpm.cli.common import console as gdpm_console
 from gdpm.cli.common import find_project_root
-from gdpm.constants import GODOT_RELEASES_URL
+from gdpm.constants import GITHUB_API_URL, GODOT_RELEASES_URL, get_github_headers
 from gdpm.utils.install import get_godot_ext, get_godot_platform
 
 console = gdpm_console
@@ -166,6 +166,7 @@ def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
                 resp = httpx.get(
                     GODOT_RELEASES_URL,
                     params={"per_page": 100, "page": current_page},
+                    headers=get_github_headers(),
                     timeout=10,
                     verify=False,
                 )
@@ -187,6 +188,7 @@ def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
             resp1 = httpx.get(
                 GODOT_RELEASES_URL,
                 params={"per_page": 30, "page": 1},
+                headers=get_github_headers(),
                 timeout=10,
                 verify=False,
             )
@@ -203,6 +205,7 @@ def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
                 resp = httpx.get(
                     GODOT_RELEASES_URL,
                     params={"per_page": 30, "page": page},
+                    headers=get_github_headers(),
                     timeout=10,
                     verify=False,
                 )
@@ -292,6 +295,7 @@ def _build_download_url(tag: str, csharp: bool = False) -> str:
     try:
         resp = httpx.get(
             f"{GODOT_RELEASES_URL}/tags/{tag}",
+            headers=get_github_headers(),
             timeout=10,
             verify=False,
         )
@@ -305,7 +309,7 @@ def _build_download_url(tag: str, csharp: bool = False) -> str:
                 continue
             if not mono and "_mono" in name:
                 continue
-            # Match platform
+            # Match platform files (zip for macOS/Linux, exe.zip for Windows)
             if name.endswith(".zip") and any(k in name for k in keywords):
                 return asset["browser_download_url"]
     except Exception:
@@ -318,8 +322,9 @@ def _get_asset_hash(tag: str, filename: str) -> str:
     """Get SHA256 hash for a release asset from GitHub API."""
     try:
         resp = httpx.get(
-            f"{GODOT_RELEASES_URL}/tags/{tag}",
-            timeout=10,
+            f"{GITHUB_API_URL}contributors",
+            headers=get_github_headers(),
+            timeout=5,
             verify=False,
         )
         resp.raise_for_status()
