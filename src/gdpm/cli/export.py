@@ -129,7 +129,8 @@ def export(output: str) -> None:
             local_zip = local_dir / f"{name}.zip"
             zf.write(local_zip, f"local-plugins/{name}.zip")
 
-    console.print(f"[green]✓[/green] Exported to [cyan]{output_path}[/cyan]")
-    console.print(f"  {len(plugins)} plugin(s)")
-    if local_files:
-        console.print(f"  {len(local_files)} local plugin(s)")
+    local_msg = f"\n  {len(local_files)} local plugin(s)" if local_files else ""
+    console.print(
+        f"[green]✓[/green] Exported to [cyan]{output_path}[/cyan]\n"
+        f"  {len(plugins)} plugin(s){local_msg}"
+    )

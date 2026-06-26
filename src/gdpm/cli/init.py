@@ -16,16 +16,9 @@ from gdpm.utils.godot import detect_version_constraint, parse_project_godot
     cls=GdpmCommand,
     examples=[
         ("gdpm init", "Initialize with auto-detected settings"),
-        ("gdpm init my-game", "Initialize with custom name"),
-        ("gdpm init --godot '>=4.3'", "Specify Godot version"),
     ],
 )
-@click.argument("name", required=False)
-@click.option("--godot", default="", help="Godot version constraint")
-def init(
-    name: str | None,
-    godot: str,
-) -> None:
+def init() -> None:
     """Initialize a new gdpm project."""
     project_dir = Path.cwd()
     config_path = project_dir / "gdproject.toml"
@@ -33,16 +26,15 @@ def init(
     project_file = project_dir / "project.godot"
     godot_project = parse_project_godot(project_file)
 
-    if name is None:
-        name = godot_project.name or project_dir.name
+    name = godot_project.name or project_dir.name
 
-    if not godot:
-        godot = detect_version_constraint(project_dir)
-        if godot_project.godot_version:
-            console.print(
-                f"  [dim]Detected Godot {godot_project.godot_version} "
-                f"from project.godot[/dim]"
-            )
+    godot = detect_version_constraint(project_dir)
+    detected = ""
+    if godot_project.godot_version:
+        detected = (
+            f"  [dim]Detected Godot {godot_project.godot_version} "
+            f"from project.godot[/dim]\n"
+        )
 
     config = ProjectConfig(
         name=name,
@@ -54,7 +46,10 @@ def init(
     addons_dir = project_dir / config.addons_dir
     addons_dir.mkdir(exist_ok=True)
 
-    console.print(f"[green]✓[/green] Initialized [bold]{name}[/bold]")
-    console.print(f"  Godot: [cyan]{godot}[/cyan]")
-    console.print("  Created [cyan]gdproject.toml[/cyan]")
-    console.print(f"  Created [cyan]{config.addons_dir}/[/cyan]")
+    console.print(
+        f"{detected}"
+        f"[green]✓[/green] Initialized [bold]{name}[/bold]\n"
+        f"  Godot: [cyan]{godot}[/cyan]\n"
+        f"  Created [cyan]gdproject.toml[/cyan]\n"
+        f"  Created [cyan]{config.addons_dir}/[/cyan]"
+    )

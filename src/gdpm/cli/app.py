@@ -278,15 +278,34 @@ def _version_text() -> Text:
     )
 
 
+def print_completion(ctx: click.Context, _param: click.Parameter, value: str) -> None:
+    """Generate shell completion script."""
+    if not value or ctx.resilient_parsing:
+        return
+
+    import os
+    import subprocess
+
+    env = os.environ.copy()
+    env["_GDPM_COMPLETE"] = f"{value}_source"
+
+    result = subprocess.run(
+        ["gdpm"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    click.echo(result.stdout)
+    ctx.exit()
+
+
+
 def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
     """Print project info with banner and version."""
     if not value:
         return
 
-    import re
-
     import httpx
-
     from rich.console import Group
 
     info_lines = []
@@ -368,6 +387,14 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
     expose_value=False,
     callback=print_version,
     help="Show version and exit.",
+)
+@click.option(
+    "--completion",
+    type=click.Choice(["zsh", "bash", "fish"], case_sensitive=False),
+    is_eager=True,
+    expose_value=False,
+    callback=print_completion,
+    help="Generate shell completion script.",
 )
 def main() -> None:
     """Godot Dependency Package Manager."""

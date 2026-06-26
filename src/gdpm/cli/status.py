@@ -120,7 +120,7 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
             console.print(json.dumps(results, indent=2))
             return
 
-        console.print(f"[bold]Plugin status ({len(results)}):[/bold]\n")
+        header = f"[bold]Plugin status ({len(results)}):[/bold]"
 
         table = Table(show_header=True, header_style="bold", box=None)
         table.add_column("Plugin", style="cyan", min_width=20)
@@ -137,9 +137,11 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                 f"[{style}]{r['status']}[/{style}]",
             )
 
+        updates = [r for r in results if "⬆" in r["status"]]
+
+        console.print(header)
         console.print(table)
 
-        updates = [r for r in results if "⬆" in r["status"]]
         if updates:
             console.print(
                 f"\n[yellow]{len(updates)} update(s) available. "

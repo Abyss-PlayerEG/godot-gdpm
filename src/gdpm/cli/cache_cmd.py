@@ -49,11 +49,11 @@ def cache_info() -> None:
         if letter_dir.is_dir():
             count += len(list(letter_dir.glob("*.zip")))
 
-    console.print()
-    console.print(f"  Cache dir:  [cyan]{cache_dir}[/cyan]")
-    console.print(f"  Cache size: [yellow]{size_str}[/yellow]")
-    console.print(f"  Plugins:    [green]{count}[/green]")
-    console.print()
+    console.print(
+        f"  Cache dir:  [cyan]{cache_dir}[/cyan]\n"
+        f"  Cache size: [yellow]{size_str}[/yellow]\n"
+        f"  Plugins:    [green]{count}[/green]"
+    )
 
 
 @cache.command(

@@ -92,9 +92,11 @@ def remove(plugins: tuple[str, ...], recursive: bool, yes: bool) -> None:
         write_lockfile(list(lock_map.values()), lock_path)
 
         for name in removed:
-            console.print(f"[green]✓[/green] Removed [bold]{name}[/bold]")
-        console.print("  Updated [cyan]gdproject.toml[/cyan]")
-        console.print("  Updated [cyan]gdpm.lock[/cyan]")
+            console.print(
+                f"[green]✓[/green] Removed [bold]{name}[/bold]\n"
+                f"  Updated [cyan]gdproject.toml[/cyan]\n"
+                f"  Updated [cyan]gdpm.lock[/cyan]"
+            )
 
     if not_found:
         for name in not_found:
