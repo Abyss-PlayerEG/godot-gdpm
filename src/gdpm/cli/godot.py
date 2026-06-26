@@ -517,10 +517,7 @@ def _find_engine(name: str, version: str) -> str | None:
 )
 @click.argument("id")
 def godot_use(id: str) -> None:
-    """Set the Godot engine for the current project.
-
-    Use 'gdpm godot list -id' to see available engine IDs.
-    """
+    """Set the Godot engine for the current project."""
     import json
 
     # Parse spec: Name@Version
