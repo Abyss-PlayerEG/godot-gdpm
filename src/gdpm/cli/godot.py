@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
+import shutil
+import zipfile
 from pathlib import Path
 
 import click
 import httpx
 from rich import box
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand, GdpmGroup
 from gdpm.cli.common import console as gdpm_console
-from gdpm.constants import GODOT_RELEASES_URL
+from gdpm.constants import GODOT_DOWNLOAD_URL, GODOT_RELEASES_URL
+from gdpm.utils.install import get_godot_ext, get_godot_platform
 
 console = gdpm_console
 
@@ -142,9 +144,8 @@ def _list_remote(version_filter: str, show_all: bool) -> None:
         if version_filter:
             if not tag.startswith(version_filter):
                 continue
-        elif not show_all:
-            if not tag.startswith(("3.", "4.", "5.")):
-                continue
+        elif not show_all and not tag.startswith(("3.", "4.", "5.")):
+            continue
 
         ver_type = "[yellow]Pre-release[/yellow]" if pre else "[green]Stable[/green]"
         table.add_row(tag, ver_type, date)
@@ -158,3 +159,127 @@ def _list_remote(version_filter: str, show_all: bool) -> None:
             width=min(terminal_width, 90),
         )
     )
+
+
+def _normalize_version(version: str) -> str:
+    """Normalize version string to tag format.
+
+    '4.7' -> '4.7-stable'
+    '4.7-stable' -> '4.7-stable'
+    '3.6.2' -> '3.6.2-stable'
+    """
+    if "-stable" in version or "-rc" in version or "-beta" in version:
+        return version
+    return f"{version}-stable"
+
+
+def _build_download_url(version: str) -> str:
+    """Build Godot download URL."""
+    tag = _normalize_version(version)
+    plat = get_godot_platform()
+    ext = get_godot_ext()
+    return f"{GODOT_DOWNLOAD_URL}/{tag}/Godot_v{tag}_{plat}.{ext}"
+
+
+@godot.command(
+    name="install",
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm godot install 4.7", "Install latest 4.7 stable"),
+        ("gdpm godot install 3.6.2-stable", "Install specific version"),
+    ],
+)
+@click.argument("version")
+def godot_install(version: str) -> None:
+    """Install a Godot engine version."""
+    import httpx
+
+    engines_dir = _get_engines_dir()
+    tag = _normalize_version(version)
+    ver_dir = engines_dir / tag
+
+    if ver_dir.exists():
+        console.print(f"[yellow]Godot {tag} is already installed.[/yellow]")
+        return
+
+    url = _build_download_url(version)
+    plat = get_godot_platform()
+    ext = get_godot_ext()
+    filename = f"Godot_v{tag}_{plat}.{ext}"
+    zip_path = engines_dir / filename
+
+    console.print(f"Downloading Godot [cyan]{tag}[/cyan]...")
+
+    try:
+        with httpx.stream("GET", url, follow_redirects=True, verify=False) as resp:
+            if resp.status_code == 404:
+                console.print(
+                    f"[red]Error:[/red] Version [cyan]{tag}[/cyan] not found.\n"
+                    "  Use [bold]gdpm godot list -r[/bold] to see available versions."
+                )
+                return
+            resp.raise_for_status()
+
+            total = int(resp.headers.get("content-length", 0))
+            downloaded = 0
+
+            with open(zip_path, "wb") as f:
+                for chunk in resp.iter_bytes(8192):
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if total:
+                        pct = downloaded * 100 // total
+                        kb = downloaded // 1024
+                        print(f"\r  {pct}% ({kb}KB)", end="", flush=True)
+
+            print()
+    except Exception as e:
+        console.print(f"[red]Error:[/red] Download failed: {e}")
+        if zip_path.exists():
+            zip_path.unlink()
+        return
+
+    console.print("Extracting...")
+
+    try:
+        ver_dir.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(zip_path) as zf:
+            zf.extractall(ver_dir)
+
+        # macOS: move .app bundle to version dir
+        for app in ver_dir.glob("*.app"):
+            # Make executable
+            binary = app / "Contents" / "MacOS" / app.stem
+            if binary.exists():
+                binary.chmod(0o755)
+
+        zip_path.unlink()
+        console.print(f"[green]✓[/green] Installed Godot [bold]{tag}[/bold]")
+    except Exception as e:
+        console.print(f"[red]Error:[/red] Extraction failed: {e}")
+        if ver_dir.exists():
+            shutil.rmtree(ver_dir)
+        if zip_path.exists():
+            zip_path.unlink()
+
+
+@godot.command(
+    name="uninstall",
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm godot uninstall 4.7", "Uninstall Godot 4.7"),
+    ],
+)
+@click.argument("version")
+def godot_uninstall(version: str) -> None:
+    """Uninstall a Godot engine version."""
+    engines_dir = _get_engines_dir()
+    tag = _normalize_version(version)
+    ver_dir = engines_dir / tag
+
+    if not ver_dir.exists():
+        console.print(f"[red]Error:[/red] Godot [cyan]{tag}[/cyan] is not installed.")
+        return
+
+    shutil.rmtree(ver_dir)
+    console.print(f"[green]✓[/green] Uninstalled Godot [bold]{tag}[/bold]")
