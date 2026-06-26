@@ -23,7 +23,7 @@ from rich.table import Table
 from gdpm.cli.app import GdpmCommand, GdpmGroup
 from gdpm.cli.common import console as gdpm_console
 from gdpm.cli.common import find_project_root
-from gdpm.constants import GODOT_DOWNLOAD_URL, GODOT_RELEASES_URL
+from gdpm.constants import GODOT_RELEASES_URL
 from gdpm.utils.install import get_godot_ext, get_godot_platform
 
 console = gdpm_console
@@ -276,17 +276,34 @@ def _normalize_version(version: str) -> str:
     return f"{version}-stable"
 
 
-def _build_download_url(version: str, csharp: bool = False) -> str:
-    """Build Godot download URL."""
-    tag = _normalize_version(version)
-    ext = get_godot_ext()
+def _build_download_url(tag: str, csharp: bool = False) -> str:
+    """Get Godot download URL from GitHub API."""
     mono = "_mono" if csharp else ""
 
-    # Godot 3.x uses 'osx' instead of 'macos'
-    major = int(tag.split(".")[0])
-    plat = "osx.universal" if major < 4 else get_godot_platform()
+    try:
+        resp = httpx.get(
+            f"{GODOT_RELEASES_URL}/tags/{tag}",
+            timeout=10,
+            verify=False,
+        )
+        resp.raise_for_status()
+        data = resp.json()
 
-    return f"{GODOT_DOWNLOAD_URL}/{tag}/Godot_v{tag}{mono}_{plat}.{ext}"
+        for asset in data.get("assets", []):
+            name = asset["name"]
+            # Skip mono if not requested
+            if mono and "_mono" not in name:
+                continue
+            if not mono and "_mono" in name:
+                continue
+            # Match platform files (zip for macOS/Linux, exe.zip for Windows)
+            platforms = ("osx", "macos", "linux", "win")
+            if name.endswith(".zip") and any(p in name for p in platforms):
+                return asset["browser_download_url"]
+    except Exception:
+        pass
+
+    return ""
 
 
 def _get_asset_hash(tag: str, filename: str) -> str:
