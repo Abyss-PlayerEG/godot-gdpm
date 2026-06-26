@@ -380,17 +380,17 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
 
         write_lockfile(list(lock_entries.values()), lock_path)
 
+        stats = []
         if packed:
-            console.print(f"  Packed: {packed}")
+            stats.append(f"  Packed: {packed}")
         if renamed:
-            console.print(f"  Renamed: {renamed}")
+            stats.append(f"  Renamed: {renamed}")
         if skipped:
-            console.print(f"  Skipped: {skipped}")
-        console.print(
-            "  Updated [cyan]gdproject.toml[/cyan]"
-            "  Updated [cyan]gdpm.lock[/cyan]"
-            f"  Updated [cyan]{LOCAL_DIR_NAME}/.hashes[/cyan]"
-        )
+            stats.append(f"  Skipped: {skipped}")
+        stats.append("  Updated [cyan]gdproject.toml[/cyan]")
+        stats.append("  Updated [cyan]gdpm.lock[/cyan]")
+        stats.append(f"  Updated [cyan]{LOCAL_DIR_NAME}/.hashes[/cyan]")
+        console.print("\n".join(stats))
 
 
 def _parse_spec(spec: str) -> tuple[str, str]:

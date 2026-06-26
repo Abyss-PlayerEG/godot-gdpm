@@ -222,9 +222,11 @@ def import_cmd(source: str, yes: bool) -> None:
         write_project_config(config, root / "gdproject.toml")
         update_lockfile(find_lockfile(root), lock_updates)
 
-        console.print(f"[green]✓[/green] Imported {imported} plugin(s)")
-        console.print("  Updated [cyan]gdproject.toml[/cyan]")
-        console.print("  Updated [cyan]gdpm.lock[/cyan]")
+        console.print(
+            f"[green]✓[/green] Imported {imported} plugin(s)\n"
+            f"  Updated [cyan]gdproject.toml[/cyan]\n"
+            f"  Updated [cyan]gdpm.lock[/cyan]"
+        )
 
     if errors:
         for err in errors:

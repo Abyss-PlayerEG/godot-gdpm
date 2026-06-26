@@ -128,15 +128,16 @@ def update(plugins: tuple[str, ...], latest: bool, check: bool, yes: bool) -> No
             console.print("[green]✓[/green] All plugins are up to date.")
             return
 
-        console.print(f"\n{len(updates)} update(s) available:\n")
+        lines = [f"{len(updates)} update(s) available:"]
         for u in updates:
-            console.print(
+            lines.append(
                 f"  [cyan]{u['name']}[/cyan]  "
                 f"{u['old_version']} → [green]{u['new_version']}[/green]"
             )
+        console.print("\n".join(lines))
 
         if check:
-            console.print("\n[yellow]Dry run complete.[/yellow]")
+            console.print("[yellow]Dry run complete.[/yellow]")
             return
 
         # Apply updates

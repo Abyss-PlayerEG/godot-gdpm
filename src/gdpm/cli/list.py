@@ -51,8 +51,10 @@ def list_cmd(as_json: bool) -> None:
         return
 
     if not installed:
-        console.print("[dim]No plugins installed.[/dim]")
-        console.print("  Use [bold]gdpm add <plugin>[/bold] to install plugins.")
+        console.print(
+            "[dim]No plugins installed.[/dim]\n"
+            "  Use [bold]gdpm add <plugin>[/bold] to install plugins."
+        )
         return
 
     terminal_width = console.width
