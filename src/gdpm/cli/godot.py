@@ -580,6 +580,7 @@ def godot_info() -> None:
     path = ""
 
     # 1. Try project config
+    is_default = False
     if conf_path.exists():
         try:
             conf = json.loads(conf_path.read_text(encoding="utf-8"))
@@ -593,6 +594,7 @@ def godot_info() -> None:
 
     # 2. Try default engine
     if not name:
+        is_default = True
         default_id = get_default_engine()
         if default_id:
             default_name, default_ver = default_id.split("@", 1)
@@ -642,7 +644,7 @@ def godot_info() -> None:
     table.add_column("Key", style="dim", min_width=12)
     table.add_column("Value", style="cyan")
 
-    table.add_row("Name", name)
+    table.add_row("Name", f"{name} [dim](default)[/dim]" if is_default else name)
     table.add_row("Version", version)
     table.add_row("Path", shorten_path(path, max_len=50) if path else "-")
     table.add_row("ID", f"{name}@{version}")
