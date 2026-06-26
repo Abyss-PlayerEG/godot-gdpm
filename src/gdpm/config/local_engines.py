@@ -18,7 +18,7 @@ def get_config_path() -> Path:
     return Path.home() / ".gdpm" / "local-engines.json"
 
 
-def load_config() -> dict:
+def load_config() -> dict[str, object]:
     """Load raw config dict."""
     path = get_config_path()
     if not path.exists():
@@ -26,12 +26,14 @@ def load_config() -> dict:
 
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
+        if isinstance(data, dict):
+            return data
+        return {}
     except (json.JSONDecodeError, TypeError):
         return {}
 
 
-def save_config(config: dict) -> None:
+def save_config(config: dict[str, object]) -> None:
     """Save raw config dict."""
     path = get_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -48,7 +50,8 @@ def load_local_engines() -> dict[str, LocalEngine]:
         Dict of {name: LocalEngine}
     """
     config = load_config()
-    engines = config.get("engines", {})
+    engines_raw = config.get("engines", {})
+    engines = engines_raw if isinstance(engines_raw, dict) else {}
 
     result: dict[str, LocalEngine] = {}
     for name, value in engines.items():
@@ -110,7 +113,8 @@ def get_default_engine() -> str:
         Engine ID string (e.g., 'steam@4.7-stable'), or empty string.
     """
     config = load_config()
-    return config.get("default", "")
+    default = config.get("default", "")
+    return str(default) if default else ""
 
 
 def set_default_engine(engine_id: str) -> None:

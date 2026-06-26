@@ -192,6 +192,7 @@ def get_godot_version(binary: Path) -> str:
             capture_output=True,
             text=True,
             timeout=10,
+            check=False,
         )
         if result.returncode != 0:
             return ""

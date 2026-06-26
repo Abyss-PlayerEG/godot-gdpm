@@ -286,7 +286,7 @@ def _build_download_url(tag: str, csharp: bool = False) -> str:
 
     # Platform keywords to match
     if "macos" in system:
-        keywords = ("osx", "macos")
+        keywords: tuple[str, ...] = ("osx", "macos")
     elif "linux" in system:
         keywords = ("linux",)
     else:
@@ -311,7 +311,7 @@ def _build_download_url(tag: str, csharp: bool = False) -> str:
                 continue
             # Match platform files (zip for macOS/Linux, exe.zip for Windows)
             if name.endswith(".zip") and any(k in name for k in keywords):
-                return asset["browser_download_url"]
+                return str(asset["browser_download_url"])
     except Exception:
         pass
 
@@ -334,7 +334,7 @@ def _get_asset_hash(tag: str, filename: str) -> str:
             if asset.get("name") == filename:
                 digest = asset.get("digest", "")
                 if digest.startswith("sha256:"):
-                    return digest[7:]
+                    return str(digest[7:])
         return ""
     except Exception:
         return ""
@@ -372,7 +372,7 @@ def godot_install(version: str, csharp: bool) -> None:
             "Reinstall?"
         ):
             return
-        shutil.rmtree(ver_dir, onerror=lambda *args: None)
+        shutil.rmtree(ver_dir, onerror=lambda *args: None)  # noqa: PTH108
 
     url = _build_download_url(tag, csharp)
     if not url:
@@ -661,25 +661,25 @@ def _find_engine(name: str, version: str) -> str | None:
     ],
 )
 @click.argument("id")
-def godot_use(id: str) -> None:
+def godot_use(engine_id: str) -> None:
     """Set the Godot engine for the current project."""
     import json
 
     # Parse spec: Name@Version
-    if "@" not in id:
+    if "@" not in engine_id:
         console.print(
             "[red]Error:[/red] Invalid format. Use [cyan]Name@Version[/cyan]\n"
             "  Example: gdpm godot use gdpm-godot@4.7-stable"
         )
         return
 
-    name, version = id.split("@", 1)
+    name, version = engine_id.split("@", 1)
 
     # Find engine
     engine_path = _find_engine(name, version)
     if not engine_path:
         console.print(
-            f"[red]Error:[/red] Engine [cyan]{id}[/cyan] not found.\n"
+            f"[red]Error:[/red] Engine [cyan]{engine_id}[/cyan] not found.\n"
             "  Use [bold]gdpm godot list -id[/bold] to see available engines."
         )
         return
