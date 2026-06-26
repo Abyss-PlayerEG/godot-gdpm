@@ -2,7 +2,7 @@
 
 ## 目标
 
-通过交互式 CLI 创建新的 Godot 项目，类似 `npm init`。
+通过交互式 CLI 创建新的 Godot 项目，类似 `pnpm create vite`。
 
 ## 命令设计
 
@@ -10,6 +10,7 @@
 gdpm create                  # 交互式创建（当前目录）
 gdpm create my-game          # 指定项目名
 gdpm create my-game --open   # 创建后打开 Godot
+gdpm create my-game -y       # 使用默认值，跳过交互
 ```
 
 ## 交互流程
@@ -18,10 +19,7 @@ gdpm create my-game --open   # 创建后打开 Godot
 $ gdpm create
 
   Project name: my-game
-  Godot version (default: 4.7): 4.7
-  Description: My awesome game
-  Author: playereg
-  License: MIT
+  Godot version (default: 4.7): 
 
   ✓ Created project 'my-game'
     Godot: >=4.7.0
@@ -53,8 +51,8 @@ gdpm create my-game
 1. 交互式收集信息（或使用参数/默认值）
 2. 创建目录 my-game/
 3. 生成 project.godot
-4. 生成 gdproject.toml
-5. 创建 addons/
+4. 创建 addons/
+5. gdpm init（生成 gdproject.toml）
 6. （可选）后台打开 Godot
 ```
 
@@ -76,11 +74,14 @@ config/features=PackedStringArray("4.7")
 
 ### gdproject.toml
 
-```toml
-name = "my-game"
-godot = ">=4.7.0"
-addons_dir = "addons"
-```
+由 `gdpm init` 自动生成。
+
+## 版本检测
+
+1. 检查 `~/.gdpm/engines/` 已安装版本
+2. 检查 `~/.gdpm/local-engines.json` 本地版本
+3. 默认使用最新稳定版（4.x > 3.x）
+4. 用户可手动输入版本
 
 ## 与 gdpm init 的区别
 
@@ -88,14 +89,17 @@ addons_dir = "addons"
 |--|-------------|---------------|
 | 目录 | 已有目录 | 自动创建 |
 | project.godot | 必须存在 | 自动生成 |
-| 交互式 | 无 | 有（类似 npm init） |
-| 描述/作者/许可证 | 不收集 | 收集 |
+| 交互式 | 无 | 有 |
+| 打开 Godot | 不支持 | `--open` 支持 |
 
 ## 实现步骤
 
-- [ ] 实现交互式 CLI（click.prompt）
+- [ ] 创建 `cli/create.py`
+- [ ] 交互式收集信息（click.prompt）
+- [ ] 检测已安装 Godot 版本
 - [ ] 生成 project.godot
-- [ ] 生成 gdproject.toml（含描述、作者、许可证）
 - [ ] 创建 addons/
+- [ ] 调用 init 逻辑生成 gdproject.toml
 - [ ] `--open` 后台打开 Godot
 - [ ] `-y` 跳过交互
+- [ ] 注册到 app.py
