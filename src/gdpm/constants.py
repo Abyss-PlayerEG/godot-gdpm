@@ -35,6 +35,3 @@ def get_github_headers() -> dict[str, str]:
     if token:
         return {"Authorization": f"Bearer {token}"}
     return {}
-
-
-GODOT_DOWNLOAD_URL = "https://github.com/godotengine/godot/releases/download"
