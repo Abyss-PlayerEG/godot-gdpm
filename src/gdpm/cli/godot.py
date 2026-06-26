@@ -471,14 +471,16 @@ def godot_install(version: str, csharp: bool) -> None:
     cls=GdpmCommand,
     examples=[
         ("gdpm godot uninstall 4.7", "Uninstall Godot 4.7"),
+        ("gdpm godot uninstall 4.7 -cs", "Uninstall Godot 4.7 C#"),
     ],
 )
 @click.argument("version")
-def godot_uninstall(version: str) -> None:
+@click.option("--csharp", "-cs", is_flag=True, help="Uninstall C# (mono) version")
+def godot_uninstall(version: str, csharp: bool) -> None:
     """Uninstall a Godot engine version."""
     engines_dir = _get_engines_dir()
     suffix = ""
-    if "-csharp" in version or "-mono" in version:
+    if "-csharp" in version or "-mono" in version or csharp:
         suffix = "-csharp"
         version = version.replace("-csharp", "").replace("-mono", "")
     tag = _normalize_version(version)
