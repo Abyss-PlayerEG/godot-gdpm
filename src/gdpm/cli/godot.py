@@ -155,6 +155,8 @@ def _list_local(show_id: bool = False) -> None:
 
 def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
     """List available Godot versions from GitHub."""
+    import re
+
     try:
         # If filtering by version, fetch all pages
         if version_filter:
@@ -181,24 +183,31 @@ def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
 
             total_pages = 1
         else:
-            resp = httpx.get(
+            # Get total pages from page 1
+            resp1 = httpx.get(
                 GODOT_RELEASES_URL,
-                params={"per_page": 30, "page": page},
+                params={"per_page": 30, "page": 1},
                 timeout=10,
                 verify=False,
             )
-            resp.raise_for_status()
-            releases = resp.json()
-
-            # Parse Link header for pagination
+            resp1.raise_for_status()
             total_pages = 1
-            link_header = resp.headers.get("link", "")
-            if 'rel="last"' in link_header:
-                import re
+            link1 = resp1.headers.get("link", "")
+            match = re.search(r"page=(\d+)>; rel=\"last\"", link1)
+            if match:
+                total_pages = int(match.group(1))
 
-                match = re.search(r"page=(\d+)>; rel=\"last\"", link_header)
-                if match:
-                    total_pages = int(match.group(1))
+            if page == 1:
+                releases = resp1.json()
+            else:
+                resp = httpx.get(
+                    GODOT_RELEASES_URL,
+                    params={"per_page": 30, "page": page},
+                    timeout=10,
+                    verify=False,
+                )
+                resp.raise_for_status()
+                releases = resp.json()
     except Exception as e:
         console.print(f"[red]Error:[/red] Failed to fetch releases: {e}")
         return
