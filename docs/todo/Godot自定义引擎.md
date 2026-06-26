@@ -47,8 +47,14 @@ gdpm godot add /usr/local/bin/godot --name 4.7-custom
 
 ```json
 {
-  "4.7-steam": "/Users/playereg/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app",
-  "4.7-custom": "/usr/local/bin/godot"
+  "4.7-steam": {
+    "path": "/Users/playereg/Library/Application Support/Steam/steamapps/common/Godot Engine/Godot.app",
+    "version": "4.7-stable"
+  },
+  "4.7-custom": {
+    "path": "/usr/local/bin/godot",
+    "version": "4.7-stable"
+  }
 }
 ```
 

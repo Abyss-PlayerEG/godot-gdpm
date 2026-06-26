@@ -95,11 +95,11 @@ def _list_local() -> None:
                 })
 
     # Local engines
-    for name, path in sorted(local_engines.items()):
+    for name, engine in sorted(local_engines.items()):
         rows.append({
             "name": name,
-            "version": "-",
-            "source": path,
+            "version": engine.version or "-",
+            "source": engine.path,
             "status": "✓",
         })
 
@@ -439,5 +439,5 @@ def godot_add(path: str, name: str) -> None:
     ):
         return
 
-    add_local_engine(name, str(engine_path))
+    add_local_engine(name, str(engine_path), version)
     console.print(f"[green]✓[/green] Added Godot [bold]{name}[/bold]")

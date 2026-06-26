@@ -3,7 +3,14 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
+
+
+@dataclass
+class LocalEngine:
+    path: str
+    version: str = ""
 
 
 def get_config_path() -> Path:
@@ -11,11 +18,11 @@ def get_config_path() -> Path:
     return Path.home() / ".gdpm" / "local-engines.json"
 
 
-def load_local_engines() -> dict[str, str]:
+def load_local_engines() -> dict[str, LocalEngine]:
     """Load local engines config.
 
     Returns:
-        Dict of {name: path}
+        Dict of {name: LocalEngine}
     """
     path = get_config_path()
     if not path.exists():
@@ -23,25 +30,42 @@ def load_local_engines() -> dict[str, str]:
 
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
+        if not isinstance(data, dict):
+            return {}
+
+        result: dict[str, LocalEngine] = {}
+        for name, value in data.items():
+            if isinstance(value, str):
+                # Legacy format: just a path string
+                result[name] = LocalEngine(path=value)
+            elif isinstance(value, dict):
+                result[name] = LocalEngine(
+                    path=value.get("path", ""),
+                    version=value.get("version", ""),
+                )
+        return result
     except (json.JSONDecodeError, TypeError):
         return {}
 
 
-def save_local_engines(engines: dict[str, str]) -> None:
+def save_local_engines(engines: dict[str, LocalEngine]) -> None:
     """Save local engines config."""
     path = get_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
+    data = {
+        name: {"path": eng.path, "version": eng.version}
+        for name, eng in engines.items()
+    }
     path.write_text(
-        json.dumps(engines, indent=2, ensure_ascii=False) + "\n",
+        json.dumps(data, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
 
 
-def add_local_engine(name: str, path: str) -> None:
+def add_local_engine(name: str, path: str, version: str = "") -> None:
     """Add a local engine to config."""
     engines = load_local_engines()
-    engines[name] = path
+    engines[name] = LocalEngine(path=path, version=version)
     save_local_engines(engines)
 
 
@@ -59,10 +83,10 @@ def remove_local_engine(name: str) -> bool:
     return True
 
 
-def get_local_engine(name: str) -> str | None:
-    """Get local engine path by name.
+def get_local_engine(name: str) -> LocalEngine | None:
+    """Get local engine by name.
 
     Returns:
-        Path string or None if not found.
+        LocalEngine or None if not found.
     """
     return load_local_engines().get(name)
