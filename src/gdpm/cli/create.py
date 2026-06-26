@@ -76,9 +76,7 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
     """Create a new Godot project."""
     project_dir = Path.cwd()
 
-    console.print()
     console.print("[bold cyan]✦ Create a new Godot project[/bold cyan]")
-    console.print()
 
     # Get project name
     if not name:
