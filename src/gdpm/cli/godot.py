@@ -87,19 +87,25 @@ def _list_local() -> None:
             if d.is_dir():
                 has_binary = any(d.iterdir())
                 status = "✓" if has_binary else "✗"
+                source = str(d).replace(str(Path.home()), "~")
+                if len(source) > 35:
+                    source = source[:32] + "..."
                 rows.append({
                     "name": "gdpm-godot",
                     "version": d.name,
-                    "source": str(d),
+                    "source": source,
                     "status": status,
                 })
 
     # Local engines
     for name, engine in sorted(local_engines.items()):
+        source = engine.path.replace(str(Path.home()), "~")
+        if len(source) > 35:
+            source = source[:32] + "..."
         rows.append({
             "name": name,
             "version": engine.version or "-",
-            "source": engine.path,
+            "source": source,
             "status": "✓",
         })
 
