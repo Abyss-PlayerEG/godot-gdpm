@@ -32,4 +32,5 @@ gdpm sync
 
 - [GitHub](https://github.com/Abyss-PlayerEG/godot-gdpm)
 - [PyPI](https://pypi.org/project/godot-gdpm/)
-- [Godot Asset Store](https://godotengine.org/asset-library)
+- [Godot Asset Store](https://store.godotengine.org/)
+- [Godot Asset Library](https://godotengine.org/asset-library/)

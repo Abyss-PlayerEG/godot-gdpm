@@ -7,20 +7,24 @@ repo_name: Abyss-PlayerEG/godot-gdpm
 theme:
   name: material
   language: en
+  icon:
+    repo: fontawesome/brands/github
   logo: assets/logo.png
   favicon: assets/favicon.ico
+  font:
+    code: JetBrains Mono
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: indigo
+      primary: blue
+      accent: blue
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: indigo
-      accent: indigo
+      accent: cyan
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -37,6 +41,7 @@ extra_css:
 
 plugins:
   - search
+  - offline
   - i18n:
       docs_structure: folder
       languages:
@@ -76,3 +81,14 @@ markdown_extensions:
   - tables
   - attr_list
   - md_in_html
+
+extra:
+  version:
+    provider: mike
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Abyss-PlayerEG/godot-gdpm
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/godot-gdpm/
+
+copyright: Copyright &copy; 2026 playereg
