@@ -1,3 +1,11 @@
+<div align="center">
+
+[![English](https://img.shields.io/badge/English-blue?style=for-the-badge)](README.md) [![简体中文](https://img.shields.io/badge/简体中文-gray?style=for-the-badge)](README_CN.md)
+
+</div>
+
+---
+
 # GDPM — Godot Dependency Package Manager
 
 > A dependency package manager for Godot plugins, like uv/npm/cargo.
