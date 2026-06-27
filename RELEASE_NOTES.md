@@ -74,7 +74,7 @@
 
 ```bash
 # macOS / Linux
-tar -xzf gdpm_v0.0.6_*.tar.gz
+tar -xzf gdpm_v0.1.0b1_*.tar.gz
 cd gdpm
 ./install.sh
 
