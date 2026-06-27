@@ -903,14 +903,22 @@ def godot_open(run: bool) -> None:
     console.print(f"Opening [cyan]{engine_name}@{engine_ver}[/cyan]...")
 
     try:
-        with subprocess.Popen(
+        proc = subprocess.Popen(  # pylint: disable=consider-using-with
             args,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-        ):
-            pass
+        )
+        ret = proc.poll()
+        if ret is not None and ret != 0:
+            console.print(
+                f"[red]Error:[/red] Godot exited with code {ret}"
+            )
+            return
     except Exception as e:
         console.print(f"[red]Error:[/red] Failed to open Godot: {e}")
+        return
+
+    console.print(f"[green]✓[/green] Opened [cyan]{engine_name}@{engine_ver}[/cyan]")
 
 
 @godot.command(
