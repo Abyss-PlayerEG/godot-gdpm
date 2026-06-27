@@ -30,6 +30,9 @@ export_presets.cfg
 *.swp
 *.swo
 
+# MkDocs
+site/
+
 # OS
 .DS_Store
 Thumbs.db

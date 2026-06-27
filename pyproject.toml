@@ -43,6 +43,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/gdpm"]
 
+[tool.hatch.build.targets.sdist]
+exclude = ["docs/", "notes/", "installer/", ".github/", "scripts/"]
+
 [dependency-groups]
 dev = [
     "mypy>=1.13",
