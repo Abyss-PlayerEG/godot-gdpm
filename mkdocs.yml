@@ -1,0 +1,94 @@
+site_name: GDPM
+site_description: A dependency package manager for Godot plugins
+site_url: https://abyss-playereg.github.io/godot-gdpm/
+repo_url: https://github.com/Abyss-PlayerEG/godot-gdpm
+repo_name: Abyss-PlayerEG/godot-gdpm
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  logo: assets/logo.png
+  favicon: assets/favicon.ico
+  font:
+    code: JetBrains Mono
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+extra_css:
+  - assets/stylesheets/custom.css
+
+plugins:
+  - search
+  - offline
+  - i18n:
+      docs_structure: folder
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+          nav:
+            - Home: index.md
+            - Installation: installation.md
+            - Quick Start: quick-start.md
+            - Commands: commands.md
+            - Engine Management: engine-management.md
+            - Configuration: configuration.md
+            - FAQ: faq.md
+        - locale: zh
+          name: 简体中文
+          build: true
+          nav:
+            - 首页: index.md
+            - 安装指南: installation.md
+            - 快速入门: quick-start.md
+            - 命令参考: commands.md
+            - 引擎管理: engine-management.md
+            - 配置参考: configuration.md
+            - 常见问题: faq.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - attr_list
+  - md_in_html
+
+extra:
+  version:
+    provider: mike
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Abyss-PlayerEG/godot-gdpm
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/godot-gdpm/
+
+copyright: Copyright &copy; 2026 playereg

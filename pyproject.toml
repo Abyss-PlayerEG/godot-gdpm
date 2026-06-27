@@ -3,7 +3,8 @@ name = "godot-gdpm"
 version = "0.1.0b1"
 description = "A dependency package manager for Godot plugins, like uv/npm/cargo"
 readme = "README.md"
-license = "MIT"
+license = "GPL-3.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.14"
 authors = [
     { name = "playereg" },
@@ -13,7 +14,7 @@ classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Build Tools",
     "Topic :: Games/Entertainment",
@@ -42,6 +43,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/gdpm"]
 
+[tool.hatch.build.targets.sdist]
+exclude = ["docs/", "notes/", "installer/", ".github/", "scripts/"]
+
 [dependency-groups]
 dev = [
     "mypy>=1.13",
@@ -56,6 +60,8 @@ dev = [
     "pre-commit>=4.0",
     "pylint>=4.0.6",
     "pyinstaller>=6.21.0",
+    "mkdocs-material>=9.7.6",
+    "mkdocs-static-i18n>=1.3.1",
 ]
 
 [tool.mypy]
