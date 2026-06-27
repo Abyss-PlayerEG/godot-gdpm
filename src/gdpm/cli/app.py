@@ -159,33 +159,29 @@ class GdpmGroup(click.Group):
     def _format_main_help(self, ctx: click.Context, panel_width: int) -> None:
         console.print()
 
-        table = Table(
-            box=box.SIMPLE,
-            show_header=True,
-            header_style="bold magenta",
-            padding=(0, 2),
-            width=panel_width - 4,
-        )
-        table.add_column("Category", style="bold cyan", width=12, justify="left")
-        table.add_column("Command", style="green", width=16, justify="left")
-        table.add_column("Description", justify="left")
-
         for category, cmds in COMMANDS.items():
-            first = True
-            for cmd_name, desc in cmds.items():
-                cat = category if first else ""
-                first = False
-                table.add_row(cat, f"  {cmd_name}", desc)
-
-        console.print(
-            Panel(
-                table,
-                title="[bold cyan]Commands[/bold cyan]",
-                border_style="dim",
-                padding=(0, 1),
-                width=panel_width,
+            table = Table(
+                box=box.SIMPLE,
+                show_header=True,
+                header_style="bold magenta",
+                padding=(0, 2),
+                width=panel_width - 4,
             )
-        )
+            table.add_column("Command", style="green", width=16, justify="left")
+            table.add_column("Description", justify="left")
+
+            for cmd_name, desc in cmds.items():
+                table.add_row(f"  {cmd_name}", desc)
+
+            console.print(
+                Panel(
+                    table,
+                    title=f"[bold cyan]{category}[/bold cyan]",
+                    border_style="dim",
+                    padding=(0, 1),
+                    width=panel_width,
+                )
+            )
 
         console.print()
         console.print(
