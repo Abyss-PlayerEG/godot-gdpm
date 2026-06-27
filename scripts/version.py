@@ -67,13 +67,20 @@ def read_current() -> tuple[str, str]:
     tag_match = re.search(r'__tag__\s*=\s*"([^"]*)"', content)
 
     pypi_version = version_match.group(1) if version_match else "0.0.0"
-    tag = tag_match.group(1) if tag_match else ""
+    tag_name = tag_match.group(1) if tag_match else ""
 
-    # Extract base version from PyPI format
-    # "0.0.2b1" → "0.0.2"
-    # "0.0.2.dev1" → "0.0.2"
-    # "0.0.2" → "0.0.2"
-    base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", pypi_version)
+    # Extract tag number from PyPI format
+    # "0.1.0b12" → tag_num=12, "0.1.0.dev3" → tag_num=3
+    tag_num = 1
+    num_match = re.search(r"[a-z](\d+)$|\.dev(\d+)$|rc(\d+)$", pypi_version)
+    if num_match:
+        tag_num = int(next(g for g in num_match.groups() if g))
+
+    # Extract base version
+    base_version = re.sub(r"(\.dev\d+|[a-z]+\d+|rc\d+)$", "", pypi_version)
+
+    # Reconstruct tag with number
+    tag = f"{tag_name}-{tag_num}" if tag_name and tag_num > 1 else tag_name
 
     return base_version, tag
 
