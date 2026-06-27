@@ -1,3 +1,11 @@
+<div align="center">
+
+[![English](https://img.shields.io/badge/English-blue?style=for-the-badge)](README.md) [![简体中文](https://img.shields.io/badge/简体中文-gray?style=for-the-badge)](README_CN.md)
+
+</div>
+
+---
+
 # GDPM — Godot Dependency Package Manager
 
 > A dependency package manager for Godot plugins, like uv/npm/cargo.
@@ -19,6 +27,9 @@
 - **Version constraints** — Support for `^`, `~`, `>=` semver syntax
 - **Template detection** — Automatically identifies project templates vs addons
 - **Godot compatibility** — Checks plugin compatibility with your Godot version
+- **Godot engine management** — Install, manage, and switch Godot versions
+- **Global cache** — Shared cache across projects, saves disk space
+- **Shell completion** — Tab completion for zsh, bash, fish
 
 ## Installation
 
@@ -30,7 +41,10 @@ pip install godot-gdpm
 
 ```bash
 # Initialize a project
-gdpm init my-game --godot ">=4.2.0"
+gdpm init
+
+# Create a new project
+gdpm create my-game
 
 # Add plugins
 gdpm add limbo-ai
@@ -46,11 +60,12 @@ gdpm sync
 
 ## Commands
 
-### Project Management
+### Project
 
 | Command | Description |
 |---------|-------------|
-| `gdpm init [name]` | Initialize a new gdpm project |
+| `gdpm init` | Initialize a new gdpm project |
+| `gdpm create [name]` | Create a new Godot project (interactive) |
 | `gdpm sync` | Sync addons/ to lock file state |
 | `gdpm lock` | Generate or update lock file |
 | `gdpm list` | List installed plugins |
@@ -66,6 +81,35 @@ gdpm sync
 | `gdpm search <query>` | Search Godot Asset Store |
 | `gdpm info <plugin>` | Show plugin details |
 
+### Engine Management
+
+| Command | Description |
+|---------|-------------|
+| `gdpm godot list` | List installed Godot engines |
+| `gdpm godot list -r` | List available versions from GitHub |
+| `gdpm godot install <ver>` | Install a Godot engine |
+| `gdpm godot uninstall <ver>` | Uninstall a Godot engine |
+| `gdpm godot add <path>` | Add a local Godot engine |
+| `gdpm godot remove <name>` | Remove a local engine |
+| `gdpm godot use <id>` | Set project engine |
+| `gdpm godot info` | Show current engine info |
+| `gdpm godot open` | Open Godot editor |
+| `gdpm godot default <id>` | Set default engine |
+
+### Cache
+
+| Command | Description |
+|---------|-------------|
+| `gdpm cache info` | Show cache size and location |
+| `gdpm cache clean` | Clean all cached files |
+
+### Import/Export
+
+| Command | Description |
+|---------|-------------|
+| `gdpm export` | Export plugins to zip archive |
+| `gdpm import` | Import plugins from zip archive |
+
 ## Configuration
 
 ### gdproject.toml
@@ -74,7 +118,7 @@ gdpm sync
 [project]
 name = "my-game"
 version = "0.1.0"
-godot = ">=4.2.0"
+godot = ">=4.7.0"
 license = "MIT"
 
 [dependencies]
@@ -113,7 +157,7 @@ gdpm add limbo-ai
 
 ### Plugin Tracking
 
-gdpm uses `tag.gdpm` files to track which addon directories belong to which plugin. This handles bundled plugins that create multiple directories.
+gdpm uses `tag.gdpm` files to track which addon directories belong to which plugin.
 
 ```
 addons/
@@ -126,6 +170,27 @@ addons/
     ...
 ```
 
+## Engine Management
+
+gdpm can manage Godot engine installations:
+
+```bash
+# Install Godot 4.7
+gdpm godot install 4.7
+
+# Install C# version
+gdpm godot install 4.7 --csharp
+
+# Add local engine (e.g., Steam)
+gdpm godot add "/path/to/Godot.app"
+
+# Set engine for current project
+gdpm godot use gdpm-godot@4.7-stable
+
+# Open Godot editor
+gdpm godot open
+```
+
 ## CI/CD Integration
 
 ```yaml
@@ -134,7 +199,6 @@ addons/
   run: |
     pip install godot-gdpm
     gdpm sync --frozen
-    gdpm run test
 ```
 
 ## Development
@@ -147,13 +211,11 @@ cd godot-gdpm
 # Install dependencies
 uv sync
 
-# Run tests
-uv run mypy src/
-uv run ruff check src/
-uv run ruff format --check src/
+# Run checks
+python scripts/check.py
 
-# Install locally for testing
-./scripts/install.sh --dev
+# Build executable
+python scripts/build.py
 ```
 
 ## Contributing
@@ -175,3 +237,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 - [uv](https://github.com/astral-sh/uv) — Inspiration for the CLI design
 - [Rich](https://github.com/Textualize/rich) — Terminal formatting
 - [Click](https://github.com/pallets/click) — CLI framework
+- [Questionary](https://github.com/tmbo/questionary) — Interactive prompts

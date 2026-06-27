@@ -13,5 +13,10 @@
 - [ ] [下载优化](todo/下载优化.md)
 - [ ] [其他待开发功能](todo/其他待开发功能.md)
 - [ ] [安装类型检测](todo/安装类型检测.md)
-- [ ] gdpm create（创建新项目）
+- [ ] [gdpm create](todo/gdpm-create.md)
+- [ ] [默认引擎配置](todo/默认引擎配置.md)
+- [ ] [GitHub Token](todo/github-token.md)
+- [ ] [Godot 自定义引擎](todo/Godot自定义引擎.md)
+- [ ] [Godot 移除命令](todo/godot-remove.md)
+- [ ] [Godot Asset Library 支持](todo/asset-library.md)
 - [ ] 加载动画（Rich spinner，解决 console.status 与 console.print 冲突问题）

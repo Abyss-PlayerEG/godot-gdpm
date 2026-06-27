@@ -1,5 +1,90 @@
 # Release Notes
 
+---
+
+## v0.1.0b1
+
+### New Features
+
+- **Godot Engine Management** — Install, uninstall, and switch Godot engine versions directly from CLI.
+  - `gdpm godot install <version>` — Download and install from GitHub (supports `--csharp`).
+  - `gdpm godot uninstall <version>` — Remove installed engine.
+  - `gdpm godot list` / `gdpm godot list -r` — List installed or remote versions with pagination.
+  - `gdpm godot add <path>` — Add a local Godot engine (e.g., Steam version).
+  - `gdpm godot remove <name>` — Remove a local engine.
+  - `gdpm godot use <id>` — Set engine for current project (`Name@Version` format).
+  - `gdpm godot default <id>` — Set fallback engine for projects without explicit config.
+  - `gdpm godot info` — Show current engine configuration.
+  - `gdpm godot open` — Open Godot editor (`--run` to run project instead).
+- **`gdpm create`** — Interactive project creation with engine selection, template detection, and Godot version compatibility.
+- **Global Cache** — Shared cache across projects with split index, `gdpm cache info` / `gdpm cache clean`.
+- **Export/Import** — `gdpm export` / `gdpm import` with zip archive support.
+- **GitHub Token Support** — Auto-detect token from `~/.gdpm/conf.json` for higher API rate limits.
+- **`gdpm info` Redesign** — Rich panel with plugin name, version, description, and install details.
+- **Download Progress Bar** — Progress bar in `gdpm sync` for parallel downloads (max 5 concurrent).
+- **`gdpm sync --frozen`** — Lock file sync for CI environments.
+- **Shell Completion** — Tab completion for zsh, bash, fish in install/uninstall scripts.
+- **Build Script** — PyInstaller-based build with `scripts/build.py`.
+- **`-i` Info Panel** — Version, platform, and install type in `gdpm -i`.
+- **`-V` Colored Output** — Version display with platform info, styled like uv.
+
+### Installation
+
+```bash
+pip install godot-gdpm==0.1.0b1
+```
+
+Or download from GitHub Releases:
+
+```bash
+# macOS / Linux
+tar -xzf gdpm_v0.1.0b1_*.tar.gz
+cd gdpm
+./install.sh
+
+# Windows
+# Extract zip, run install.bat
+```
+
+### Improvements
+
+- Subcommand help redesigned with Rich panels and usage examples.
+- `gdpm list` uses Rich panel with color-coded source prefixes.
+- `gdpm search` output formatted with panels.
+- `gdpm godot add` detects binary, shows version, checks duplicates.
+- `gdpm godot list -id` shows compact engine ID view.
+- macOS install scripts auto-remove quarantine attributes.
+- Hash verification for engine downloads.
+- Version normalization (`4.7` → `4.7-stable`).
+- Platform-aware download URL resolution via GitHub API.
+- `GdpmConsole` auto-adds spacing to all CLI output.
+- Suppress SSL verification for GitHub API requests.
+
+### Bug Fixes
+
+- Fixed `gdpm godot open` blocking terminal until Godot exits.
+- Fixed `gdpm sync` parallel download passing zip_path correctly.
+- Fixed `gdpm create` engine version filtering and deduplication.
+- Fixed `gdpm init` preventing overwrite of existing config.
+- Fixed `gdpm list` sorting and folder name display.
+- Fixed `gdpm info` working outside gdpm projects.
+- Fixed deprecated `rmtree` onerror and `Popen` context manager.
+- Fixed legacy `except` syntax for PyCharm compatibility.
+- Fixed mypy, pylint, and deptry errors.
+- Fixed `-h` output with consistent blank line handling.
+- Fixed cache index path and download destination directory.
+- Fixed `gdpm add --local` scan message formatting.
+
+### Infrastructure
+
+- Pylint added to CI workflow.
+- Multi-platform Nuitka build support.
+- `scripts/check.py` with legacy syntax check.
+- VS Code workspace file.
+- AGENTS.md for AI agent context.
+
+---
+
 ## v0.0.6
 
 ### Changes
@@ -48,3 +133,45 @@ cd gdpm
 - AGENTS.md for AI agent context.
 - Code quality check script (`scripts/check.py`).
 - Version management script (`scripts/version.py`).
+
+---
+
+## v0.0.3
+
+### New Features
+
+- **Godot Asset Store Integration** — Search, browse, and install plugins directly from the official Godot Asset Store API.
+- **Dependency Management** — Automatic dependency resolution with `gdproject.toml` and `gdpm.lock`.
+- **Version Constraints** — Support for semver syntax (`^1.0.0`, `~1.5.0`, `>=1.0.0,<2.0.0`).
+- **Template Detection** — Automatically identifies project templates vs addons.
+- **Godot Version Compatibility** — Checks plugin compatibility with your project's Godot version.
+- **Plugin Tracking** — `tag.gdpm` system for tracking bundled plugin sub-packages.
+- **Auto-detect Godot Version** — Reads `project.godot` to detect Godot version (supports 1.x through 4.x).
+
+### CLI Commands
+
+- `gdpm init` — Initialize a new gdpm project
+- `gdpm add <plugin>` — Add plugins to the project
+- `gdpm remove <plugin>` — Remove plugins
+- `gdpm sync` — Sync addons/ to lock file state
+- `gdpm lock` — Generate or update lock file
+- `gdpm list` — List installed plugins
+- `gdpm status` — Show plugin status and available updates
+- `gdpm search <query>` — Search Godot Asset Store
+- `gdpm info <plugin>` — Show plugin details
+- `gdpm update` — Update plugins to newer versions
+
+### Improvements
+
+- Progress bars with download speed for plugin installations.
+- Beautiful CLI help interface with rich formatting.
+- Short options `-V` (version) and `-h` (help).
+- Version tag support (dev, beta, alpha, rc, stable).
+- PyPI-compatible version formats.
+
+### Infrastructure
+
+- GitHub Actions CI with mypy, ruff, and format checks.
+- Multi-platform build workflow (Linux, macOS arm64/x64, Windows).
+- PyPI publishing with trusted publishers.
+- Code quality tools: mypy, ruff, vulture, deptry, pre-commit.

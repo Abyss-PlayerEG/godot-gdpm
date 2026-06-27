@@ -39,8 +39,6 @@ COMMANDS = {
         "search": "Search Godot Asset Store",
         "info": "Show plugin details",
         "cache": "Manage global cache (info, clean)",
-    },
-    "Import/Export": {
         "export": "Export plugins to zip archive",
         "import": "Import plugins from zip archive",
     },
@@ -159,29 +157,32 @@ class GdpmGroup(click.Group):
     def _format_main_help(self, ctx: click.Context, panel_width: int) -> None:
         console.print()
 
+        table = Table(
+            box=None,
+            show_header=False,
+            padding=(0, 1),
+            width=panel_width - 4,
+        )
+        table.add_column("Content", justify="left")
+
         for category, cmds in COMMANDS.items():
-            table = Table(
-                box=box.SIMPLE,
-                show_header=True,
-                header_style="bold magenta",
-                padding=(0, 2),
-                width=panel_width - 4,
-            )
-            table.add_column("Command", style="green", width=16, justify="left")
-            table.add_column("Description", justify="left")
-
+            table.add_row(Text(f"  {category}", style="bold magenta"))
             for cmd_name, desc in cmds.items():
-                table.add_row(f"  {cmd_name}", desc)
-
-            console.print(
-                Panel(
-                    table,
-                    title=f"[bold cyan]{category}[/bold cyan]",
-                    border_style="dim",
-                    padding=(0, 1),
-                    width=panel_width,
+                table.add_row(
+                    Text(f"    {cmd_name:<16}", style="green")
+                    + Text(desc, style="dim")
                 )
+            table.add_row(Text(""))
+
+        console.print(
+            Panel(
+                table,
+                title="[bold cyan]Commands[/bold cyan]",
+                border_style="dim",
+                padding=(0, 1),
+                width=panel_width,
             )
+        )
 
         console.print()
         console.print(
