@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased (since v0.0.6)
+## v0.1.0
 
 ### New Features
 
