@@ -228,7 +228,7 @@ python scripts/build.py
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+GPL-3.0 License — see [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
