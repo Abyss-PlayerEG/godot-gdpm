@@ -32,6 +32,9 @@ theme:
     - search.highlight
     - content.code.copy
 
+extra_css:
+  - assets/stylesheets/custom.css
+
 plugins:
   - search
   - i18n:
