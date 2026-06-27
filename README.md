@@ -18,21 +18,6 @@
 
 ---
 
-## What's New in v0.1.0b1
-
-- **Godot Engine Management** — `gdpm godot install/list/use/open` and more
-- **`gdpm create`** — Interactive project creation with engine selection
-- **Global Cache** — Shared cache across projects (`gdpm cache info/clean`)
-- **Export/Import** — `gdpm export` / `gdpm import` with zip archive support
-- **GitHub Token Support** — Higher API rate limits via `~/.gdpm/conf.json`
-- **Download Progress Bar** — Parallel downloads in `gdpm sync`
-- **`gdpm sync --frozen`** — CI-friendly lock file sync
-- **Shell Completion** — Tab completion for zsh, bash, fish
-
-> See [RELEASE_NOTES.md](RELEASE_NOTES.md) for full changelog.
-
----
-
 ## Features
 
 - **One command install** — `gdpm add limbo-ai` instead of manual downloads
