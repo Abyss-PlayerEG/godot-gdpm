@@ -903,7 +903,7 @@ def godot_open(run: bool) -> None:
     console.print(f"Opening [cyan]{engine_name}@{engine_ver}[/cyan]...")
 
     try:
-        proc = subprocess.Popen(  # pylint: disable=consider-using-with
+        proc = subprocess.Popen(
             args,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

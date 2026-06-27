@@ -96,32 +96,39 @@ known-first-party = ["gdpm"]
 
 [tool.pylint.messages_control]
 disable = [
+    # 项目约定
     "missing-class-docstring",
     "missing-function-docstring",
+    # 复杂度（CLI 命令天然参数多、分支多）
     "too-many-instance-attributes",
     "too-many-arguments",
     "too-many-locals",
     "too-many-branches",
     "too-many-statements",
     "too-many-nested-blocks",
-    "broad-exception-caught",
-    "unused-argument",
+    # 延迟导入（避免循环依赖）
     "import-outside-toplevel",
     "wrong-import-position",
-    "cyclic-import",
-    "duplicate-code",
+    # 测试常见模式
     "redefined-outer-name",
     "reimported",
+    # 与 ruff 重叠的风格检查
     "no-else-return",
-    "cell-var-from-loop",
+    "use-implicit-booleaness-not-comparison-to-zero",
+    # 项目设计选择
+    "broad-exception-caught",
+    "unused-argument",
     "protected-access",
+    "cell-var-from-loop",
+    "consider-using-with",
+    "cyclic-import",
+    "duplicate-code",
+    # pylint 自身
     "unrecognized-option",
 ]
 
 [tool.pylint.format]
-max-line-length = 100
-testpaths = ["tests"]
-asyncio_mode = "auto"
+max-line-length = 88
 
 [tool.deptry]
 ignore = ["DEP003"]
