@@ -39,18 +39,25 @@ plugins:
           default: true
           name: English
           build: true
+          nav:
+            - Home: index.md
+            - Installation: installation.md
+            - Quick Start: quick-start.md
+            - Commands: commands.md
+            - Engine Management: engine-management.md
+            - Configuration: configuration.md
+            - FAQ: faq.md
         - locale: zh
           name: 简体中文
           build: true
-
-nav:
-  - Home: index.md
-  - Installation: installation.md
-  - Quick Start: quick-start.md
-  - Commands: commands.md
-  - Engine Management: engine-management.md
-  - Configuration: configuration.md
-  - FAQ: faq.md
+          nav:
+            - 首页: index.md
+            - 安装指南: installation.md
+            - 快速入门: quick-start.md
+            - 命令参考: commands.md
+            - 引擎管理: engine-management.md
+            - 配置参考: configuration.md
+            - 常见问题: faq.md
 
 markdown_extensions:
   - admonition
