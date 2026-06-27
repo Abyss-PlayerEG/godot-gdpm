@@ -157,14 +157,32 @@ class GdpmGroup(click.Group):
     def _format_main_help(self, ctx: click.Context, panel_width: int) -> None:
         console.print()
 
+        table = Table(
+            box=None,
+            show_header=False,
+            padding=(0, 1),
+            width=panel_width - 4,
+        )
+        table.add_column("Content", justify="left")
+
         for category, cmds in COMMANDS.items():
-            console.print(Text(f"  {category}", style="bold magenta"))
+            table.add_row(Text(f"  {category}", style="bold magenta"))
             for cmd_name, desc in cmds.items():
-                console.print(
+                table.add_row(
                     Text(f"    {cmd_name:<16}", style="green")
                     + Text(desc, style="dim")
                 )
-            console.print()
+            table.add_row(Text(""))
+
+        console.print(
+            Panel(
+                table,
+                title="[bold cyan]Commands[/bold cyan]",
+                border_style="dim",
+                padding=(0, 1),
+                width=panel_width,
+            )
+        )
 
         console.print()
         console.print(
