@@ -6,13 +6,16 @@ Usage:
     python scripts/version.py 0.0.3              # Update version only
     python scripts/version.py 0.0.3 beta         # Update version + tag
     python scripts/version.py 0.0.3 ""           # Update version, clear tag (stable)
+    python scripts/version.py 0.0.3 beta-2       # Update version + tag with number
 
 Supported tags (PyPI compatible):
-    ""      → 0.0.3        (stable)
-    "dev"   → 0.0.3.dev1   (development)
-    "alpha" → 0.0.3a1      (alpha)
-    "beta"  → 0.0.3b1      (beta)
-    "rc"    → 0.0.3rc1     (release candidate)
+    ""        → 0.0.3        (stable)
+    "dev"     → 0.0.3.dev1   (development)
+    "alpha"   → 0.0.3a1      (alpha)
+    "beta"    → 0.0.3b1      (beta)
+    "rc"      → 0.0.3rc1     (release candidate)
+    "beta-2"  → 0.0.3b2      (beta 2)
+    "rc3"     → 0.0.3rc3     (rc 3)
 """
 
 from __future__ import annotations
@@ -31,11 +34,29 @@ VALID_TAGS = ["", "dev", "alpha", "beta", "rc"]
 # PyPI version format mapping
 TAG_FORMATS = {
     "": "{version}",
-    "dev": "{version}.dev1",
-    "alpha": "{version}a1",
-    "beta": "{version}b1",
-    "rc": "{version}rc1",
+    "dev": "{version}.dev{n}",
+    "alpha": "{version}a{n}",
+    "beta": "{version}b{n}",
+    "rc": "{version}rc{n}",
 }
+
+
+def parse_tag(tag_input: str) -> tuple[str, int]:
+    """Parse tag input like 'beta-2' or 'beta2' into (tag_name, number).
+
+    Returns:
+        (tag_name, number) e.g. ("beta", 2)
+    """
+    if not tag_input:
+        return "", 1
+
+    # Match patterns: "beta-2", "beta2", "rc-1", "dev3"
+    match = re.match(r"^([a-z]+)-?(\d+)$", tag_input)
+    if match:
+        return match.group(1), int(match.group(2))
+
+    # Plain tag without number
+    return tag_input, 1
 
 
 def read_current() -> tuple[str, str]:
@@ -59,21 +80,26 @@ def read_current() -> tuple[str, str]:
 
 def get_pypi_version(version: str, tag: str) -> str:
     """Get PyPI-compatible version string."""
-    if not tag:
+    tag_name, num = parse_tag(tag)
+    if not tag_name:
         return version
-    return TAG_FORMATS.get(tag, version).format(version=version)
+    return TAG_FORMATS.get(tag_name, version).format(version=version, n=num)
 
 
 def get_display_version(version: str, tag: str) -> str:
     """Get display version string."""
     pypi = get_pypi_version(version, tag)
     if tag:
-        return f"{pypi} ({tag})"
+        tag_name, num = parse_tag(tag)
+        if num > 1:
+            return f"{pypi} ({tag_name}{num})"
+        return f"{pypi} ({tag_name})"
     return f"{pypi} (stable)"
 
 
 def update_files(version: str, tag: str) -> None:
     """Update pyproject.toml and __init__.py."""
+    tag_name, _ = parse_tag(tag)
     pypi_version = get_pypi_version(version, tag)
 
     # Update pyproject.toml
@@ -95,7 +121,7 @@ def update_files(version: str, tag: str) -> None:
     )
     content = re.sub(
         r'__tag__\s*=\s*"[^"]*"',
-        f'__tag__ = "{tag}"',
+        f'__tag__ = "{tag_name}"',
         content,
     )
     INIT_FILE.write_text(content, encoding="utf-8")
@@ -104,6 +130,14 @@ def update_files(version: str, tag: str) -> None:
 def validate_version(version: str) -> bool:
     """Validate version format (x.y.z)."""
     return bool(re.match(r"^\d+\.\d+\.\d+$", version))
+
+
+def validate_tag(tag_input: str) -> bool:
+    """Validate tag input like 'beta', 'beta-2', 'rc1'."""
+    if not tag_input:
+        return True
+    tag_name, _ = parse_tag(tag_input)
+    return tag_name in VALID_TAGS
 
 
 def main() -> None:
@@ -122,7 +156,7 @@ def main() -> None:
         print(f"Tags: {', '.join(VALID_TAGS)} (empty = stable)")
         new_tag = input("Tag (empty = stable): ").strip()
 
-        if new_tag and new_tag not in VALID_TAGS:
+        if not validate_tag(new_tag):
             print(f"Error: Invalid tag '{new_tag}'")
             sys.exit(1)
 
@@ -139,7 +173,7 @@ def main() -> None:
         print(f"Error: Invalid version format '{new_version}'. Use x.y.z")
         sys.exit(1)
 
-    if new_tag not in VALID_TAGS:
+    if not validate_tag(new_tag):
         print(f"Error: Invalid tag '{new_tag}'. Use: {', '.join(VALID_TAGS)}")
         sys.exit(1)
 
