@@ -101,7 +101,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gdpm-${{ matrix.platform }}-${{ matrix.arch }}
+          name: gdpm-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.suffix || 'default' }}
           path: dist/gdpm_*
 
   checksums:
@@ -126,8 +126,32 @@ jobs:
           name: checksums
           path: checksums.txt
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: pip install mkdocs-material mkdocs-static-i18n
+
+      - name: Build docs
+        run: mkdocs build
+
+      - name: Create docs archive
+        run: cd site && zip -r ../gdpm-docs-${{ github.event.release.tag_name || 'dev' }}.zip .
+
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdpm-docs
+          path: gdpm-docs-*.zip
+
   upload:
-    needs: [build, checksums]
+    needs: [build, checksums, docs]
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
     steps:
@@ -142,5 +166,6 @@ jobs:
           files: |
             artifacts/**/gdpm_*
             artifacts/checksums/checksums.txt
+            artifacts/gdpm-docs/gdpm-docs-*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
