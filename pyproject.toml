@@ -4,6 +4,7 @@ version = "0.1.0b1"
 description = "A dependency package manager for Godot plugins, like uv/npm/cargo"
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.14"
 authors = [
     { name = "playereg" },
