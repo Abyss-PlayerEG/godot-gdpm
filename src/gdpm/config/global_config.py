@@ -20,7 +20,7 @@ class GlobalConfig:
 
     def __post_init__(self) -> None:
         if not self.cache_dir:
-            self.cache_dir = str(Path(platformdirs.user_cache_dir("gdpm")))
+            self.cache_dir = str(Path.home() / ".gdpm" / "cache")
 
 
 def get_config_path() -> Path:

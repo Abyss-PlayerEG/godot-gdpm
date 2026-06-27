@@ -5,71 +5,49 @@ from __future__ import annotations
 import asyncio
 
 import click
-from rich.console import Console
 from rich.table import Table
 
-from gdpm.cli.common import require_project
-from gdpm.config.project import read_project_config
-from gdpm.lockfile.lock import find_lockfile, read_lockfile
+from gdpm.cli.app import GdpmCommand
+from gdpm.cli.common import console
+from gdpm.cli.context import get_project_context
 from gdpm.store.client import StoreClient
+from gdpm.utils.tag import scan_addons
 from gdpm.utils.version import normalize_version
 
-console = Console()
 
-TAG_FILENAME = "tag.gdpm"
-
-
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm status", "Show status of all plugins"),
+        ("gdpm status limbo-ai", "Show status of specific plugin"),
+        ("gdpm status --json", "Output as JSON"),
+    ],
+)
 @click.argument("plugin_slug", required=False)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
 def status(plugin_slug: str | None, as_json: bool) -> None:
     """Show plugin status and available updates."""
 
     async def _status() -> None:
-        root = require_project()
-        config_path = root / "gdproject.toml"
-        config = read_project_config(config_path)
-        addons_dir = root / config.addons_dir
-        lock_path = find_lockfile(root)
-
-        lock_entries = read_lockfile(lock_path)
-        lock_map = {e.name: e for e in lock_entries}
+        ctx = get_project_context()
 
         installed: list[dict[str, str]] = []
 
-        if addons_dir.exists():
-            for child in sorted(addons_dir.iterdir()):
-                if not child.is_dir():
-                    continue
+        for _, tag in scan_addons(ctx.addons_dir):
+            if plugin_slug and tag.slug != plugin_slug:
+                continue
 
-                tag_path = child / TAG_FILENAME
-                if not tag_path.exists():
-                    continue
+            locked = ctx.lock_map.get(tag.slug)
+            version = "local" if tag.is_local else (locked.version if locked else "?")
 
-                tag_content = tag_path.read_text(encoding="utf-8").strip()
-                is_local = tag_content.startswith("local+")
-
-                slug = ""
-                if "/" in tag_content:
-                    slug = tag_content.split("/")[-1]
-                else:
-                    slug = tag_content.split("+")[-1]
-
-                if plugin_slug and slug != plugin_slug:
-                    continue
-
-                locked = lock_map.get(slug)
-                version = "local" if is_local else (locked.version if locked else "?")
-
-                installed.append(
-                    {
-                        "slug": slug,
-                        "dir_name": child.name,
-                        "version": version,
-                        "source": tag_content,
-                        "is_local": str(is_local),
-                    }
-                )
+            installed.append(
+                {
+                    "slug": tag.slug,
+                    "version": version,
+                    "source": tag.source,
+                    "is_local": str(tag.is_local),
+                }
+            )
 
         if not installed:
             if plugin_slug:
@@ -87,7 +65,6 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                 current_ver = plugin["version"]
                 is_local = plugin.get("is_local", "False") == "True"
 
-                # Local plugins don't have versions to check
                 if is_local:
                     results.append(
                         {
@@ -95,7 +72,6 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                             "version": "local",
                             "latest": "local",
                             "status": "✓ Local",
-                            "dir_name": plugin["dir_name"],
                         }
                     )
                     continue
@@ -103,8 +79,8 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                 source = plugin["source"]
                 publisher = ""
                 if "/" in source:
-                    clean_source = source.replace("store+", "")
-                    parts = clean_source.split("/")
+                    clean = source.replace("store+", "")
+                    parts = clean.split("/")
                     if len(parts) >= 2:
                         publisher = parts[0]
 
@@ -133,7 +109,6 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                         "version": current_ver,
                         "latest": latest_ver,
                         "status": update_status,
-                        "dir_name": plugin["dir_name"],
                     }
                 )
         finally:
@@ -142,10 +117,10 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
         if as_json:
             import json
 
-            click.echo(json.dumps(results, indent=2))
+            console.print(json.dumps(results, indent=2))
             return
 
-        console.print(f"[bold]Plugin status ({len(results)}):[/bold]\n")
+        header = f"[bold]Plugin status ({len(results)}):[/bold]"
 
         table = Table(show_header=True, header_style="bold", box=None)
         table.add_column("Plugin", style="cyan", min_width=20)
@@ -154,23 +129,23 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
         table.add_column("Status", min_width=15)
 
         for r in results:
-            status_style = "green" if "Up to date" in r["status"] else "yellow"
+            style = "green" if "Up to date" in r["status"] else "yellow"
             table.add_row(
                 r["slug"],
                 r["version"],
                 r["latest"],
-                f"[{status_style}]{r['status']}[/{status_style}]",
+                f"[{style}]{r['status']}[/{style}]",
             )
 
-        console.print(table)
-
         updates = [r for r in results if "⬆" in r["status"]]
+
+        update_msg = ""
         if updates:
-            console.print(
+            update_msg = (
                 f"\n[yellow]{len(updates)} update(s) available. "
                 f"Run 'gdpm update' to update.[/yellow]"
             )
 
-        console.print()
+        console.print(f"{header}\n{table}{update_msg}")
 
     asyncio.run(_status())

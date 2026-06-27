@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import click
 from rich import box
 from rich.console import Console
@@ -10,21 +12,21 @@ from rich.table import Table
 from rich.text import Text
 
 from gdpm import __tag__, __version__
+from gdpm.constants import GITHUB_API_URL, REPO_URL
 
 console = Console()
 
-BANNER = r"""
- ██████╗ ██████╗ ██████╗ ███╗   ███╗
+BANNER = r""" ██████╗ ██████╗ ██████╗ ███╗   ███╗
 ██╔════╝ ██╔══██╗██╔══██╗████╗ ████║
 ██║  ███╗██║  ██║██████╔╝██╔████╔██║
 ██║   ██║██║  ██║██╔═══╝ ██║╚██╔╝██║
 ╚██████╔╝██████╔╝██║     ██║ ╚═╝ ██║
- ╚═════╝ ╚═════╝ ╚═╝     ╚═╝     ╚═╝
-"""
+ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝     ╚═╝"""
 
 COMMANDS = {
     "Project": {
         "init": "Initialize a new gdpm project",
+        "create": "Create a new Godot project",
         "sync": "Sync addons/ to lock file state",
         "lock": "Generate or update lock file",
         "list": "List installed plugins",
@@ -36,36 +38,126 @@ COMMANDS = {
         "update": "Update plugins to newer versions",
         "search": "Search Godot Asset Store",
         "info": "Show plugin details",
+        "cache": "Manage global cache (info, clean)",
+    },
+    "Import/Export": {
+        "export": "Export plugins to zip archive",
+        "import": "Import plugins from zip archive",
+    },
+    "Engine": {
+        "godot": "Manage Godot engine versions",
     },
 }
 
 
-class GdpmGroup(click.Group):
+class GdpmCommand(click.Command):
+    """Custom command class with Rich-formatted help."""
+
+    def __init__(
+        self,
+        *args: Any,
+        examples: list[tuple[str, str]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.examples: list[tuple[str, str]] = examples or []
+
     def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        banner_text = Text(BANNER, style="bold cyan")
-        version_text = Text(f"  v{__version__}", style="dim")
-
-        console.print(banner_text)
-        console.print(version_text)
         console.print()
-
         console.print(
-            Text("  [DEV] ", style="bold yellow")
-            + Text("This project is under active development.", style="dim")
-        )
-        console.print(
-            Text("  Report issues: ", style="dim")
-            + Text("https://github.com/Abyss-PlayerEG/godot-gdpm/issues", style="blue")
+            Text(f"  gdpm {ctx.info_name}", style="bold green")
+            + Text(f"  {self.help or ''}", style="dim")
         )
         console.print()
 
-        console.print(Text("  Godot Dependency Package Manager", style="bold white"))
+        usage_parts = [f"gdpm {ctx.info_name}"]
+        for param in self.params:
+            if param.name == "help":
+                continue
+            if param.required:
+                usage_parts.append(f"<{param.name}>")
+            elif isinstance(param, click.Option) and param.is_flag:
+                usage_parts.append(f"[--{param.name}]")
+            else:
+                usage_parts.append(f"[--{param.name} VALUE]")
         console.print(
-            Text("  https://github.com/Abyss-PlayerEG/godot-gdpm", style="dim")
+            Text("  Usage: ", style="dim") + Text(" ".join(usage_parts), style="white")
         )
         console.print()
 
+        options = [
+            p for p in self.params if p.name != "help" and isinstance(p, click.Option)
+        ]
+        if options:
+            table = Table(
+                box=box.SIMPLE,
+                show_header=True,
+                header_style="bold",
+                padding=(0, 2),
+                width=min(80, 90),
+            )
+            table.add_column("Option", style="green", min_width=20, justify="left")
+            table.add_column("Description", justify="left")
+
+            for param in options:
+                opts = ", ".join(param.opts)
+                desc = param.help or ""
+                default = ""
+                if param.default is not None and not param.is_flag:
+                    default = f" [dim](default: {param.default})[/dim]"
+                elif param.is_flag and param.default:
+                    default = " [dim](default: on)[/dim]"
+                table.add_row(f"  {opts}", f"{desc}{default}")
+
+            console.print(
+                Panel(
+                    table,
+                    title="[bold cyan]Options[/bold cyan]",
+                    border_style="dim",
+                    padding=(0, 1),
+                    width=min(80, 90),
+                )
+            )
+
+        if self.examples:
+            lines = []
+            for example_cmd, example_desc in self.examples:
+                lines.append(f"  [dim]# {example_desc}[/dim]")
+                lines.append(f"  $ {example_cmd}")
+            console.print(
+                Panel(
+                    "\n".join(lines),
+                    title="[bold cyan]Examples[/bold cyan]",
+                    border_style="dim",
+                    padding=(0, 1),
+                    width=min(80, 90),
+                )
+            )
+
+
+class GdpmGroup(click.Group):
+    """Custom group class with Rich-formatted help."""
+
+    def __init__(
+        self,
+        *args: Any,
+        examples: list[tuple[str, str]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.examples: list[tuple[str, str]] = examples or []
+
+    def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
         terminal_width = console.width
+        panel_width = min(terminal_width - 6, 80)
+
+        if ctx.info_name == "gdpm":
+            self._format_main_help(ctx, panel_width)
+        else:
+            self._format_group_help(ctx, panel_width)
+
+    def _format_main_help(self, ctx: click.Context, panel_width: int) -> None:
+        console.print()
 
         for category, cmds in COMMANDS.items():
             table = Table(
@@ -73,10 +165,10 @@ class GdpmGroup(click.Group):
                 show_header=True,
                 header_style="bold magenta",
                 padding=(0, 2),
-                width=terminal_width - 6,
+                width=panel_width - 4,
             )
-            table.add_column("Command", style="green", min_width=12)
-            table.add_column("Description")
+            table.add_column("Command", style="green", width=16, justify="left")
+            table.add_column("Description", justify="left")
 
             for cmd_name, desc in cmds.items():
                 table.add_row(f"  {cmd_name}", desc)
@@ -87,7 +179,7 @@ class GdpmGroup(click.Group):
                     title=f"[bold cyan]{category}[/bold cyan]",
                     border_style="dim",
                     padding=(0, 1),
-                    width=terminal_width,
+                    width=panel_width,
                 )
             )
 
@@ -105,55 +197,193 @@ class GdpmGroup(click.Group):
             + Text(" --help", style="dim")
         )
         console.print()
-
-        # Common options
         console.print(
             Panel(
-                Text("  -h, --help     Show help message\n", style="dim")
-                + Text("  -V, --version  Show version\n", style="dim")
-                + Text("  -y, --yes      Skip confirmation prompts", style="dim"),
+                Text("  -h, --help      Show help message\n", style="dim")
+                + Text("  -i, --info      Show project info and version\n", style="dim")
+                + Text("  -V, --version   Show version\n", style="dim")
+                + Text("  -y, --yes       Skip confirmation prompts", style="dim"),
                 title="[bold cyan]Common Options[/bold cyan]",
                 border_style="dim",
                 padding=(0, 1),
-                width=terminal_width,
+                width=panel_width,
             )
+        )
+
+    def _format_group_help(self, ctx: click.Context, panel_width: int) -> None:
+        console.print()
+        console.print(
+            Text(f"  gdpm {ctx.info_name}", style="bold green")
+            + Text(f"  {self.help or ''}", style="dim")
+        )
+        console.print()
+        console.print(
+            Text("  Usage: ", style="dim")
+            + Text(f"gdpm {ctx.info_name}", style="bold green")
+            + Text(" <command>", style="white")
         )
         console.print()
 
+        table = Table(
+            box=box.SIMPLE,
+            show_header=True,
+            header_style="bold magenta",
+            padding=(0, 2),
+            width=panel_width - 4,
+        )
+        table.add_column("Command", style="green", width=16, justify="left")
+        table.add_column("Description", justify="left")
 
-def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> None:
-    """Print formatted version info."""
+        for name, cmd in self.commands.items():
+            table.add_row(f"  {name}", cmd.help or "")
+
+        console.print(
+            Panel(
+                table,
+                title="[bold cyan]Commands[/bold cyan]",
+                border_style="dim",
+                padding=(0, 1),
+                width=panel_width,
+            )
+        )
+
+        if self.examples:
+            lines = []
+            for example_cmd, example_desc in self.examples:
+                lines.append(f"  [dim]# {example_desc}[/dim]")
+                lines.append(f"  $ {example_cmd}")
+            console.print(
+                Panel(
+                    "\n".join(lines),
+                    title="[bold cyan]Examples[/bold cyan]",
+                    border_style="dim",
+                    padding=(0, 1),
+                    width=panel_width,
+                )
+            )
+
+
+def _version_text() -> Text:
+    """Build version text with tag and platform info."""
+    import re
+
+    from gdpm.utils.install import get_install_type, get_platform
+
+    base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
+    tag_display = f" [{__tag__}]" if __tag__ else ""
+    install_type = get_install_type()
+    platform_info = get_platform()
+
+    return (
+        Text("gdpm", style="bold white")
+        + Text(f" v{base_version}", style="yellow")
+        + Text(tag_display, style="dim")
+        + Text(f" ({install_type} | {platform_info})", style="dim")
+    )
+
+
+def print_completion(ctx: click.Context, _param: click.Parameter, value: str) -> None:
+    """Generate shell completion script."""
+    if not value or ctx.resilient_parsing:
+        return
+
+    import os
+    import subprocess
+
+    env = os.environ.copy()
+    env["_GDPM_COMPLETE"] = f"{value}_source"
+
+    result = subprocess.run(
+        ["gdpm"],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    click.echo(result.stdout)
+    ctx.exit()
+
+
+
+def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
+    """Print project info with banner and version."""
     if not value:
         return
 
-    import re
+    import httpx
+    from rich.console import Group
 
-    # Extract base version (remove tag suffix like b1, dev1, a1, rc1)
-    base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
-    tag_display = f" [{__tag__}]" if __tag__ else ""
-
-    console.print()
-    console.print(Text(BANNER, style="bold cyan"))
-    console.print()
-    console.print(
-        Text("  gdpm", style="bold white")
-        + Text(f" v{base_version}", style="bold green")
-        + Text(tag_display, style="bold yellow")
+    info_lines = []
+    info_lines.append(Text(BANNER, style="bold cyan"))
+    info_lines.append(Text(""))
+    info_lines.append(Text("  ") + _version_text())
+    info_lines.append(Text("  Godot Dependency Package Manager", style="dim"))
+    info_lines.append(Text(""))
+    info_lines.append(
+        Text("  GitHub: ", style="dim")
+        + Text(REPO_URL, style="blue underline")
     )
-    console.print(Text("  Godot Dependency Package Manager", style="dim"))
+
+    terminal_width = console.width
     console.print()
     console.print(
-        Text("  Report issues: ", style="dim")
-        + Text(
-            "https://github.com/Abyss-PlayerEG/godot-gdpm/issues",
-            style="blue underline",
+        Panel(
+            Group(*info_lines),
+            title="[bold cyan]GDPM-Info[/bold cyan]",
+            border_style="dim",
+            padding=(1, 2),
+            width=min(terminal_width, 90),
         )
     )
+
+    try:
+        resp = httpx.get(f"{GITHUB_API_URL}contributors", timeout=5, verify=False)
+        if resp.status_code == 200:
+            contributors = sorted(
+                [c["login"] for c in resp.json()],
+                key=str.lower,
+            )
+            contrib_text = Text()
+            for i, name in enumerate(contributors):
+                if i > 0:
+                    contrib_text.append("  ")
+                contrib_text.append(f"@{name}", style="cyan")
+            console.print()
+            console.print(
+                Panel(
+                    contrib_text,
+                    title="[bold cyan]Contributors[/bold cyan]",
+                    border_style="dim",
+                    padding=(1, 2),
+                width=min(terminal_width, 90),
+                )
+            )
+    except Exception:
+        pass
+
     console.print()
     ctx.exit()
 
 
+def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
+    """Print version info."""
+    if not value:
+        return
+
+    console.print(_version_text())
+    ctx.exit()
+
+
 @click.group(cls=GdpmGroup, context_settings={"help_option_names": ["-h", "--help"]})
+@click.option(
+    "-i",
+    "--info",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=print_info,
+    help="Show project info and version.",
+)
 @click.option(
     "-V",
     "--version",
@@ -163,28 +393,46 @@ def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> No
     callback=print_version,
     help="Show version and exit.",
 )
+@click.option(
+    "--completion",
+    type=click.Choice(["zsh", "bash", "fish"], case_sensitive=False),
+    is_eager=True,
+    expose_value=False,
+    callback=print_completion,
+    help="Generate shell completion script.",
+)
 def main() -> None:
     """Godot Dependency Package Manager."""
 
 
-from gdpm.cli.add import add  # noqa: E402
-from gdpm.cli.info import info  # noqa: E402
-from gdpm.cli.init import init  # noqa: E402
+from gdpm.cli.add import add as add_cmd  # noqa: E402
+from gdpm.cli.cache_cmd import cache as cache_cmd  # noqa: E402
+from gdpm.cli.create import create as create_cmd  # noqa: E402
+from gdpm.cli.export import export as export_cmd  # noqa: E402
+from gdpm.cli.godot import godot as godot_cmd  # noqa: E402
+from gdpm.cli.import_cmd import import_cmd as import_cmd_  # noqa: E402
+from gdpm.cli.info import info as info_cmd  # noqa: E402
+from gdpm.cli.init import init as init_cmd  # noqa: E402
 from gdpm.cli.list import list_cmd  # noqa: E402
-from gdpm.cli.lock import lock  # noqa: E402
-from gdpm.cli.remove import remove  # noqa: E402
-from gdpm.cli.search import search  # noqa: E402
-from gdpm.cli.status import status  # noqa: E402
-from gdpm.cli.sync import sync  # noqa: E402
-from gdpm.cli.update import update  # noqa: E402
+from gdpm.cli.lock import lock as lock_cmd  # noqa: E402
+from gdpm.cli.remove import remove as remove_cmd  # noqa: E402
+from gdpm.cli.search import search as search_cmd  # noqa: E402
+from gdpm.cli.status import status as status_cmd  # noqa: E402
+from gdpm.cli.sync import sync as sync_cmd  # noqa: E402
+from gdpm.cli.update import update as update_cmd  # noqa: E402
 
-main.add_command(add)
-main.add_command(info)
-main.add_command(init)
+main.add_command(add_cmd, "add")  # type: ignore[has-type]
+main.add_command(cache_cmd, "cache")
+main.add_command(create_cmd, "create")
+main.add_command(export_cmd, "export")
+main.add_command(godot_cmd, "godot")
+main.add_command(import_cmd_, "import")
+main.add_command(info_cmd, "info")
+main.add_command(init_cmd, "init")
 main.add_command(list_cmd, "list")
-main.add_command(lock)
-main.add_command(remove)
-main.add_command(search)
-main.add_command(status)
-main.add_command(sync)
-main.add_command(update)
+main.add_command(lock_cmd, "lock")
+main.add_command(remove_cmd, "remove")
+main.add_command(search_cmd, "search")
+main.add_command(status_cmd, "status")
+main.add_command(sync_cmd, "sync")
+main.add_command(update_cmd, "update")

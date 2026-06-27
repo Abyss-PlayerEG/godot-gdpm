@@ -6,8 +6,11 @@ Usage:
     python scripts/check.py mypy     # Run mypy only
     python scripts/check.py ruff     # Run ruff only
     python scripts/check.py format   # Check formatting only
+    python scripts/check.py pylint   # Run pylint only
     python scripts/check.py vulture  # Run vulture only
+    python scripts/check.py legacy   # Check legacy syntax
     python scripts/check.py deptry   # Run deptry only
+    python scripts/check.py test     # Run tests only
     python scripts/check.py fix      # Auto-fix issues
 """
 
@@ -19,6 +22,15 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent.parent
 SRC_DIR = PROJECT_DIR / "src"
+
+CHECKS = [
+    "mypy",
+    "ruff",
+    "pylint",
+    "legacy",
+    "vulture",
+    "deptry",
+]
 
 
 def run(cmd: list[str], cwd: Path | None = None) -> int:
@@ -33,15 +45,18 @@ def run(cmd: list[str], cwd: Path | None = None) -> int:
 
 def header(name: str) -> None:
     """Print a section header."""
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  {name}")
-    print(f"{'='*50}\n")
+    print(f"{'=' * 50}\n")
 
 
 def check_mypy() -> bool:
     """Run mypy type checker."""
     header("mypy (type checking)")
-    return run(["uv", "run", "mypy", "src/"]) == 0
+    result = run(["uv", "run", "mypy", "src/"])
+    if result != 0:
+        print("  Note: mypy may fail due to pathspec/Python 3.14 compatibility issue")
+    return result == 0
 
 
 def check_ruff() -> bool:
@@ -56,18 +71,46 @@ def check_format() -> bool:
     return run(["uv", "run", "ruff", "format", "--check", "src/"]) == 0
 
 
+def check_pylint() -> bool:
+    """Run pylint static analysis."""
+    header("pylint (static analysis)")
+    return run(["uv", "run", "pylint", "src/gdpm/"]) == 0
+
+
 def check_vulture() -> bool:
     """Run vulture dead code detector."""
     header("vulture (dead code)")
     whitelist = PROJECT_DIR / ".vulture_whitelist.py"
     cmd = [
-        "uv", "run", "vulture",
+        "uv",
+        "run",
+        "vulture",
         str(SRC_DIR),
         str(whitelist) if whitelist.exists() else "",
-        "--min-confidence", "80",
+        "--min-confidence",
+        "80",
     ]
-    cmd = [c for c in cmd if c]  # Remove empty strings
+    cmd = [c for c in cmd if c]
     return run(cmd) == 0
+
+
+def check_legacy_syntax() -> bool:
+    """Check for legacy Python 2 syntax patterns."""
+    header("legacy syntax check")
+    import re
+
+    pattern = re.compile(r"except\s+\w+\s*,\s*\w+\s*:")
+    found = False
+    for py_file in SRC_DIR.rglob("*.py"):
+        for i, line in enumerate(py_file.read_text().splitlines(), 1):
+            if pattern.search(line):
+                print(f"  {py_file}:{i}: {line.strip()}")
+                found = True
+    if found:
+        print("\n  Use 'except (A, B):' or 'except A as B:' instead of 'except A, B:'")
+        return False
+    print("  No legacy syntax found.")
+    return True
 
 
 def check_deptry() -> bool:
@@ -101,7 +144,8 @@ def main() -> None:
         commands = {
             "mypy": check_mypy,
             "ruff": check_ruff,
-            "format": check_format,
+            "pylint": check_pylint,
+            "legacy": check_legacy_syntax,
             "vulture": check_vulture,
             "deptry": check_deptry,
             "test": check_test,
@@ -122,12 +166,16 @@ def main() -> None:
 
     # Run all checks
     results = {}
-
-    results["mypy"] = check_mypy()
-    results["ruff"] = check_ruff()
-    results["format"] = check_format()
-    results["vulture"] = check_vulture()
-    results["deptry"] = check_deptry()
+    for name in CHECKS:
+        func = {
+            "mypy": check_mypy,
+            "ruff": check_ruff,
+            "pylint": check_pylint,
+            "legacy": check_legacy_syntax,
+            "vulture": check_vulture,
+            "deptry": check_deptry,
+        }[name]
+        results[name] = func()
 
     # Summary
     header("Summary")

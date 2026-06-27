@@ -6,7 +6,24 @@ from pathlib import Path
 
 from rich.console import Console
 
-console = Console()
+
+class GdpmConsole(Console):
+    """Console that adds empty lines before first and after last output."""
+
+    _first_print: bool = True
+
+    def print(self, *args: object, **kwargs: object) -> None:
+        if not args:
+            super().print()
+            return
+        if self._first_print:
+            super().print()
+            self._first_print = False
+        super().print(*args, **kwargs)  # type: ignore[arg-type]
+        super().print()
+
+
+console = GdpmConsole()
 
 CONFIG_FILENAME = "gdproject.toml"
 LOCK_FILENAME = "gdpm.lock"

@@ -3,102 +3,98 @@
 from __future__ import annotations
 
 import click
-from rich.console import Console
+from rich import box
+from rich.panel import Panel
 from rich.table import Table
 
-from gdpm.cli.common import require_project
+from gdpm.cli.app import GdpmCommand
+from gdpm.cli.common import console, require_project
 from gdpm.config.project import read_project_config
 from gdpm.lockfile.lock import find_lockfile, read_lockfile
-
-console = Console()
-
-TAG_FILENAME = "tag.gdpm"
+from gdpm.utils.tag import scan_addons
 
 
-@click.command()
-@click.option("--outdated", is_flag=True, help="Show only outdated plugins")
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm list", "List all installed plugins"),
+        ("gdpm list --json", "Output as JSON"),
+    ],
+)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-def list_cmd(outdated: bool, as_json: bool) -> None:
+def list_cmd(as_json: bool) -> None:
     """List installed plugins."""
     root = require_project()
-    config_path = root / "gdproject.toml"
-    config = read_project_config(config_path)
+    config = read_project_config(root / "gdproject.toml")
     addons_dir = root / config.addons_dir
-    lock_path = find_lockfile(root)
-
-    lock_entries = read_lockfile(lock_path)
-    lock_map = {e.name: e for e in lock_entries}
-
-    all_deps = {**config.dependencies, **config.dev_dependencies}
+    lock_entries = {e.name: e for e in read_lockfile(find_lockfile(root))}
 
     installed: list[dict[str, str]] = []
 
-    if addons_dir.exists():
-        for child in sorted(addons_dir.iterdir()):
-            if not child.is_dir():
-                continue
+    for addon_path, tag in scan_addons(addons_dir):
+        locked = lock_entries.get(tag.slug)
+        version = "local" if tag.is_local else (locked.version if locked else "?")
 
-            tag_path = child / TAG_FILENAME
-            if not tag_path.exists():
-                continue
-
-            tag_content = tag_path.read_text(encoding="utf-8").strip()
-
-            slug = ""
-            if "/" in tag_content:
-                slug = tag_content.split("/")[-1]
-            else:
-                slug = tag_content.split("+")[-1]
-
-            locked = lock_map.get(slug)
-            is_local = tag_content.startswith("local+")
-
-            if is_local:
-                version = "local"
-            elif locked:
-                version = locked.version
-            else:
-                version = "?"
-
-            dep = all_deps.get(slug)
-            source = tag_content
-
-            installed.append(
-                {
-                    "slug": slug,
-                    "dir_name": child.name,
-                    "version": version,
-                    "source": source,
-                    "is_dev": str(dep.is_dev) if dep else "false",
-                }
-            )
+        installed.append(
+            {
+                "name": addon_path.name,
+                "slug": tag.slug,
+                "version": version,
+                "source": tag.source,
+            }
+        )
 
     if as_json:
         import json
 
-        click.echo(json.dumps(installed, indent=2))
+        console.print(json.dumps(installed, indent=2))
         return
 
     if not installed:
-        console.print("[dim]No plugins installed.[/dim]")
-        console.print("  Use [bold]gdpm add <plugin>[/bold] to install plugins.")
+        console.print(
+            "[dim]No plugins installed.[/dim]\n"
+            "  Use [bold]gdpm add <plugin>[/bold] to install plugins."
+        )
         return
 
-    console.print(f"[bold]Installed plugins ({len(installed)}):[/bold]\n")
+    terminal_width = console.width
 
-    table = Table(show_header=True, header_style="bold", box=None)
+    table = Table(
+        box=box.SIMPLE,
+        show_header=True,
+        header_style="bold magenta",
+        padding=(0, 2),
+        width=min(terminal_width - 6, 90),
+    )
     table.add_column("Plugin", style="cyan", min_width=20)
-    table.add_column("Version", min_width=10)
-    table.add_column("Directory", style="dim")
-    table.add_column("Source", style="dim")
+    table.add_column("Version", style="green", min_width=10)
+    table.add_column("Source", min_width=10)
 
-    for plugin in installed:
-        table.add_row(
-            plugin["slug"],
-            plugin["version"],
-            plugin["dir_name"],
-            plugin["source"],
+    for p in installed:
+        version = p["version"]
+        if version == "local":
+            version = f"[yellow]{version}[/yellow]"
+        p["version_display"] = version
+
+        source = p["source"]
+        if source.startswith("store+"):
+            source = "[blue]store[/blue]+" + source[6:]
+        elif source.startswith("local+"):
+            source = "[yellow]local[/yellow]+" + source[6:]
+
+        p["source_display"] = source
+
+    installed.sort(key=lambda p: p["source"])
+
+    for p in installed:
+        table.add_row(p["name"], p["version_display"], p["source_display"])
+
+    console.print(
+        Panel(
+            table,
+            title=f"[bold cyan]Installed Plugins ({len(installed)})[/bold cyan]",
+            border_style="dim",
+            padding=(0, 1),
+            width=min(terminal_width, 90),
         )
-
-    console.print(table)
-    console.print()
+    )

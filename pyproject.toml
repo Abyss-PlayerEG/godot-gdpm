@@ -1,6 +1,6 @@
 [project]
 name = "godot-gdpm"
-version = "0.0.6"
+version = "0.1.0"
 description = "A dependency package manager for Godot plugins, like uv/npm/cargo"
 readme = "README.md"
 license = "MIT"
@@ -24,6 +24,7 @@ dependencies = [
     "rich>=13.0",
     "platformdirs>=4.0",
     "packaging>=24.0",
+    "questionary>=2.1.1",
 ]
 
 [project.scripts]
@@ -44,6 +45,7 @@ packages = ["src/gdpm"]
 [dependency-groups]
 dev = [
     "mypy>=1.13",
+    "pathspec<1.1",
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "ruff>=0.8",
@@ -52,6 +54,8 @@ dev = [
     "vulture>=2.10",
     "deptry>=0.20",
     "pre-commit>=4.0",
+    "pylint>=4.0.6",
+    "pyinstaller>=6.21.0",
 ]
 
 [tool.mypy]
@@ -90,9 +94,35 @@ select = [
 [tool.ruff.lint.isort]
 known-first-party = ["gdpm"]
 
-[tool.pytest.ini_options]
+[tool.pylint.messages_control]
+disable = [
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "too-many-instance-attributes",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-branches",
+    "too-many-statements",
+    "too-many-nested-blocks",
+    "broad-exception-caught",
+    "unused-argument",
+    "import-outside-toplevel",
+    "wrong-import-position",
+    "cyclic-import",
+    "duplicate-code",
+    "redefined-outer-name",
+    "reimported",
+    "no-else-return",
+    "cell-var-from-loop",
+    "protected-access",
+    "unrecognized-option",
+]
+
+[tool.pylint.format]
+max-line-length = 100
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.deptry]
 ignore = ["DEP003"]
+exclude = [".venv", "scripts"]

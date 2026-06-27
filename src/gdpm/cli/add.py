@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import click
-from rich.console import Console
 from rich.progress import (
     BarColumn,
     DownloadColumn,
@@ -16,21 +16,29 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-from gdpm.cache.file_cache import FileCache
-from gdpm.cli.common import is_template, require_project
+from gdpm.cli.app import GdpmCommand
+from gdpm.cli.common import console, is_template
+from gdpm.cli.context import get_project_context, get_services
 from gdpm.cli.options import yes_option
-from gdpm.config.project import read_project_config, write_project_config
-from gdpm.installer.manager import PluginManager
-from gdpm.lockfile.lock import find_lockfile, read_lockfile, write_lockfile
+from gdpm.config.project import write_project_config
+from gdpm.lockfile.utils import update_lockfile
 from gdpm.models.dependency import Dependency
 from gdpm.models.lock import LockEntry
-from gdpm.store.client import StoreClient
-from gdpm.utils.version import is_compatible
-
-console = Console()
+from gdpm.store.utils import resolve_publisher
 
 
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm add limbo-ai", "Add plugin from Godot Store"),
+        ("gdpm add limofeus/limbo-ai", "Add with publisher/slug"),
+        ("gdpm add limbo-ai@1.5.0", "Add specific version"),
+        ("gdpm add limbo-ai@^1.0.0", "Add with version constraint"),
+        ("gdpm add --dev gdunit4", "Add as dev dependency"),
+        ("gdpm add --local", "Pack all local plugins"),
+        ("gdpm add --local plugin.zip", "Install from zip file"),
+    ],
+)
 @click.argument("plugins", nargs=-1)
 @click.option("--dev", is_flag=True, help="Add as dev dependency")
 @click.option("--local", is_flag=True, help="Pack local plugins to gdpm-local/")
@@ -46,89 +54,71 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
         raise SystemExit(1)
 
     async def _add() -> None:
-        root = require_project()
-        config_path = root / "gdproject.toml"
-        config = read_project_config(config_path)
-        addons_dir = root / config.addons_dir
-
-        store = StoreClient()
-        cache_dir = root / ".gdpm" / "cache"
-        cache = FileCache(cache_dir)
-        manager = PluginManager(addons_dir, cache, store)
+        ctx = get_project_context()
+        svc = get_services(ctx)
 
         results: list[dict[str, str]] = []
         errors: list[str] = []
+        lock_updates: dict[str, LockEntry] = {}
 
         try:
             for plugin_spec in plugins:
                 name, version_constraint = _parse_spec(plugin_spec)
 
-                parts = name.split("/")
-                if len(parts) == 2:
-                    publisher, slug = parts
-                else:
-                    publisher = ""
-                    slug = name
-
-                if slug in config.dependencies or slug in config.dev_dependencies:
+                # Check if already in dependencies
+                if (
+                    name in ctx.config.dependencies
+                    or name in ctx.config.dev_dependencies
+                ):
                     console.print(
-                        f"[yellow]![/yellow] [bold]{slug}[/bold] "
+                        f"[yellow]![/yellow] [bold]{name}[/bold] "
                         "already in dependencies. Use 'gdpm update' to update."
                     )
                     continue
 
-                if not publisher:
-                    search_results = await store.search(slug, limit=20)
-                    if not search_results:
-                        errors.append(f"Plugin '{slug}' not found in Godot Store")
-                        continue
+                # Resolve publisher
+                resolved = await resolve_publisher(svc.store, name)
+                if not resolved.found:
+                    errors.append(resolved.error)
+                    continue
 
-                    exact = next((r for r in search_results if r.slug == slug), None)
-                    if exact:
-                        publisher = exact.publisher_slug
-                    else:
-                        errors.append(
-                            f"Plugin '{slug}' not found. "
-                            f"Did you mean: {search_results[0].slug}?"
-                        )
-                        continue
+                publisher = resolved.publisher
+                slug = resolved.slug
 
+                # Check if template
                 try:
-                    detail = await store.get_plugin(publisher, slug)
+                    detail = await svc.store.get_plugin(publisher, slug)
                     if is_template(detail.tags):
-                        errors.append(
-                            f"'{slug}' is a project template, not an addon. "
-                            "Use 'gdpm download' for templates and resources."
-                        )
+                        errors.append(f"'{slug}' is a project template, not an addon.")
                         continue
                 except Exception:
                     pass
 
-                versions = await store.get_versions(publisher, slug)
+                # Show version info
+                versions = await svc.store.get_versions(publisher, slug)
                 if versions:
-                    latest = versions[0]
-                    ver = latest.get("version", "")
-                    min_godot = latest.get("min_godot_version", "")
-                    max_godot = latest.get("max_godot_version", "")
+                    # Find the version that matches the constraint
+                    target_ver = versions[0].get("version", "")
+                    if version_constraint:
+                        from gdpm.models.version import Version, VersionConstraint
 
-                    ver_display = ver if ver.startswith(("v", "V")) else f"v{ver}"
+                        constraint = VersionConstraint(version_constraint)
+                        for v in versions:
+                            api_ver = v.get("version", "").lstrip("v")
+                            try:
+                                if constraint.matches(Version(api_ver)):
+                                    target_ver = v.get("version", "")
+                                    break
+                            except Exception:
+                                pass
+
+                    if target_ver.startswith(("v", "V")):
+                        ver_display = target_ver
+                    else:
+                        ver_display = f"v{target_ver}"
                     console.print(f"  [dim]{ver_display}[/dim]")
 
-                    godot_parts = []
-                    if min_godot and min_godot not in ("None", ""):
-                        godot_parts.append(f">={min_godot}")
-                    if max_godot and max_godot not in ("None", ""):
-                        godot_parts.append(f"<={max_godot}")
-
-                    if godot_parts:
-                        console.print(f"  [dim]Godot {' '.join(godot_parts)}[/dim]")
-
-                    compatible, msg = is_compatible(config.godot, min_godot, max_godot)
-                    if compatible:
-                        console.print("  [green]✓ Compatible[/green]")
-                    else:
-                        console.print(f"  [red]✗ {msg}[/red]")
-
+                # Download and install
                 try:
                     with Progress(
                         TextColumn("[bold blue]{task.fields[name]}"),
@@ -149,11 +139,17 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                                 progress.update(_task, total=total)
                             progress.update(_task, completed=current)
 
-                        zip_path, ver = await manager.download(
-                            publisher, slug, on_progress=on_progress
+                        ver = (
+                            version_constraint.lstrip("v") if version_constraint else ""
+                        )
+                        zip_path, ver = await svc.manager.download(
+                            publisher,
+                            slug,
+                            version=ver,
+                            on_progress=on_progress,
                         )
 
-                    manager.install_from_zip(zip_path, slug, publisher)
+                    svc.manager.install_from_zip(zip_path, slug, publisher)
 
                     result = {
                         "name": slug,
@@ -161,9 +157,16 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                         "source": f"store+{publisher}/{slug}",
                     }
                     results.append(result)
+
+                    lock_updates[slug] = LockEntry(
+                        name=slug,
+                        version=ver,
+                        source=f"store+{publisher}/{slug}",
+                    )
+
                 except Exception as e:
                     if "404" in str(e):
-                        search_results = await store.search(slug, limit=5)
+                        search_results = await svc.store.search(slug, limit=5)
                         exact = next(
                             (r for r in search_results if r.slug == slug),
                             None,
@@ -171,8 +174,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                         if exact:
                             errors.append(
                                 f"Plugin '{slug}' not found at '{publisher}'. "
-                                f"Did you mean: "
-                                f"{exact.publisher_slug}/{slug}?"
+                                f"Did you mean: {exact.publisher_slug}/{slug}?"
                             )
                         else:
                             errors.append(f"Failed to install {slug}: {e}")
@@ -180,6 +182,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                         errors.append(f"Failed to install {slug}: {e}")
                     continue
 
+                # Update config
                 dep = Dependency.from_spec(
                     slug,
                     version_constraint or result["version"],
@@ -188,35 +191,25 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                 )
 
                 if dev:
-                    config.dev_dependencies[slug] = dep
+                    ctx.config.dev_dependencies[slug] = dep
                 else:
-                    config.dependencies[slug] = dep
+                    ctx.config.dependencies[slug] = dep
 
         finally:
-            await manager.close()
+            await svc.store.close()
 
         if results:
-            write_project_config(config, config_path)
+            write_project_config(ctx.config, ctx.config_path)
+            update_lockfile(ctx.lock_path, lock_updates)
 
-            lock_path = find_lockfile(root)
-            lock_entries = read_lockfile(lock_path)
-            lock_map = {e.name: e for e in lock_entries}
-
+            added_lines = []
             for r in results:
-                lock_map[r["name"]] = LockEntry(
-                    name=r["name"],
-                    version=r["version"],
-                    source=r.get("source", ""),
+                added_lines.append(
+                    f"[green]✓[/green] Added [bold]{r['name']}[/bold] {r['version']}"
                 )
-
-            write_lockfile(list(lock_map.values()), lock_path)
-
-            for r in results:
-                ver = r["version"]
-                console.print(f"[green]✓[/green] Added [bold]{r['name']}[/bold] {ver}")
-
-            console.print("  Updated [cyan]gdproject.toml[/cyan]")
-            console.print("  Updated [cyan]gdpm.lock[/cyan]")
+            added_lines.append("  Updated [cyan]gdproject.toml[/cyan]")
+            added_lines.append("  Updated [cyan]gdpm.lock[/cyan]")
+            console.print("\n".join(added_lines))
 
         if errors:
             for err in errors:
@@ -228,15 +221,10 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
     asyncio.run(_add())
 
 
-def _parse_spec(spec: str) -> tuple[str, str]:
-    if "@" in spec:
-        name, constraint = spec.split("@", 1)
-        return name, constraint
-    return spec, ""
-
-
 def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
-    """Pack local plugins to gdpm-local/ with hash comparison."""
+    """Pack local plugins to gdpm-local/ or install from zip."""
+    from gdpm.lockfile.lock import find_lockfile, read_lockfile, write_lockfile
+    from gdpm.models.lock import LockEntry
     from gdpm.utils.local import (
         LOCAL_DIR_NAME,
         compute_dir_hash,
@@ -247,101 +235,127 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
         scan_untagged_or_local_plugins,
         tag_plugin,
     )
+    from gdpm.utils.zip import extract_full_zip
 
-    root = require_project()
-    config_path = root / "gdproject.toml"
-    config = read_project_config(config_path)
-    addons_dir = root / config.addons_dir
-    local_dir = root / LOCAL_DIR_NAME
+    ctx = get_project_context()
+    local_dir = ctx.root / LOCAL_DIR_NAME
 
-    if plugins:
-        targets = list(plugins)
+    # Separate zip files and directory names
+    zip_files: list[Path] = []
+    dir_names: list[str] = []
+
+    for item in plugins:
+        p = Path(item)
+        if p.suffix == ".zip" and p.exists():
+            zip_files.append(p)
+        else:
+            dir_names.append(item)
+
+    # Install from zip files
+    for zip_path in zip_files:
+        slug = zip_path.stem
+        dest = ctx.addons_dir / slug
+
+        console.print(f"Installing from [cyan]{zip_path.name}[/cyan]...")
+        extract_full_zip(zip_path, dest)
+        tag_plugin(ctx.addons_dir, slug)
+
+        # Copy zip to gdpm-local/ (skip if already there)
+        local_dir.mkdir(parents=True, exist_ok=True)
+        local_zip = local_dir / zip_path.name
+        import shutil
+
+        if zip_path.resolve() != local_zip.resolve():
+            shutil.copy2(zip_path, local_zip)
+
+        # Update config
+        dep = Dependency.from_spec(slug, "*", is_local=True, is_dev=False)
+        ctx.config.dependencies[slug] = dep
+
+        # Update lock
+        lock_path = find_lockfile(ctx.root)
+        lock_entries = {e.name: e for e in read_lockfile(lock_path)}
+        lock_entries[slug] = LockEntry(
+            name=slug,
+            version="local",
+            source="local",
+        )
+        write_lockfile(list(lock_entries.values()), lock_path)
+
+        console.print(f"[green]✓[/green] Installed [bold]{slug}[/bold] from zip")
+
+    # Handle directory names (existing logic)
+    if dir_names:
+        targets = dir_names
     else:
-        untagged = scan_untagged_or_local_plugins(addons_dir)
+        untagged = scan_untagged_or_local_plugins(ctx.addons_dir)
         if not untagged:
-            console.print("[dim]No local plugins found in addons/[/dim]")
+            if not zip_files:
+                console.print("[dim]No local plugins found in addons/[/dim]")
             return
         targets = [p.name for p in untagged]
 
     if not targets:
-        console.print("[dim]No plugins to pack.[/dim]")
+        if not zip_files:
+            console.print("[dim]No plugins to pack.[/dim]")
         return
 
-    hashes = load_hashes(root)
-    console.print(f"Scanning {len(targets)} plugin(s)...\n")
+    hashes = load_hashes(ctx.root)
+    console.print(f"Scanning {len(targets)} plugin(s)...")
 
     packed = 0
     skipped = 0
     renamed = 0
 
     for name in targets:
-        plugin_dir = addons_dir / name
+        plugin_dir = ctx.addons_dir / name
         if not plugin_dir.exists():
             console.print(f"[red]✗[/red] Plugin directory not found: {name}")
             continue
 
         content_hash = compute_dir_hash(plugin_dir)
 
-        # Check if hash matches an existing plugin (possible rename)
         existing_name = find_matching_hash(hashes, content_hash)
 
         if existing_name and existing_name != name:
-            # Rename detected
             old_zip = local_dir / f"{existing_name}.zip"
             new_zip = local_dir / f"{name}.zip"
 
-            if (
-                old_zip.exists()
-                and not yes
-                and not console.input(
-                    f"  [yellow]?[/yellow] {name} matches "
-                    f"[bold]{existing_name}[/bold]. Rename? (y/n): "
-                )
-                .strip()
-                .lower()
-                .startswith("y")
-            ):
-                # User declined rename, treat as new plugin
-                existing_name = None
+            if old_zip.exists():
+                old_zip.rename(new_zip)
+            hashes.pop(existing_name, None)
+            hashes[name] = content_hash
+            tag_plugin(ctx.addons_dir, name)
 
-            if existing_name and existing_name != name:
-                if old_zip.exists():
-                    old_zip.rename(new_zip)
-                hashes.pop(existing_name, None)
-                hashes[name] = content_hash
-                tag_plugin(addons_dir, name)
+            if existing_name in ctx.config.dependencies:
+                dep = ctx.config.dependencies.pop(existing_name)
+                ctx.config.dependencies[name] = dep
 
-                # Update dependency name
-                if existing_name in config.dependencies:
-                    dep = config.dependencies.pop(existing_name)
-                    config.dependencies[name] = dep
+            console.print(
+                f"[green]✓[/green] Renamed [bold]{existing_name}[/bold] "
+                f"→ [bold]{name}[/bold]"
+            )
+            renamed += 1
+            continue
 
-                console.print(
-                    f"[green]✓[/green] Renamed [bold]{existing_name}[/bold] "
-                    f"→ [bold]{name}[/bold]"
-                )
-                renamed += 1
-                continue
-
-        # Check if content changed
         zip_exists = (local_dir / f"{name}.zip").exists()
-        is_registered = name in config.dependencies or name in config.dev_dependencies
+        is_registered = (
+            name in ctx.config.dependencies or name in ctx.config.dev_dependencies
+        )
 
         if not zip_exists or not is_registered:
-            # Zip was deleted or not registered, force repack
             pass
         elif name in hashes and hashes[name] == content_hash:
             console.print(f"  [dim]○ {name}: unchanged → skipped[/dim]")
             skipped += 1
             continue
 
-        # Pack the plugin
-        tag_plugin(addons_dir, name)
-        pack_plugin(addons_dir, name, local_dir)
+        tag_plugin(ctx.addons_dir, name)
+        pack_plugin(ctx.addons_dir, name, local_dir)
         hashes[name] = content_hash
 
         dep = Dependency.from_spec(name, "*", is_local=True, is_dev=False)
-        config.dependencies[name] = dep
+        ctx.config.dependencies[name] = dep
 
         console.print(
             f"[green]✓[/green] Packed [bold]{name}[/bold] → {LOCAL_DIR_NAME}/{name}.zip"
@@ -349,32 +363,38 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
         packed += 1
 
     if packed or renamed:
-        save_hashes(root, hashes)
-        write_project_config(config, config_path)
+        save_hashes(ctx.root, hashes)
+        write_project_config(ctx.config, ctx.config_path)
 
-        # Update lock file
-        lock_path = find_lockfile(root)
-        lock_entries = read_lockfile(lock_path)
-        lock_map = {e.name: e for e in lock_entries}
+        lock_path = find_lockfile(ctx.root)
+        lock_entries = {e.name: e for e in read_lockfile(lock_path)}
 
         for name in targets:
-            plugin_dir = addons_dir / name
+            plugin_dir = ctx.addons_dir / name
             if plugin_dir.exists():
-                lock_map[name] = LockEntry(
+                lock_entries[name] = LockEntry(
                     name=name,
                     version="local",
                     source="local",
                 )
 
-        write_lockfile(list(lock_map.values()), lock_path)
+        write_lockfile(list(lock_entries.values()), lock_path)
 
-        console.print()
+        stats = []
         if packed:
-            console.print(f"  Packed: {packed}")
+            stats.append(f"  Packed: {packed}")
         if renamed:
-            console.print(f"  Renamed: {renamed}")
+            stats.append(f"  Renamed: {renamed}")
         if skipped:
-            console.print(f"  Skipped: {skipped}")
-        console.print("  Updated [cyan]gdproject.toml[/cyan]")
-        console.print("  Updated [cyan]gdpm.lock[/cyan]")
-        console.print(f"  Updated [cyan]{LOCAL_DIR_NAME}/.hashes[/cyan]")
+            stats.append(f"  Skipped: {skipped}")
+        stats.append("  Updated [cyan]gdproject.toml[/cyan]")
+        stats.append("  Updated [cyan]gdpm.lock[/cyan]")
+        stats.append(f"  Updated [cyan]{LOCAL_DIR_NAME}/.hashes[/cyan]")
+        console.print("\n".join(stats))
+
+
+def _parse_spec(spec: str) -> tuple[str, str]:
+    if "@" in spec:
+        name, constraint = spec.split("@", 1)
+        return name, constraint
+    return spec, ""

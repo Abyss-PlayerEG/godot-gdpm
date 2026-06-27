@@ -49,6 +49,11 @@ class FileCache:
                 total += f.stat().st_size
         return total
 
+    def _letter_dir(self, key: str) -> Path:
+        publisher = key.split("/")[0] if "/" in key else key
+        letter = publisher[0].lower() if publisher else "x"
+        return self._downloads / letter
+
     def _key_path(self, key: str) -> Path:
         safe_key = key.replace("/", "_").replace("\\", "_")
-        return self._downloads / safe_key
+        return self._letter_dir(key) / safe_key

@@ -5,14 +5,20 @@ from __future__ import annotations
 import asyncio
 
 import click
-from rich.console import Console
+from rich.panel import Panel
 
+from gdpm.cli.app import GdpmCommand
+from gdpm.cli.common import console, is_template
 from gdpm.store.client import StoreClient
 
-console = Console()
 
-
-@click.command()
+@click.command(
+    cls=GdpmCommand,
+    examples=[
+        ("gdpm info limbo-ai", "Show plugin details"),
+        ("gdpm info rsubtil/controller-icons", "Show with publisher/slug"),
+    ],
+)
 @click.argument("plugin_slug")
 def info(plugin_slug: str) -> None:
     """Show detailed information about a plugin."""
@@ -56,32 +62,51 @@ def info(plugin_slug: str) -> None:
 
         add_route = f"{author}/{slug}"
 
-        console.print(f"[bold cyan]{detail.name}[/bold cyan]")
-        if detail.latest_version:
-            console.print(f"  [dim]{detail.latest_version}[/dim]")
-        console.print("─" * 50)
-        console.print(detail.description)
-        console.print()
+        # Build info content
+        info_lines = []
+        info_lines.append(
+            f"[bold cyan]{detail.name}[/bold cyan]"
+            + (f"  [dim]{detail.latest_version}[/dim]" if detail.latest_version else "")
+        )
+        info_lines.append("")
+        info_lines.append(detail.description)
+        info_lines.append("")
 
         if detail.author:
-            console.print(f"  Author:     {detail.author}")
+            info_lines.append(f"  Author:     {detail.author}")
         if detail.license:
-            console.print(f"  License:    {detail.license}")
+            info_lines.append(f"  License:    {detail.license}")
         if detail.homepage:
-            console.print(f"  Store:      {detail.homepage}")
+            info_lines.append(f"  Store:      {detail.homepage}")
         if detail.tags:
-            console.print(f"  Tags:       {', '.join(detail.tags)}")
-        console.print()
-        console.print(f"  [bold]Install:[/bold]  [green]gdpm add {add_route}[/green]")
-        console.print()
+            info_lines.append(f"  Tags:       {', '.join(detail.tags)}")
+        info_lines.append("")
 
+        if is_template(detail.tags):
+            info_lines.append(
+                "  [yellow]Project template - not installable as addon[/yellow]"
+            )
+        else:
+            info_lines.append(f"  Install:    [green]gdpm add {add_route}[/green]")
+
+        # Add versions table if available
         if versions:
-            console.print("  [bold]Versions:[/bold]")
+            info_lines.append("")
+            info_lines.append("  [bold]Versions:[/bold]")
             for v in versions[:10]:
+                ver = v.get("version", "")
                 stable = "stable" if v.get("stable") == "True" else "pre"
                 date = v.get("created", "")
-                ver = v.get("version", "")
-                console.print(f"    {ver}  {date}  [{stable}]")
-        console.print()
+                info_lines.append(f"    {ver}  {date}  [{stable}]")
+
+        console.print(
+            Panel(
+                "\n".join(info_lines),
+                title="[bold cyan]Info[/bold cyan]",
+                border_style="dim",
+                padding=(1, 2),
+                width=120,
+            )
+        )
 
     asyncio.run(_info())

@@ -1,18 +1,17 @@
 """Godot project.godot file parser.
 
 Detects Godot engine version from project.godot files.
-Supports Godot 1.x through 4.x formats.
+Supports Godot 3.x and 4.x formats.
 
 Version detection by config_version:
 - config_version=5 → Godot 4.x: config/features=PackedStringArray("4.7", "Forward Plus")
 - config_version=4 → Godot 3.x: config/version="3.5.2"
-- config_version=2 → Godot 2.x: version="2.1.6"
-- config_version=1 → Godot 1.x: version="1.1.0"
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -34,7 +33,7 @@ class GodotProject:
     def version_constraint(self) -> str:
         """Return a version constraint string for gdproject.toml."""
         if not self.godot_version:
-            return ">=4.0"
+            return ">=3.0"
 
         parts = self.godot_version.split(".")
         if len(parts) >= 2:
@@ -46,12 +45,20 @@ class GodotProject:
 
 
 def parse_project_godot(path: Path) -> GodotProject:
-    """Parse a project.godot file and extract project information."""
+    """Parse a project.godot file and extract project information.
+
+    Supports Godot 3.x (config_version=4) and 4.x (config_version=5).
+    """
     if not path.exists():
         return GodotProject()
 
     content = path.read_text(encoding="utf-8")
-    return _parse_content(content)
+    project = _parse_content(content)
+
+    if project.config_version > 0 and project.config_version < 4:
+        return GodotProject()
+
+    return project
 
 
 def _parse_content(content: str) -> GodotProject:
@@ -116,12 +123,6 @@ def _parse_content(content: str) -> GodotProject:
         elif "GLES3" in content:
             project.renderer = "GLES3"
 
-    elif project.config_version <= 2:
-        # Godot 2.x/1.x: version="2.1.6"
-        match = re.search(r'^version="([^"]+)"', content, re.MULTILINE)
-        if match:
-            project.godot_version = match.group(1)
-
     return project
 
 
@@ -145,3 +146,85 @@ def detect_version_constraint(project_dir: Path) -> str:
     project_file = project_dir / "project.godot"
     project = parse_project_godot(project_file)
     return project.version_constraint
+
+
+def detect_godot_binary(path: Path) -> Path | None:
+    """Detect Godot binary path from a given path.
+
+    For macOS .app bundles, returns the binary inside Contents/MacOS/.
+    For Linux/Windows, returns the path directly if it's executable.
+
+    Returns:
+        Path to Godot binary, or None if not valid.
+    """
+    if not path.exists():
+        return None
+
+    # macOS .app bundle
+    if path.suffix == ".app":
+        binary = path / "Contents" / "MacOS" / "Godot"
+        if binary.exists():
+            return binary
+        # Try stem-based name (e.g., Godot_mono.app -> Godot_mono)
+        binary = path / "Contents" / "MacOS" / path.stem
+        if binary.exists():
+            return binary
+        return None
+
+    # Linux/Windows executable
+    if path.is_file():
+        return path
+
+    return None
+
+
+def get_godot_version(binary: Path) -> str:
+    """Get Godot version from binary.
+
+    Runs 'godot --version' and parses the output.
+
+    Returns:
+        Version string like '4.7-stable', or empty string if failed.
+    """
+    try:
+        result = subprocess.run(
+            [str(binary), "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if result.returncode != 0:
+            return ""
+
+        version_str = result.stdout.strip()
+        # "4.7.0.stable.official.h" -> "4.7-stable"
+        return _parse_version_string(version_str)
+    except Exception:
+        return ""
+
+
+def _parse_version_string(version_str: str) -> str:
+    """Parse Godot version string to short format.
+
+    '4.7.0.stable.official.h' -> '4.7-stable'
+    '3.6.2.stable.official.h' -> '3.6.2-stable'
+    '4.7.0.rc1.official.h' -> '4.7-rc1'
+    """
+    parts = version_str.split(".")
+    if len(parts) < 3:
+        return version_str
+
+    major = parts[0]
+    minor = parts[1]
+
+    # Find the stability tag (stable, rc, beta, dev)
+    stability = ""
+    for part in parts[2:]:
+        if part in ("stable", "rc", "beta", "dev"):
+            stability = part
+            break
+
+    if stability:
+        return f"{major}.{minor}-{stability}"
+    return f"{major}.{minor}"
