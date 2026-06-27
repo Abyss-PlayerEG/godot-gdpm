@@ -6,6 +6,8 @@
 
 ### New Features
 
+### New Features
+
 - **Godot Engine Management** — Install, uninstall, and switch Godot engine versions directly from CLI.
   - `gdpm godot install <version>` — Download and install from GitHub (supports `--csharp`).
   - `gdpm godot uninstall <version>` — Remove installed engine.
@@ -19,7 +21,7 @@
 - **`gdpm create`** — Interactive project creation with engine selection, template detection, and Godot version compatibility.
 - **Global Cache** — Shared cache across projects with split index, `gdpm cache info` / `gdpm cache clean`.
 - **Export/Import** — `gdpm export` / `gdpm import` with zip archive support.
-- **GitHub Token Support** — Auto-detect token from `~/.gdpm/conf.json` for higher API rate limits.
+- **GitHub Token Support** — Auto-detect token from `~/.gdpm/github_token.txt` for higher API rate limits.
 - **`gdpm info` Redesign** — Rich panel with plugin name, version, description, and install details.
 - **Download Progress Bar** — Progress bar in `gdpm sync` for parallel downloads (max 5 concurrent).
 - **`gdpm sync --frozen`** — Lock file sync for CI environments.
