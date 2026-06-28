@@ -54,7 +54,7 @@ jobs:
           FIRST=true
           for ver in $VERSIONS; do
             if [ "$FIRST" = true ]; then
-              VERSION_HTML="$VERSION_HTML      <a href=\"$ver/\" class=\"version-link\">\n        <span class=\"version-name\">v$ver</span>\n        <span class=\"version-badge\">Latest</span>\n      </a>"
+              VERSION_HTML="$VERSION_HTML      <a href=\"$ver/\" class=\"version-link latest\">\n        <span class=\"version-name\">v$ver</span>\n      </a>"
               FIRST=false
             else
               VERSION_HTML="$VERSION_HTML\n      <a href=\"$ver/\" class=\"version-link\">\n        <span class=\"version-name\">v$ver</span>\n      </a>"
