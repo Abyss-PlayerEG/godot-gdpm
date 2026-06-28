@@ -61,14 +61,19 @@ jobs:
             fi
           done
 
-          # Read template and replace placeholder
-          TEMPLATE=$(cat .github/templates/versions.html)
+          # Read template and remove example block
+          sed '/<!-- EXAMPLE_VERSIONS_START -->/,/<!-- EXAMPLE_VERSIONS_END -->/d' .github/templates/versions.html > /tmp/template.html
 
-          # Remove example versions block
-          TEMPLATE=$(echo "$TEMPLATE" | sed '/<!-- EXAMPLE_VERSIONS_START -->/,/<!-- EXAMPLE_VERSIONS_END -->/d')
-
-          # Insert real versions at REAL_VERSIONS placeholder
-          echo "$TEMPLATE" | sed "s|<!-- REAL_VERSIONS -->|$(echo -e "$VERSION_HTML")|" > /tmp/index.html
+          # Insert real versions at REAL_VERSIONS placeholder (safe for multiline)
+          awk -v repl="$VERSION_HTML" '
+            {
+              if ($0 ~ /<!-- REAL_VERSIONS -->/) {
+                print repl
+              } else {
+                print $0
+              }
+            }
+          ' /tmp/template.html > /tmp/index.html
 
           # Deploy index.html to gh-pages root
           git checkout gh-pages
