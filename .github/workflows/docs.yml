@@ -33,63 +33,6 @@ jobs:
         id: version
         run: echo "version=$(grep '^version' pyproject.toml | cut -d'"' -f2)" >> $GITHUB_OUTPUT
 
-      - name: Get existing versions from gh-pages
-        id: versions
-        run: |
-          # Fetch gh-pages branch
-          git fetch origin gh-pages:gh-pages 2>/dev/null || true
-          # Extract version directories
-          VERSIONS=$(git ls-tree -d --name-only gh-pages 2>/dev/null | grep -E '^[0-9]' | sort -V -r | tr '\n' ',' | sed 's/,$//')
-          echo "list=$VERSIONS" >> $GITHUB_OUTPUT
-
-      - name: Generate versions.md
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          VERSIONS="${{ steps.versions.outputs.list }}"
-
-          # Add current version to list if not already there
-          if [[ ! ",$VERSIONS," == *",$VERSION,"* ]]; then
-            if [ -z "$VERSIONS" ]; then
-              VERSIONS="$VERSION"
-            else
-              VERSIONS="$VERSION,$VERSIONS"
-            fi
-          fi
-
-          # Generate English versions.md
-          cat > docs/en/versions.md << 'EOF'
-          # Version History
-
-          All versions of GDPM documentation.
-          EOF
-
-          IFS=',' read -ra VER_ARRAY <<< "$VERSIONS"
-          for i in "${!VER_ARRAY[@]}"; do
-            ver="${VER_ARRAY[$i]}"
-            if [ "$i" -eq 0 ]; then
-              echo "- [v${ver}](/godot-gdpm/${ver}/) — Latest" >> docs/en/versions.md
-            else
-              echo "- [v${ver}](/godot-gdpm/${ver}/)" >> docs/en/versions.md
-            fi
-          done
-
-          # Generate Chinese versions.md
-          cat > docs/zh/versions.md << 'EOF'
-          # 版本历史
-
-          GDPM 文档的所有版本。
-          EOF
-
-          IFS=',' read -ra VER_ARRAY <<< "$VERSIONS"
-          for i in "${!VER_ARRAY[@]}"; do
-            ver="${VER_ARRAY[$i]}"
-            if [ "$i" -eq 0 ]; then
-              echo "- [v${ver}](/godot-gdpm/${ver}/) — 最新" >> docs/zh/versions.md
-            else
-              echo "- [v${ver}](/godot-gdpm/${ver}/)" >> docs/zh/versions.md
-            fi
-          done
-
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
@@ -98,4 +41,145 @@ jobs:
       - name: Deploy version with mike
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          mike deploy --push --update-aliases "$VERSION" latest
+          mike deploy --push "$VERSION"
+
+      - name: Generate and deploy index.html
+        run: |
+          # Fetch gh-pages to get all versions
+          git fetch origin gh-pages:gh-pages
+          VERSIONS=$(git ls-tree -d --name-only gh-pages | grep -E '^[0-9]' | sort -V -r)
+
+          # Generate version links HTML
+          VERSION_LINKS=""
+          FIRST=true
+          for ver in $VERSIONS; do
+            if [ "$FIRST" = true ]; then
+              VERSION_LINKS="$VERSION_LINKS      <a href=\"$ver/\" class=\"version-link\">\n        <span class=\"version-name\">v$ver</span>\n        <span class=\"version-badge badge-latest\">Latest</span>\n      </a>"
+              FIRST=false
+            else
+              VERSION_LINKS="$VERSION_LINKS\n      <a href=\"$ver/\" class=\"version-link\">\n        <span class=\"version-name\">v$ver</span>\n      </a>"
+            fi
+          done
+
+          # Create index.html
+          cat > /tmp/index.html << 'HTMLEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>GDPM Documentation</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background: #0F1923;
+                color: #E2E8F0;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              .container {
+                text-align: center;
+                padding: 2rem;
+                max-width: 600px;
+              }
+              .logo {
+                width: 80px;
+                height: 80px;
+                margin: 0 auto 1.5rem;
+              }
+              h1 {
+                font-size: 2.5rem;
+                font-weight: 700;
+                margin-bottom: 0.5rem;
+                color: #FFFFFF;
+              }
+              .subtitle {
+                color: #8B9DB5;
+                margin-bottom: 2.5rem;
+                font-size: 1.1rem;
+              }
+              .versions {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+                margin-bottom: 2rem;
+              }
+              .version-link {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 1rem 1.5rem;
+                background: #1A2A3A;
+                border: 1px solid #2D3E50;
+                border-radius: 8px;
+                color: #E2E8F0;
+                text-decoration: none;
+                transition: all 0.2s ease;
+              }
+              .version-link:hover {
+                background: #243447;
+                border-color: #478CBF;
+                transform: translateY(-2px);
+              }
+              .version-name {
+                font-size: 1.1rem;
+                font-weight: 600;
+              }
+              .version-badge {
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 0.75rem;
+                font-weight: 500;
+              }
+              .badge-latest {
+                background: rgba(71, 140, 191, 0.2);
+                color: #478CBF;
+              }
+              .footer {
+                color: #4A5568;
+                font-size: 0.875rem;
+              }
+              .footer a {
+                color: #478CBF;
+                text-decoration: none;
+              }
+              .footer a:hover {
+                text-decoration: underline;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>GDPM</h1>
+              <p class="subtitle">Godot Dependency Package Manager</p>
+
+              <div class="versions">
+          HTMLEOF
+
+          # Insert version links
+          echo -e "$VERSION_LINKS" >> /tmp/index.html
+
+          # Close HTML
+          cat >> /tmp/index.html << 'HTMLEOF'
+              </div>
+
+              <div class="footer">
+                <a href="https://github.com/Abyss-PlayerEG/godot-gdpm">GitHub</a>
+                &nbsp;·&nbsp;
+                <a href="https://pypi.org/project/godot-gdpm/">PyPI</a>
+              </div>
+            </div>
+          </body>
+          </html>
+          HTMLEOF
+
+          # Deploy index.html to gh-pages root
+          git checkout gh-pages
+          cp /tmp/index.html index.html
+          git add index.html
+          git commit -m "Update version index" || true
+          git push origin gh-pages
+          git checkout main
