@@ -16,6 +16,7 @@
 
 ## 待开发
 
+- [ ] 官方主页 — Vue + Vite 产品宣传页（动画、特性展示、安装指南）
 - [ ] [下载优化](todo/下载优化.md)
 - [ ] [其他待开发功能](todo/其他待开发功能.md)
 - [ ] [Godot Asset Library 支持](todo/asset-library.md)
