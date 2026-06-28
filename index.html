@@ -3,86 +3,177 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GDPM Documentation</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <title>GDPM — Documentation</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0F1923;
+      background: #0B1120;
       color: #E2E8F0;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      padding: 2rem 1rem;
+      background-image:
+        radial-gradient(ellipse at 50% 0%, rgba(71, 140, 191, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(71, 140, 191, 0.05) 0%, transparent 40%);
     }
+
     .container {
       text-align: center;
-      padding: 2rem;
-      max-width: 600px;
+      width: 100%;
+      max-width: 720px;
     }
-    h1 {
-      font-size: 2.5rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      color: #FFFFFF;
-    }
-    .subtitle {
-      color: #8B9DB5;
+
+    /* Header */
+    .header {
       margin-bottom: 2.5rem;
-      font-size: 1.1rem;
     }
+
+    .logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 1.25rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(71, 140, 191, 0.25);
+    }
+
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: #64748B;
+      font-size: 1.05rem;
+      font-weight: 400;
+    }
+
+    /* Version Grid */
+    .section-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #475569;
+      margin-bottom: 1rem;
+    }
+
     .versions {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 0.75rem;
-      margin-bottom: 2rem;
-      max-width: 800px;
-      margin-left: auto;
-      margin-right: auto;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.625rem;
+      margin-bottom: 2.5rem;
     }
+
     .version-link {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0.75rem 1rem;
-      background: #1A2A3A;
-      border: 1px solid #2D3E50;
-      border-radius: 8px;
-      color: #E2E8F0;
+      padding: 0.7rem 0.5rem;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 10px;
+      color: #CBD5E1;
       text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
       transition: all 0.2s ease;
-      text-align: center;
+      backdrop-filter: blur(8px);
     }
+
     .version-link:hover {
-      background: #243447;
+      background: rgba(51, 65, 85, 0.6);
       border-color: #478CBF;
+      color: #FFFFFF;
       transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(71, 140, 191, 0.15);
     }
-    .version-name {
-      font-size: 1rem;
+
+    .version-link.latest {
+      border-color: rgba(71, 140, 191, 0.5);
+      background: rgba(71, 140, 191, 0.1);
+      color: #93C5FD;
       font-weight: 600;
     }
-    .version-link.latest {
+
+    .version-link.latest:hover {
+      background: rgba(71, 140, 191, 0.2);
       border-color: #478CBF;
-      background: rgba(71, 140, 191, 0.15);
+      color: #FFFFFF;
     }
+
+    /* Footer */
     .footer {
-      color: #4A5568;
-      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(51, 65, 85, 0.3);
     }
+
     .footer a {
-      color: #478CBF;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #64748B;
       text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: color 0.2s ease;
     }
+
     .footer a:hover {
-      text-decoration: underline;
+      color: #93C5FD;
+    }
+
+    .footer svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      body { padding: 1.5rem 0.75rem; }
+      .logo { width: 56px; height: 56px; border-radius: 12px; }
+      h1 { font-size: 1.75rem; }
+      .subtitle { font-size: 0.9rem; }
+      .versions {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 0.5rem;
+      }
+      .version-link { padding: 0.6rem 0.4rem; font-size: 0.8rem; }
+      .footer { gap: 1rem; }
+    }
+
+    @media (min-width: 481px) and (max-width: 768px) {
+      .versions { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+    }
+
+    @media (min-width: 769px) {
+      .versions { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>GDPM</h1>
-    <p class="subtitle">Godot Dependency Package Manager</p>
+
+    <div class="header">
+      <img src="icon.png" alt="GDPM" class="logo">
+      <h1>GDPM</h1>
+      <p class="subtitle">Godot Dependency Package Manager</p>
+    </div>
+
+    <p class="section-title">Documentation Versions</p>
 
     <div class="versions">
       <a href="0.1.0b1/" class="version-link latest">
@@ -91,10 +182,16 @@
     </div>
 
     <div class="footer">
-      <a href="https://github.com/Abyss-PlayerEG/godot-gdpm">GitHub</a>
-      &nbsp;·&nbsp;
-      <a href="https://pypi.org/project/godot-gdpm/">PyPI</a>
+      <a href="https://github.com/Abyss-PlayerEG/godot-gdpm">
+        <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+      <a href="https://pypi.org/project/godot-gdpm/">
+        <svg viewBox="0 0 16 16"><path d="M8 0L0 4v8l8 4 8-4V4L8 0zm0 1.5L14 4.5v7L8 14.5 2 11.5v-7L8 1.5z"/></svg>
+        PyPI
+      </a>
     </div>
+
   </div>
 </body>
 </html>
