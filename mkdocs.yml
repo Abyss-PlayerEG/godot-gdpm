@@ -12,7 +12,7 @@ theme:
   logo: assets/logo.png
   favicon: assets/favicon.ico
   font:
-    text: Noto Sans SC
+    text: ZCOOL XiaoWei
     code: JetBrains Mono
   palette:
     - media: "(prefers-color-scheme: light)"

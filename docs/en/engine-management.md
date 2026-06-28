@@ -102,6 +102,14 @@ gdpm godot add /path/to/Godot --name 4.7-custom
     ╰──────────────────────────────────────────────────────────────╯
     ```
 
+    Additional options:
+
+    | Option | Description |
+    |--------|-------------|
+    | `-V, --version <ver>` | Filter by version (e.g., `4.7`, `3.6`) |
+    | `-a, --all` | Show all versions including 1.x/2.x |
+    | `-p, --page <num>` | Page number for pagination |
+
 ## Set engine for project
 
 ```bash
