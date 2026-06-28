@@ -1,19 +1,21 @@
 # Notes
 
-项目开发笔记和待办清单。
+Project development notes and todo list.
 
-## 目录结构
+> **Note**: This directory contains notes written in Chinese for the developer's convenience. Since gdpm is a personal project and the primary developer is a Chinese speaker, notes are kept in Chinese for faster iteration. The official documentation (in `docs/`) is available in both English and Chinese.
+
+## Structure
 
 ```
 notes/
-├── done/           ← 已完成功能的设计文档
-├── todo/           ← 待开发功能的设计文档
-├── todo.md         ← 待办清单总览
-└── store-openapi.json  ← Godot Asset Store API 文档
+├── done/           ← Design docs for completed features
+├── todo/           ← Design docs for planned features
+├── todo.md         ← Todo overview
+└── store-openapi.json  ← Godot Asset Store API reference
 ```
 
-## 用途
+## Purpose
 
-- 记录功能设计思路和实现方案
-- 跟踪开发进度
-- 保存参考资料（API 文档等）
+- Record design decisions and implementation plans
+- Track development progress
+- Store reference materials (API docs, etc.)
