@@ -16,6 +16,15 @@ wheels/
 # pytest
 .pytest_cache/
 
+# pylint
+.pylint.d/
+
+# vulture
+.vulture_whitelist.py
+
+# deptry
+.deptry/
+
 # Godot
 .godot/
 *.import
@@ -32,6 +41,9 @@ export_presets.cfg
 
 # MkDocs
 site/
+
+# PyInstaller
+*.spec
 
 # OS
 .DS_Store
