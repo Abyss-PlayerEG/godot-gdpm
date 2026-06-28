@@ -75,10 +75,12 @@ jobs:
             }
           ' /tmp/template.html > /tmp/index.html
 
-          # Deploy index.html to gh-pages root
+          # Deploy index.html and icon to gh-pages root
           git checkout gh-pages
           cp /tmp/index.html index.html
-          git add index.html
+          cp icon.png . 2>/dev/null || true
+          cp icon.ico . 2>/dev/null || true
+          git add index.html icon.png icon.ico
           git commit -m "Update version index" || true
           git push origin gh-pages
           git checkout main
