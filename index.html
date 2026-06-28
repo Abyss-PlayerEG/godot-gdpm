@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GDPM Documentation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0F1923;
+      color: #E2E8F0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      max-width: 600px;
+    }
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #FFFFFF;
+    }
+    .subtitle {
+      color: #8B9DB5;
+      margin-bottom: 2.5rem;
+      font-size: 1.1rem;
+    }
+    .versions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+    .version-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      background: #1A2A3A;
+      border: 1px solid #2D3E50;
+      border-radius: 8px;
+      color: #E2E8F0;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .version-link:hover {
+      background: #243447;
+      border-color: #478CBF;
+      transform: translateY(-2px);
+    }
+    .version-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .version-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .badge-latest {
+      background: rgba(71, 140, 191, 0.2);
+      color: #478CBF;
+    }
+    .footer {
+      color: #4A5568;
+      font-size: 0.875rem;
+    }
+    .footer a {
+      color: #478CBF;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GDPM</h1>
+    <p class="subtitle">Godot Dependency Package Manager</p>
+
+    <div class="versions">
+      <a href="0.1.0b2/" class="version-link">
+        <span class="version-name">v0.1.0b2</span>
+        <span class="version-badge badge-latest">Latest</span>
+      </a>
+    </div>
+
+    <div class="footer">
+      <a href="https://github.com/Abyss-PlayerEG/godot-gdpm">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="https://pypi.org/project/godot-gdpm/">PyPI</a>
+    </div>
+  </div>
+</body>
+</html>
