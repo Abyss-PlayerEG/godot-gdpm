@@ -62,7 +62,7 @@ jobs:
           done
 
           # Read template and replace placeholder
-          TEMPLATE=$(cat .github/templates/index.html)
+          TEMPLATE=$(cat .github/templates/versions.html)
           echo "$TEMPLATE" | sed "s|<!-- VERSION_LIST -->|$(echo -e "$VERSION_HTML")|" > /tmp/index.html
 
           # Deploy index.html to gh-pages root
