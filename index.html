@@ -20,11 +20,6 @@
       padding: 2rem;
       max-width: 600px;
     }
-    .logo {
-      width: 80px;
-      height: 80px;
-      margin: 0 auto 1.5rem;
-    }
     h1 {
       font-size: 2.5rem;
       font-weight: 700;
@@ -37,22 +32,26 @@
       font-size: 1.1rem;
     }
     .versions {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 0.75rem;
       margin-bottom: 2rem;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
     }
     .version-link {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 1rem 1.5rem;
+      justify-content: center;
+      padding: 0.75rem 1rem;
       background: #1A2A3A;
       border: 1px solid #2D3E50;
       border-radius: 8px;
       color: #E2E8F0;
       text-decoration: none;
       transition: all 0.2s ease;
+      text-align: center;
     }
     .version-link:hover {
       background: #243447;
@@ -60,18 +59,12 @@
       transform: translateY(-2px);
     }
     .version-name {
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: 600;
     }
-    .version-badge {
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-    .badge-latest {
-      background: rgba(71, 140, 191, 0.2);
-      color: #478CBF;
+    .version-link.latest {
+      border-color: #478CBF;
+      background: rgba(71, 140, 191, 0.15);
     }
     .footer {
       color: #4A5568;
@@ -92,9 +85,8 @@
     <p class="subtitle">Godot Dependency Package Manager</p>
 
     <div class="versions">
-      <a href="0.1.0b1/" class="version-link">
+      <a href="0.1.0b1/" class="version-link latest">
         <span class="version-name">v0.1.0b1</span>
-        <span class="version-badge badge-latest">Latest</span>
       </a>
     </div>
 
