@@ -9,7 +9,7 @@
 
 ## Does GDPM require a custom registry?
 
-No. GDPM uses the official [Godot Asset Store API](https://store.godotengine.org/api/v1) directly.
+No. GDPM uses the official [Godot Asset Store API](https://store.godotengine.org/api/v1/redoc) directly.
 
 ## How does plugin tracking work?
 

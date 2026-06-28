@@ -6,6 +6,9 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
+      - "pyproject.toml"
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -16,19 +19,83 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
 
       - name: Install dependencies
-        run: pip install mkdocs-material mkdocs-static-i18n
+        run: pip install mkdocs-material mkdocs-static-i18n mike
 
-      - name: Build docs
-        run: mkdocs build
+      - name: Get version from pyproject.toml
+        id: version
+        run: echo "version=$(grep '^version' pyproject.toml | cut -d'"' -f2)" >> $GITHUB_OUTPUT
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
+      - name: Get existing versions from gh-pages
+        id: versions
+        run: |
+          # Fetch gh-pages branch
+          git fetch origin gh-pages:gh-pages 2>/dev/null || true
+          # Extract version directories
+          VERSIONS=$(git ls-tree -d --name-only gh-pages 2>/dev/null | grep -E '^[0-9]' | sort -V -r | tr '\n' ',' | sed 's/,$//')
+          echo "list=$VERSIONS" >> $GITHUB_OUTPUT
+
+      - name: Generate versions.md
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSIONS="${{ steps.versions.outputs.list }}"
+
+          # Add current version to list if not already there
+          if [[ ! ",$VERSIONS," *",$VERSION,"* ]]; then
+            if [ -z "$VERSIONS" ]; then
+              VERSIONS="$VERSION"
+            else
+              VERSIONS="$VERSION,$VERSIONS"
+            fi
+          fi
+
+          # Generate English versions.md
+          cat > docs/en/versions.md << 'EOF'
+          # Version History
+
+          All versions of GDPM documentation.
+          EOF
+
+          IFS=',' read -ra VER_ARRAY <<< "$VERSIONS"
+          for i in "${!VER_ARRAY[@]}"; do
+            ver="${VER_ARRAY[$i]}"
+            if [ "$i" -eq 0 ]; then
+              echo "- [v${ver}](/godot-gdpm/${ver}/) — Latest" >> docs/en/versions.md
+            else
+              echo "- [v${ver}](/godot-gdpm/${ver}/)" >> docs/en/versions.md
+            fi
+          done
+
+          # Generate Chinese versions.md
+          cat > docs/zh/versions.md << 'EOF'
+          # 版本历史
+
+          GDPM 文档的所有版本。
+          EOF
+
+          IFS=',' read -ra VER_ARRAY <<< "$VERSIONS"
+          for i in "${!VER_ARRAY[@]}"; do
+            ver="${VER_ARRAY[$i]}"
+            if [ "$i" -eq 0 ]; then
+              echo "- [v${ver}](/godot-gdpm/${ver}/) — 最新" >> docs/zh/versions.md
+            else
+              echo "- [v${ver}](/godot-gdpm/${ver}/)" >> docs/zh/versions.md
+            fi
+          done
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Deploy version with mike
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mike deploy --push --update-aliases "$VERSION" latest
