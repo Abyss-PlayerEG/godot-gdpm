@@ -18,58 +18,47 @@
       align-items: center;
       justify-content: center;
       padding: 2rem 1rem;
-      background-image:
-        radial-gradient(ellipse at 50% 0%, rgba(71, 140, 191, 0.15) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 80%, rgba(71, 140, 191, 0.05) 0%, transparent 40%);
+      background-image: radial-gradient(ellipse at 50% 0%, rgba(71, 140, 191, 0.1) 0%, transparent 50%);
     }
 
     .container {
       text-align: center;
       width: 100%;
-      max-width: 720px;
-    }
-
-    /* Header */
-    .header {
-      margin-bottom: 2.5rem;
+      max-width: 640px;
     }
 
     .logo {
-      width: 72px;
-      height: 72px;
-      margin: 0 auto 1.25rem;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(71, 140, 191, 0.25);
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 1rem;
+      border-radius: 12px;
+      opacity: 0.8;
     }
 
     h1 {
-      font-size: 2.25rem;
-      font-weight: 700;
+      font-size: 1.4rem;
+      font-weight: 600;
       color: #FFFFFF;
-      letter-spacing: -0.02em;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.25rem;
     }
 
-    .subtitle {
-      color: #64748B;
-      font-size: 1.05rem;
-      font-weight: 400;
-    }
-
-    /* Version Grid */
-    .section-title {
-      font-size: 0.8rem;
+    .label {
+      display: inline-block;
+      font-size: 0.7rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #475569;
-      margin-bottom: 1rem;
+      letter-spacing: 0.1em;
+      color: #478CBF;
+      background: rgba(71, 140, 191, 0.1);
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 2rem;
     }
 
     .versions {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 0.625rem;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.5rem;
       margin-bottom: 2.5rem;
     }
 
@@ -77,103 +66,66 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0.7rem 0.5rem;
-      background: rgba(30, 41, 59, 0.6);
-      border: 1px solid rgba(51, 65, 85, 0.5);
-      border-radius: 10px;
-      color: #CBD5E1;
+      padding: 0.6rem 0.5rem;
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      border-radius: 8px;
+      color: #94A3B8;
       text-decoration: none;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 500;
-      transition: all 0.2s ease;
-      backdrop-filter: blur(8px);
+      transition: all 0.15s ease;
     }
 
     .version-link:hover {
-      background: rgba(51, 65, 85, 0.6);
+      background: rgba(51, 65, 85, 0.5);
       border-color: #478CBF;
       color: #FFFFFF;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(71, 140, 191, 0.15);
     }
 
     .version-link.latest {
-      border-color: rgba(71, 140, 191, 0.5);
-      background: rgba(71, 140, 191, 0.1);
+      border-color: rgba(71, 140, 191, 0.4);
       color: #93C5FD;
-      font-weight: 600;
     }
 
-    .version-link.latest:hover {
-      background: rgba(71, 140, 191, 0.2);
-      border-color: #478CBF;
-      color: #FFFFFF;
-    }
-
-    /* Footer */
     .footer {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 1.5rem;
+      gap: 1.25rem;
       padding-top: 1.5rem;
-      border-top: 1px solid rgba(51, 65, 85, 0.3);
+      border-top: 1px solid rgba(51, 65, 85, 0.2);
     }
 
     .footer a {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      color: #64748B;
+      gap: 0.4rem;
+      color: #475569;
       text-decoration: none;
-      font-size: 0.85rem;
-      font-weight: 500;
-      transition: color 0.2s ease;
+      font-size: 0.8rem;
+      transition: color 0.15s ease;
     }
 
-    .footer a:hover {
-      color: #93C5FD;
-    }
+    .footer a:hover { color: #93C5FD; }
 
     .footer svg {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       fill: currentColor;
     }
 
-    /* Responsive */
     @media (max-width: 480px) {
-      body { padding: 1.5rem 0.75rem; }
-      .logo { width: 56px; height: 56px; border-radius: 12px; }
-      h1 { font-size: 1.75rem; }
-      .subtitle { font-size: 0.9rem; }
-      .versions {
-        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-        gap: 0.5rem;
-      }
-      .version-link { padding: 0.6rem 0.4rem; font-size: 0.8rem; }
-      .footer { gap: 1rem; }
-    }
-
-    @media (min-width: 481px) and (max-width: 768px) {
-      .versions { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
-    }
-
-    @media (min-width: 769px) {
-      .versions { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+      .versions { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.4rem; }
+      .version-link { padding: 0.5rem 0.4rem; font-size: 0.8rem; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-
-    <div class="header">
-      <img src="icon.png" alt="GDPM" class="logo">
-      <h1>GDPM</h1>
-      <p class="subtitle">Godot Dependency Package Manager</p>
-    </div>
-
-    <p class="section-title">Documentation Versions</p>
+    <img src="icon.png" alt="GDPM" class="logo">
+    <h1>GDPM Docs</h1>
+    <span class="label">Select Version</span>
 
     <div class="versions">
       <!-- EXAMPLE_VERSIONS_START -->
@@ -206,7 +158,6 @@
         PyPI
       </a>
     </div>
-
   </div>
 </body>
 </html>
