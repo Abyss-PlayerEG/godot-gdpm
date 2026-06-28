@@ -9,7 +9,7 @@
 
 ## GDPM 需要自定义注册表吗？
 
-不需要。GDPM 直接使用官方的 [Godot Asset Store API](https://store.godotengine.org/api/v1)。
+不需要。GDPM 直接使用官方的 [Godot Asset Store API](https://store.godotengine.org/api/v1/redoc)。
 
 ## 插件追踪是怎么工作的？
 

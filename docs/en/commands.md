@@ -21,8 +21,12 @@
 | `gdpm update` | Update plugins to newer versions |
 | `gdpm search <query>` | Search Godot Asset Store |
 | `gdpm info <plugin>` | Show plugin details |
+| `gdpm cache info` | Show cache size and location |
+| `gdpm cache clean` | Clean all cached files |
+| `gdpm export` | Export plugins to zip archive |
+| `gdpm import` | Import plugins from zip archive |
 
-## Engine Management
+## Engine
 
 | Command | Description |
 |---------|-------------|
@@ -37,21 +41,7 @@
 | `gdpm godot open` | Open Godot editor |
 | `gdpm godot default <id>` | Set default engine |
 
-## Cache
-
-| Command | Description |
-|---------|-------------|
-| `gdpm cache info` | Show cache size and location |
-| `gdpm cache clean` | Clean all cached files |
-
-## Import/Export
-
-| Command | Description |
-|---------|-------------|
-| `gdpm export` | Export plugins to zip archive |
-| `gdpm import` | Import plugins from zip archive |
-
-## Global Options
+## Common Options
 
 | Option | Description |
 |--------|-------------|

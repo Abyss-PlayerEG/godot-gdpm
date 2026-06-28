@@ -17,29 +17,98 @@ gdpm godot install 4.7 --csharp
 
 ## 添加本地引擎
 
+=== "macOS"
+
+    ```bash
+    gdpm godot add /Applications/Godot.app
+    ```
+
+=== "Linux"
+
+    ```bash
+    gdpm godot add /usr/local/bin/godot
+    ```
+
+=== "Windows"
+
+    ```bash
+    gdpm godot add "C:\Program Files\Godot\Godot.exe"
+    ```
+
+设置别名：
+
 ```bash
-# macOS
-gdpm godot add /Applications/Godot.app
-
-# Linux
-gdpm godot add /usr/local/bin/godot
-
-# 设置别名
 gdpm godot add /path/to/Godot --name 4.7-custom
 ```
 
+!!! note
+    路径包含空格时需要使用引号，所有平台通用。
+
 ## 列出引擎
 
-```bash
-# 已安装的引擎
-gdpm godot list
+=== "已安装"
 
-# GitHub 上可用的版本
-gdpm godot list -r
+    ```bash
+    gdpm godot list
+    ```
 
-# 紧凑 ID 视图
-gdpm godot list -id
-```
+    ```
+    ╭──────────────────── Installed Godot (3) ─────────────────────╮
+    │                                                              │
+    │   Name               Version              Source             │
+    │  ────────────────────────────────────────────────────────    │
+    │   gdpm-godot         4.4-stable           ~/.gdpm/engines/   │
+    │   gdpm-godot         4.4-stable-csharp    ~/.gdpm/engines/   │
+    │   steam-godot        4.7-stable           ~/Library/...      │
+    │                                                              │
+    ╰──────────────────────────────────────────────────────────────╯
+    ```
+
+=== "紧凑 ID"
+
+    ```bash
+    gdpm godot list -id
+    ```
+
+    ```
+    ╭──────────────────── Installed Godot (3) ─────────────────────╮
+    │                                                              │
+    │   ID                              Source                     │
+    │  ────────────────────────────────────────────────────────    │
+    │   gdpm-godot@4.4-stable           ~/.gdpm/engines/...        │
+    │   gdpm-godot@4.4-stable-csharp    ~/.gdpm/engines/...        │
+    │   steam-godot@4.7-stable          ~/Library/...              │
+    │                                                              │
+    ╰──────────────────────────────────────────────────────────────╯
+    ```
+
+=== "远程"
+
+    ```bash
+    gdpm godot list -r
+    ```
+
+    ```
+    ╭────────────── Available Godot Versions (page 1/3) ───────────╮
+    │                                                              │
+    │   Version                        Type          Date          │
+    │  ────────────────────────────────────────────────────────    │
+    │   4.7-stable                     Stable        2026-06-18    │
+    │   4.6.3-stable                   Stable        2026-05-20    │
+    │   4.6.2-stable                   Stable        2026-04-01    │
+    │   4.5.2-stable                   Stable        2026-03-19    │
+    │   ...                                                        │
+    │                                                              │
+    ╰──────────────────────────────────────────────────────────────╯
+    ```
+
+    额外参数：
+
+    | 参数 | 说明 |
+    |------|------|
+    | `-V, --version <ver>` | 按版本过滤（如 `4.7`、`3.6`） |
+    | `-a, --all` | 显示所有版本，包括 1.x/2.x |
+    | `-p, --page <num>` | 分页页码 |
 
 ## 设置项目引擎
 

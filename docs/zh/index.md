@@ -17,8 +17,11 @@ Godot 插件的依赖包管理器，类似 uv/npm/cargo。
 ```bash
 pip install godot-gdpm
 
-# 初始化项目
+# 初始化已有项目
 gdpm init
+
+# 或创建新项目
+gdpm create my-game
 
 # 添加插件
 gdpm add limbo-ai
