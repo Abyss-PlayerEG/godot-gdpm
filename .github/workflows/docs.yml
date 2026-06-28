@@ -75,12 +75,16 @@ jobs:
             }
           ' /tmp/template.html > /tmp/index.html
 
+          # Save icon files before switching branch
+          cp icon.png /tmp/ 2>/dev/null || true
+          cp icon.ico /tmp/ 2>/dev/null || true
+
           # Deploy index.html and icon to gh-pages root
           git checkout gh-pages
           cp /tmp/index.html index.html
-          cp icon.png . 2>/dev/null || true
-          cp icon.ico . 2>/dev/null || true
-          git add index.html icon.png icon.ico
-          git commit -m "Update version index" || true
+          cp /tmp/icon.png . 2>/dev/null || true
+          cp /tmp/icon.ico . 2>/dev/null || true
+          git add -A
+          git diff --cached --quiet || git commit -m "Update version index"
           git push origin gh-pages
           git checkout main
