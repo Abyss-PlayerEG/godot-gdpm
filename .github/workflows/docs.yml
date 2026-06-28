@@ -27,7 +27,7 @@ jobs:
           python-version: "3.14"
 
       - name: Install dependencies
-        run: pip install mkdocs-material mkdocs-static-i18n mike
+        run: pip install mkdocs-material mkdocs-static-i18n mike mkdocs-minify-plugin
 
       - name: Get version from pyproject.toml
         id: version
