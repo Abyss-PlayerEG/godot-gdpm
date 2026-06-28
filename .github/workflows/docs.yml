@@ -48,7 +48,7 @@ jobs:
           VERSIONS="${{ steps.versions.outputs.list }}"
 
           # Add current version to list if not already there
-          if [[ ! ",$VERSIONS," *",$VERSION,"* ]]; then
+          if [[ ! ",$VERSIONS," == *",$VERSION,"* ]]; then
             if [ -z "$VERSIONS" ]; then
               VERSIONS="$VERSION"
             else
