@@ -76,8 +76,8 @@ jobs:
           ' /tmp/template.html > /tmp/index.html
 
           # Save icon files before switching branch
-          cp .github/templates/icon.png /tmp/ 2>/dev/null || true
-          cp .github/templates/icon.ico /tmp/ 2>/dev/null || true
+          cp icon.png /tmp/ 2>/dev/null || true
+          cp icon.ico /tmp/ 2>/dev/null || true
 
           # Deploy index.html and icon to gh-pages root
           git checkout gh-pages
