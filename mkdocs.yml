@@ -12,6 +12,7 @@ theme:
   logo: assets/logo.png
   favicon: assets/favicon.ico
   font:
+    text: Noto Sans SC
     code: JetBrains Mono
   palette:
     - media: "(prefers-color-scheme: light)"
@@ -35,9 +36,6 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
-
-extra_css:
-  - assets/stylesheets/custom.css
 
 plugins:
   - search

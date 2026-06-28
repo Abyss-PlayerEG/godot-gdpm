@@ -17,8 +17,11 @@ A dependency package manager for Godot plugins, like uv/npm/cargo.
 ```bash
 pip install godot-gdpm
 
-# Initialize a project
+# Initialize an existing project
 gdpm init
+
+# Or create a new project
+gdpm create my-game
 
 # Add plugins
 gdpm add limbo-ai

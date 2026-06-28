@@ -1,21 +1,27 @@
 # Quick Start
 
-## Initialize a project
+There are two ways to get started with GDPM.
+
+## Option 1: Initialize an existing project
+
+If you already have a Godot project:
 
 ```bash
 cd my-godot-project
 gdpm init
 ```
 
-This creates `gdproject.toml` and `gdpm.lock`.
+This creates `gdproject.toml` and `gdpm.lock` in your project directory.
 
-## Create a new project
+## Option 2: Create a new project
+
+Start from scratch with an interactive setup:
 
 ```bash
 gdpm create my-game
 ```
 
-Interactive prompts guide you through project setup, Godot version, and engine selection.
+This guides you through project name, Godot version, engine selection, and creates the project structure for you.
 
 ## Add plugins
 

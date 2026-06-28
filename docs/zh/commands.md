@@ -21,8 +21,12 @@
 | `gdpm update` | 更新插件 |
 | `gdpm search <query>` | 搜索 Godot Asset Store |
 | `gdpm info <plugin>` | 查看插件详情 |
+| `gdpm cache info` | 显示缓存大小和位置 |
+| `gdpm cache clean` | 清理所有缓存文件 |
+| `gdpm export` | 导出插件为 zip 归档 |
+| `gdpm import` | 从 zip 归档导入插件 |
 
-## 引擎管理
+## 引擎
 
 | 命令 | 说明 |
 |------|------|
@@ -37,21 +41,7 @@
 | `gdpm godot open` | 打开 Godot 编辑器 |
 | `gdpm godot default <id>` | 设置默认引擎 |
 
-## 缓存
-
-| 命令 | 说明 |
-|------|------|
-| `gdpm cache info` | 显示缓存大小和位置 |
-| `gdpm cache clean` | 清理所有缓存文件 |
-
-## 导入/导出
-
-| 命令 | 说明 |
-|------|------|
-| `gdpm export` | 导出插件为 zip 归档 |
-| `gdpm import` | 从 zip 归档导入插件 |
-
-## 全局选项
+## 通用选项
 
 | 选项 | 说明 |
 |------|------|

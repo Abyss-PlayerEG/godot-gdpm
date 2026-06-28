@@ -1,21 +1,27 @@
 # 快速入门
 
-## 初始化项目
+有两种方式开始使用 GDPM。
+
+## 方式一：初始化已有项目
+
+如果你已有 Godot 项目：
 
 ```bash
 cd my-godot-project
 gdpm init
 ```
 
-这会创建 `gdproject.toml` 和 `gdpm.lock`。
+这会在项目目录下创建 `gdproject.toml` 和 `gdpm.lock`。
 
-## 创建新项目
+## 方式二：创建新项目
+
+从零开始，交互式创建：
 
 ```bash
 gdpm create my-game
 ```
 
-交互式引导你完成项目设置、Godot 版本和引擎选择。
+引导你完成项目名称、Godot 版本、引擎选择，并自动创建项目结构。
 
 ## 添加插件
 
