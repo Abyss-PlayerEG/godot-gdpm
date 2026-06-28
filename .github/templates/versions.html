@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GDPM Documentation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0F1923;
+      color: #E2E8F0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      max-width: 600px;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #FFFFFF;
+    }
+    .subtitle {
+      color: #8B9DB5;
+      margin-bottom: 2.5rem;
+      font-size: 1.1rem;
+    }
+    .versions {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .version-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1rem;
+      background: #1A2A3A;
+      border: 1px solid #2D3E50;
+      border-radius: 8px;
+      color: #E2E8F0;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+    .version-link:hover {
+      background: #243447;
+      border-color: #478CBF;
+      transform: translateY(-2px);
+    }
+    .version-name {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .version-link.latest {
+      border-color: #478CBF;
+      background: rgba(71, 140, 191, 0.15);
+    }
+    .footer {
+      color: #4A5568;
+      font-size: 0.875rem;
+    }
+    .footer a {
+      color: #478CBF;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GDPM</h1>
+    <p class="subtitle">Godot Dependency Package Manager</p>
+
+    <div class="versions">
+      <!-- EXAMPLE_VERSIONS_START -->
+      <a href="0.1.0b12/" class="version-link latest">
+        <span class="version-name">v0.1.0b12</span>
+      </a>
+      <a href="0.1.0b11/" class="version-link">
+        <span class="version-name">v0.1.0b11</span>
+      </a>
+      <a href="0.1.0b10/" class="version-link">
+        <span class="version-name">v0.1.0b10</span>
+      </a>
+      <a href="0.1.0b9/" class="version-link">
+        <span class="version-name">v0.1.0b9</span>
+      </a>
+      <a href="0.1.0b8/" class="version-link">
+        <span class="version-name">v0.1.0b8</span>
+      </a>
+      <a href="0.1.0b7/" class="version-link">
+        <span class="version-name">v0.1.0b7</span>
+      </a>
+      <a href="0.1.0b6/" class="version-link">
+        <span class="version-name">v0.1.0b6</span>
+      </a>
+      <a href="0.1.0b5/" class="version-link">
+        <span class="version-name">v0.1.0b5</span>
+      </a>
+      <a href="0.1.0b4/" class="version-link">
+        <span class="version-name">v0.1.0b4</span>
+      </a>
+      <a href="0.1.0b3/" class="version-link">
+        <span class="version-name">v0.1.0b3</span>
+      </a>
+      <a href="0.1.0b2/" class="version-link">
+        <span class="version-name">v0.1.0b2</span>
+      </a>
+      <a href="0.1.0b1/" class="version-link">
+        <span class="version-name">v0.1.0b1</span>
+      </a>
+      <a href="0.0.6/" class="version-link">
+        <span class="version-name">v0.0.6</span>
+      </a>
+      <a href="0.0.5/" class="version-link">
+        <span class="version-name">v0.0.5</span>
+      </a>
+      <a href="0.0.4/" class="version-link">
+        <span class="version-name">v0.0.4</span>
+      </a>
+      <!-- EXAMPLE_VERSIONS_END -->
+      <!-- REAL_VERSIONS -->
+    </div>
+
+    <div class="footer">
+      <a href="https://github.com/Abyss-PlayerEG/godot-gdpm">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="https://pypi.org/project/godot-gdpm/">PyPI</a>
+    </div>
+  </div>
+</body>
+</html>
