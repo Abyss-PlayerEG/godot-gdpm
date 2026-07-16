@@ -10,7 +10,7 @@ import questionary
 
 from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import console
-from gdpm.cli.godot import _get_engines_dir, _normalize_version
+from gdpm.cli.godot.common import get_engines_dir, normalize_version
 from gdpm.config.local_engines import get_default_engine, get_local_engine
 from gdpm.config.project import ProjectConfig, write_project_config
 
@@ -23,7 +23,7 @@ def _get_installed_engines() -> list[str]:
     engines: list[str] = []
 
     # Downloaded engines (including csharp)
-    engines_dir = _get_engines_dir()
+    engines_dir = get_engines_dir()
     if engines_dir.exists():
         for d in engines_dir.iterdir():
             if d.is_dir() and d.name[0].isdigit():
@@ -239,15 +239,15 @@ def _set_project_engine(project_dir: Path, engine_id: str) -> None:
     """Set the Godot engine for a project."""
     import json
 
-    from gdpm.cli.godot import _get_engines_dir, _normalize_version
+    from gdpm.cli.godot.common import get_engines_dir, normalize_version
 
     name, version = engine_id.split("@", 1)
 
     # Find engine binary
     binary = ""
     if name == "gdpm-godot":
-        engines_dir = _get_engines_dir()
-        tag = _normalize_version(version)
+        engines_dir = get_engines_dir()
+        tag = normalize_version(version)
         ver_dir = engines_dir / tag
         if ver_dir.exists():
             for app in ver_dir.glob("*.app"):
@@ -290,8 +290,8 @@ def _open_godot(project_dir: Path, version: str) -> None:
     if default:
         name, ver = default.split("@", 1)
         if name == "gdpm-godot":
-            engines_dir = _get_engines_dir()
-            tag = _normalize_version(ver)
+            engines_dir = get_engines_dir()
+            tag = normalize_version(ver)
             ver_dir = engines_dir / tag
             if ver_dir.exists():
                 for app in ver_dir.glob("*.app"):

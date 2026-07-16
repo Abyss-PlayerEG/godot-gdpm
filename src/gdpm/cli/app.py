@@ -423,7 +423,7 @@ main.add_command(add_cmd, "add")  # type: ignore[has-type]
 main.add_command(cache_cmd, "cache")
 main.add_command(create_cmd, "create")
 main.add_command(export_cmd, "export")
-main.add_command(godot_cmd, "godot")
+main.add_command(godot_cmd, "godot")  # type: ignore[has-type]
 main.add_command(import_cmd_, "import")
 main.add_command(info_cmd, "info")
 main.add_command(init_cmd, "init")
