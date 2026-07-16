@@ -49,3 +49,7 @@ gdpm search mcp --all-sources
 - [ ] 修改 `gdpm search` 支持双源搜索
 - [ ] 修改 `gdpm add` 支持从 Asset Library 下载
 - [ ] 修改 `gdpm info` 显示来源
+
+## 当前状态
+
+❌ 未实现 - 目前只支持 Godot Asset Store API
