@@ -36,11 +36,14 @@ def _get_engines_dir() -> Path:
     return engines_dir
 
 
-@click.group(cls=GdpmGroup, examples=[
-    ("gdpm godot list", "List installed Godot versions"),
-    ("gdpm godot list --remote", "List available versions"),
-    ("gdpm godot install 4.7", "Install Godot 4.7"),
-])
+@click.group(
+    cls=GdpmGroup,
+    examples=[
+        ("gdpm godot list", "List installed Godot versions"),
+        ("gdpm godot list --remote", "List available versions"),
+        ("gdpm godot install 4.7", "Install Godot 4.7"),
+    ],
+)
 def godot() -> None:
     """Manage Godot engine versions."""
 
@@ -54,23 +57,38 @@ def godot() -> None:
     ],
 )
 @click.option(
-    "--remote", "-r", is_flag=True,
+    "--remote",
+    "-r",
+    is_flag=True,
     help="List available versions from GitHub",
 )
 @click.option(
-    "-V", "--version", "version_filter", default="", metavar="VERSION",
+    "-V",
+    "--version",
+    "version_filter",
+    default="",
+    metavar="VERSION",
     help="Filter by version (e.g. '4.7', '3.6')",
 )
 @click.option(
-    "-a", "--all", "show_all", is_flag=True,
+    "-a",
+    "--all",
+    "show_all",
+    is_flag=True,
     help="Show all versions including 1.x/2.x",
 )
 @click.option(
-    "-p", "--page", "page", default=1, type=int,
+    "-p",
+    "--page",
+    "page",
+    default=1,
+    type=int,
     help="Page number for remote list",
 )
 @click.option(
-    "-id", "show_id", is_flag=True,
+    "-id",
+    "show_id",
+    is_flag=True,
     help="Show ID column instead of Name and Version",
 )
 def godot_list(
@@ -97,19 +115,23 @@ def _list_local(show_id: bool = False) -> None:
     if engines_dir.exists():
         for d in sorted(engines_dir.iterdir()):
             if d.is_dir():
-                rows.append({
-                    "name": "gdpm-godot",
-                    "version": d.name,
-                    "source": shorten_path(str(d)),
-                })
+                rows.append(
+                    {
+                        "name": "gdpm-godot",
+                        "version": d.name,
+                        "source": shorten_path(str(d)),
+                    }
+                )
 
     # Local engines
     for name, engine in sorted(local_engines.items()):
-        rows.append({
-            "name": name,
-            "version": engine.version or "-",
-            "source": shorten_path(engine.path),
-        })
+        rows.append(
+            {
+                "name": name,
+                "version": engine.version or "-",
+                "source": shorten_path(engine.path),
+            }
+        )
 
     if not rows:
         console.print(
@@ -368,8 +390,7 @@ def godot_install(version: str, csharp: bool) -> None:
 
     if ver_dir.exists():
         if not click.confirm(
-            f"  Godot [cyan]{tag}{suffix}[/cyan] is already installed. "
-            "Reinstall?"
+            f"  Godot [cyan]{tag}{suffix}[/cyan] is already installed. Reinstall?"
         ):
             return
         shutil.rmtree(ver_dir, onexc=lambda *args: None)
@@ -692,7 +713,7 @@ def godot_use(engine_id: str) -> None:
     if conf_path.exists():
         try:
             conf = json.loads(conf_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, TypeError):
+        except json.JSONDecodeError, TypeError:
             conf = {}
 
     conf["godot"] = {"name": name, "version": version, "path": engine_path}
@@ -702,9 +723,7 @@ def godot_use(engine_id: str) -> None:
         encoding="utf-8",
     )
 
-    console.print(
-        f"[green]✓[/green] Set Godot engine to [bold]{name}@{version}[/bold]"
-    )
+    console.print(f"[green]✓[/green] Set Godot engine to [bold]{name}@{version}[/bold]")
 
 
 @godot.command(
@@ -739,7 +758,7 @@ def godot_info() -> None:
                 name = godot.get("name", "")
                 version = godot.get("version", "")
                 path = godot.get("path", "")
-        except (json.JSONDecodeError, TypeError):
+        except json.JSONDecodeError, TypeError:
             pass
 
     # 2. Try default engine
@@ -819,7 +838,9 @@ def godot_info() -> None:
     ],
 )
 @click.option(
-    "--run", "-r", is_flag=True,
+    "--run",
+    "-r",
+    is_flag=True,
     help="Run the project instead of opening editor",
 )
 def godot_open(run: bool) -> None:
@@ -842,7 +863,7 @@ def godot_open(run: bool) -> None:
             binary = godot.get("path", "")
             engine_name = godot.get("name", "?")
             engine_ver = godot.get("version", "?")
-        except (json.JSONDecodeError, TypeError):
+        except json.JSONDecodeError, TypeError:
             pass
 
     # 2. Try default engine
@@ -910,9 +931,7 @@ def godot_open(run: bool) -> None:
         )
         ret = proc.poll()
         if ret is not None and ret != 0:
-            console.print(
-                f"[red]Error:[/red] Godot exited with code {ret}"
-            )
+            console.print(f"[red]Error:[/red] Godot exited with code {ret}")
             return
     except Exception as e:
         console.print(f"[red]Error:[/red] Failed to open Godot: {e}")
@@ -960,9 +979,7 @@ def godot_default(engine_id: str | None, unset: bool) -> None:
 
     # Validate engine exists
     if "@" not in engine_id:
-        console.print(
-            "[red]Error:[/red] Invalid format. Use [cyan]Name@Version[/cyan]"
-        )
+        console.print("[red]Error:[/red] Invalid format. Use [cyan]Name@Version[/cyan]")
         return
 
     name, version = engine_id.split("@", 1)

@@ -48,7 +48,7 @@ def init() -> None:
             "[red]Error:[/red] Invalid [cyan]project.godot[/cyan] "
             "- no project name found.\n"
             "  Make sure the file contains "
-            "[dim]config/name=\"...\"[/dim]"
+            '[dim]config/name="..."[/dim]'
         )
         raise SystemExit(1)
 

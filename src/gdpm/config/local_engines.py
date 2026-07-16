@@ -29,7 +29,7 @@ def load_config() -> dict[str, object]:
         if isinstance(data, dict):
             return data
         return {}
-    except (json.JSONDecodeError, TypeError):
+    except json.JSONDecodeError, TypeError:
         return {}
 
 

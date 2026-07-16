@@ -44,7 +44,7 @@ class CacheIndex:
                 raw = json.loads(path.read_text(encoding="utf-8"))
                 for key, entry in raw.items():
                     data[key] = CacheEntry(**entry)
-            except (json.JSONDecodeError, TypeError):
+            except json.JSONDecodeError, TypeError:
                 data = {}
 
         self._cache[letter] = data

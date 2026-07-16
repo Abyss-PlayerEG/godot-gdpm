@@ -169,8 +169,7 @@ class GdpmGroup(click.Group):
             table.add_row(Text(f"  {category}", style="bold magenta"))
             for cmd_name, desc in cmds.items():
                 table.add_row(
-                    Text(f"    {cmd_name:<16}", style="green")
-                    + Text(desc, style="dim")
+                    Text(f"    {cmd_name:<16}", style="green") + Text(desc, style="dim")
                 )
             table.add_row(Text(""))
 
@@ -305,7 +304,6 @@ def print_completion(ctx: click.Context, _param: click.Parameter, value: str) ->
     ctx.exit()
 
 
-
 def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
     """Print project info with banner and version."""
     if not value:
@@ -321,8 +319,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     info_lines.append(Text("  Godot Dependency Package Manager", style="dim"))
     info_lines.append(Text(""))
     info_lines.append(
-        Text("  GitHub: ", style="dim")
-        + Text(REPO_URL, style="blue underline")
+        Text("  GitHub: ", style="dim") + Text(REPO_URL, style="blue underline")
     )
 
     terminal_width = console.width
@@ -356,7 +353,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
                     title="[bold cyan]Contributors[/bold cyan]",
                     border_style="dim",
                     padding=(1, 2),
-                width=min(terminal_width, 90),
+                    width=min(terminal_width, 90),
                 )
             )
     except Exception:

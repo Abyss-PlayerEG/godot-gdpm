@@ -85,7 +85,10 @@ def _get_godot_version_tag(version: str) -> str:
 )
 @click.argument("name", required=False)
 @click.option(
-    "--open", "-o", "open_editor", is_flag=True,
+    "--open",
+    "-o",
+    "open_editor",
+    is_flag=True,
     help="Open Godot after create",
 )
 @click.option("--yes", "-y", is_flag=True, help="Use defaults, skip prompts")
@@ -113,8 +116,7 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
 
     if config_path.exists():
         console.print(
-            f"  [red]✖[/red] Project already exists "
-            f"([cyan]{config_path}[/cyan])"
+            f"  [red]✖[/red] Project already exists ([cyan]{config_path}[/cyan])"
         )
         return
 

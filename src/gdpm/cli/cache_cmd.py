@@ -14,11 +14,14 @@ from gdpm.config.global_config import read_global_config
 console = Console()
 
 
-@click.group(cls=GdpmGroup, examples=[
-    ("gdpm cache info", "Show cache size and location"),
-    ("gdpm cache clean", "Clean all cached files"),
-    ("gdpm cache clean -y", "Clean without confirmation"),
-])
+@click.group(
+    cls=GdpmGroup,
+    examples=[
+        ("gdpm cache info", "Show cache size and location"),
+        ("gdpm cache clean", "Clean all cached files"),
+        ("gdpm cache clean -y", "Clean without confirmation"),
+    ],
+)
 def cache() -> None:
     """Manage global cache."""
 

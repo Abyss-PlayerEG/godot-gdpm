@@ -14,14 +14,15 @@ def get_install_type() -> str:
         'pip'    - pip install
         'source' - development/source install
     """
-    if getattr(sys, 'frozen', False):
-        return 'binary'
+    if getattr(sys, "frozen", False):
+        return "binary"
     try:
         from importlib.metadata import version
-        version('godot-gdpm')
-        return 'pip'
+
+        version("godot-gdpm")
+        return "pip"
     except Exception:
-        return 'source'
+        return "source"
 
 
 def get_platform() -> str:

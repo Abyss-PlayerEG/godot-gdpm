@@ -137,6 +137,9 @@ disable = [
 [tool.pylint.format]
 max-line-length = 88
 
+[tool.pylint."MESSAGES CONTROL"]
+max-module-lines = 1100
+
 [tool.deptry]
 ignore = ["DEP003"]
 exclude = [".venv", "scripts"]
