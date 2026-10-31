@@ -1,4 +1,4 @@
-"""gdpm godot open command."""
+"""gdpm godot open 命令 / gdpm godot open command."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from gdpm.cli.godot.common import resolve_engine_path
     "--run", "-r", is_flag=True, help="Run the project instead of opening editor"
 )
 def godot_open(run: bool) -> None:
-    """Open Godot editor for the current project."""
+    """为当前项目打开 Godot 编辑器 / Open Godot editor for the current project."""
     from gdpm.config.local_engines import get_default_engine
 
     root = find_project_root()

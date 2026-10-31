@@ -1,4 +1,4 @@
-"""gdpm godot install/uninstall commands."""
+"""gdpm godot install/uninstall 命令 / gdpm godot install/uninstall commands."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ from gdpm.utils.install import get_godot_ext, get_godot_platform
 @click.argument("version")
 @click.option("--csharp", "-cs", is_flag=True, help="Install C# (mono) version")
 def godot_install(version: str, csharp: bool) -> None:
-    """Install a Godot engine version."""
+    """安装一个 Godot 引擎版本 / Install a Godot engine version."""
     if "-csharp" in version or "-mono" in version:
         csharp = True
 
@@ -156,7 +156,7 @@ def godot_install(version: str, csharp: bool) -> None:
 @click.argument("version")
 @click.option("--csharp", "-cs", is_flag=True, help="Uninstall C# (mono) version")
 def godot_uninstall(version: str, csharp: bool) -> None:
-    """Uninstall a Godot engine version."""
+    """卸载一个 Godot 引擎版本 / Uninstall a Godot engine version."""
     engines_dir = get_engines_dir()
     suffix = ""
     if "-csharp" in version or "-mono" in version or csharp:

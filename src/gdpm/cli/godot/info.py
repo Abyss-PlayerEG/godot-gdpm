@@ -1,4 +1,4 @@
-"""gdpm godot info command."""
+"""gdpm godot info 命令 / gdpm godot info command."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from gdpm.cli.godot.common import resolve_engine_path
     ],
 )
 def godot_info() -> None:
-    """Show current Godot engine configuration."""
+    """显示当前 Godot 引擎配置 / Show current Godot engine configuration."""
     from gdpm.config.local_engines import get_default_engine
     from gdpm.utils.path import shorten_path
 

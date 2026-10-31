@@ -1,4 +1,4 @@
-"""Shared utilities for gdpm godot commands."""
+"""gdpm godot 命令共享工具 / Shared utilities for gdpm godot commands."""
 
 from __future__ import annotations
 
@@ -14,14 +14,14 @@ from gdpm.utils.install import get_godot_platform
 
 
 def get_engines_dir() -> Path:
-    """Get the global engines directory."""
+    """获取全局引擎目录 / Get the global engines directory."""
     engines_dir = Path.home() / ".gdpm" / "engines"
     engines_dir.mkdir(parents=True, exist_ok=True)
     return engines_dir
 
 
 def normalize_version(version: str) -> str:
-    """Normalize version string to tag format.
+    """将版本字符串规范化为 tag 格式 / Normalize version string to tag format.
 
     '4.7' -> '4.7-stable'
     '4.7-stable' -> '4.7-stable'
@@ -36,7 +36,7 @@ def normalize_version(version: str) -> str:
 
 
 def build_download_url(tag: str, csharp: bool = False) -> str:
-    """Get Godot download URL from GitHub API."""
+    """从 GitHub API 获取 Godot 下载地址 / Get Godot download URL from GitHub API."""
     mono = "_mono" if csharp else ""
     system = get_godot_platform()
 
@@ -72,7 +72,10 @@ def build_download_url(tag: str, csharp: bool = False) -> str:
 
 
 def get_asset_hash(tag: str, filename: str) -> str:
-    """Get SHA256 hash for a release asset from GitHub API."""
+    """从 GitHub API 获取发布资源的 SHA256 哈希。
+
+    Get SHA256 hash for a release asset from GitHub API.
+    """
     try:
         resp = httpx.get(
             f"{GITHUB_API_URL}contributors",
@@ -94,7 +97,10 @@ def get_asset_hash(tag: str, filename: str) -> str:
 
 
 def ensure_executable(path: Path) -> None:
-    """Ensure a file has execute permission (no-op on Windows)."""
+    """确保文件具有执行权限 (Windows 上无操作)。
+
+    Ensure a file has execute permission (no-op on Windows).
+    """
     if platform.system() == "Windows":
         return
     try:
@@ -105,12 +111,17 @@ def ensure_executable(path: Path) -> None:
 
 
 def find_engine_binary(directory: Path) -> str | None:
-    """Find launchable Godot binary inside an engine directory (cross-platform).
+    """在引擎目录中查找可启动的 Godot 二进制文件 (跨平台)。
 
-    Handles:
-    - macOS: .app bundle -> Contents/MacOS/Godot, fallback to extensionless binary
-    - Windows: .exe (prefers non-console), including mono subdirectory layout
-    - Linux: Godot* executable (names end with .x86_64/.arm64), restores exec bit
+    Find launchable Godot binary inside an engine directory (cross-platform).
+
+    处理以下平台布局 / Handles:
+    - macOS: .app 包 -> Contents/MacOS/Godot, 回退到无后缀二进制
+             .app bundle -> Contents/MacOS/Godot, fallback to extensionless binary
+    - Windows: .exe (优先非 console 版), 兼容 mono 子目录布局
+               .exe (prefers non-console), including mono subdirectory layout
+    - Linux: Godot* 开头的可执行文件 (名字以 .x86_64/.arm64 结尾), 恢复执行位
+             Godot* executable (names end with .x86_64/.arm64), restores exec bit
     """
     system = platform.system()
 
@@ -174,7 +185,10 @@ def find_engine_binary(directory: Path) -> str | None:
 
 
 def prepare_engine_dir(directory: Path) -> None:
-    """Fix permissions after extracting a Godot release archive (platform-aware)."""
+    """解压 Godot 发布包后修复权限 (按平台处理)。
+
+    Fix permissions after extracting a Godot release archive (platform-aware).
+    """
     if platform.system() == "Darwin":
         for app in directory.glob("*.app"):
             subprocess.run(
@@ -198,9 +212,10 @@ def prepare_engine_dir(directory: Path) -> None:
 
 
 def find_engine(name: str, version: str) -> str | None:
-    """Find Godot binary path by name and version.
+    """按名称和版本查找 Godot 二进制路径 / Find Godot binary path by name and version.
 
-    Returns:
+    返回 / Returns:
+        Godot 二进制路径字符串, 未找到时返回 None /
         Path string to Godot binary, or None if not found.
     """
     from gdpm.config.local_engines import load_local_engines
@@ -226,8 +241,11 @@ def find_engine(name: str, version: str) -> str | None:
 
 
 def resolve_engine_path(name: str, version: str) -> str:
-    """Resolve Godot binary path by engine name and version.
+    """按引擎名称和版本解析 Godot 二进制路径。
 
+    Resolve Godot binary path by engine name and version.
+
+    比 find_engine 更宽松: 本地引擎仅按名称匹配 /
     Less strict than find_engine: local engines are matched by name only.
     """
     from gdpm.config.local_engines import get_local_engine
