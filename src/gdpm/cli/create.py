@@ -55,6 +55,12 @@ def _get_installed_engines() -> list[str]:
 
     # 排序: stable 优先, 再按版本降序
     def sort_key(item: str) -> tuple[int, str]:
+        """
+        构造引擎条目排序键.
+
+        stable 版本排在预发布之前 (0), 其余为 1;
+        同组内按版本字符串降序排列.
+        """
         ver = item.split("@", 1)[1]
         is_stable = 0 if "stable" in ver else 1
         return (is_stable, ver)
