@@ -10,7 +10,7 @@ import click
 
 from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import console, find_project_root
-from gdpm.cli.godot.common import get_engines_dir, normalize_version
+from gdpm.cli.godot.common import resolve_engine_path
 
 
 @click.command(
@@ -26,7 +26,7 @@ from gdpm.cli.godot.common import get_engines_dir, normalize_version
 )
 def godot_open(run: bool) -> None:
     """Open Godot editor for the current project."""
-    from gdpm.config.local_engines import get_default_engine, get_local_engine
+    from gdpm.config.local_engines import get_default_engine
 
     root = find_project_root()
     conf_path = root / ".engines-conf.json"
@@ -49,26 +49,7 @@ def godot_open(run: bool) -> None:
         default_id = get_default_engine()
         if default_id:
             name, version = default_id.split("@", 1)
-            if name == "gdpm-godot":
-                engines_dir = get_engines_dir()
-                tag = normalize_version(version)
-                ver_dir = engines_dir / tag
-                if ver_dir.exists():
-                    for app in ver_dir.glob("*.app"):
-                        b = app / "Contents" / "MacOS" / "Godot"
-                        if b.exists():
-                            binary = str(b)
-                            break
-                    if not binary:
-                        for f in ver_dir.iterdir():
-                            if f.is_file() and not f.suffix:
-                                binary = str(f)
-                                break
-            else:
-                engine = get_local_engine(name)
-                if engine:
-                    binary = engine.path
-
+            binary = resolve_engine_path(name, version)
             engine_name = name
             engine_ver = version
 
@@ -103,7 +84,10 @@ def godot_open(run: bool) -> None:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        ret = proc.poll()
+        try:
+            ret: int | None = proc.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            ret = None
         if ret is not None and ret != 0:
             console.print(f"[red]Error:[/red] Godot exited with code {ret}")
             return

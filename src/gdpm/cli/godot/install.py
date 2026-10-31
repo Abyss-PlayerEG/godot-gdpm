@@ -127,24 +127,13 @@ def godot_install(version: str, csharp: bool) -> None:
     console.print("Extracting...")
 
     try:
+        from gdpm.cli.godot.common import prepare_engine_dir
+
         ver_dir.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(zip_path) as zf:
             zf.extractall(ver_dir)
 
-        import platform
-        import subprocess
-
-        for app in ver_dir.glob("*.app"):
-            if platform.system() == "Darwin":
-                subprocess.run(
-                    ["xattr", "-cr", str(app)],
-                    check=False,
-                    capture_output=True,
-                )
-            macos_dir = app / "Contents" / "MacOS"
-            if macos_dir.exists():
-                for binary in macos_dir.iterdir():
-                    binary.chmod(0o755)
+        prepare_engine_dir(ver_dir)
 
         zip_path.unlink()
         console.print(f"[green]✓[/green] Installed Godot [bold]{tag}{suffix}[/bold]")

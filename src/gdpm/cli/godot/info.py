@@ -11,7 +11,7 @@ from rich.table import Table
 
 from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import console, find_project_root
-from gdpm.cli.godot.common import get_engines_dir, normalize_version
+from gdpm.cli.godot.common import resolve_engine_path
 
 
 @click.command(
@@ -23,7 +23,7 @@ from gdpm.cli.godot.common import get_engines_dir, normalize_version
 )
 def godot_info() -> None:
     """Show current Godot engine configuration."""
-    from gdpm.config.local_engines import get_default_engine, get_local_engine
+    from gdpm.config.local_engines import get_default_engine
     from gdpm.utils.path import shorten_path
 
     root = find_project_root()
@@ -49,29 +49,8 @@ def godot_info() -> None:
         is_default = True
         default_id = get_default_engine()
         if default_id:
-            default_name, default_ver = default_id.split("@", 1)
-            name = default_name
-            version = default_ver
-
-            if default_name == "gdpm-godot":
-                engines_dir = get_engines_dir()
-                tag = normalize_version(default_ver)
-                ver_dir = engines_dir / tag
-                if ver_dir.exists():
-                    for app in ver_dir.glob("*.app"):
-                        b = app / "Contents" / "MacOS" / "Godot"
-                        if b.exists():
-                            path = str(b)
-                            break
-                    if not path:
-                        for f in ver_dir.iterdir():
-                            if f.is_file() and not f.suffix:
-                                path = str(f)
-                                break
-            else:
-                engine = get_local_engine(default_name)
-                if engine:
-                    path = engine.path
+            name, version = default_id.split("@", 1)
+            path = resolve_engine_path(name, version)
 
     if not name:
         console.print(
