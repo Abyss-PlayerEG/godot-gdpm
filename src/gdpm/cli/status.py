@@ -1,18 +1,14 @@
 """
 gdpm status 命令: 展示插件状态与可用更新.
 
-Show plugin status and available updates.
-
 ----
 
 Note:
-    - 扫描 addons/: 收集已安装插件 / Collect installed plugins.
-    - 查询最新版本: 从 Store 获取 / Fetch the latest versions from the Store.
-    - 对比版本: 归一化后比较并标注可更新项 /
-        Compare normalized versions and flag available updates.
-    - 输出结果: 表格或 JSON / Print a table or JSON.
-    - status(): 命令入口, 内部定义异步 _status() /
-        Command entry with the async _status() worker inside.
+    - 扫描 addons/: 收集已安装插件.
+    - 查询最新版本: 从 Store 获取.
+    - 对比版本: 归一化后比较并标注可更新项.
+    - 输出结果: 表格或 JSON.
+    - status(): 命令入口, 内部定义异步 _status().
 """
 
 from __future__ import annotations
@@ -41,10 +37,10 @@ from gdpm.utils.version import normalize_version
 @click.argument("plugin_slug", required=False)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
 def status(plugin_slug: str | None, as_json: bool) -> None:
-    """显示插件状态与可用更新 / Show plugin status and available updates."""
+    """显示插件状态与可用更新."""
 
     async def _status() -> None:
-        """收集插件状态并输出结果 / Collect plugin status and print results."""
+        """收集插件状态并输出结果."""
         ctx = get_project_context()
 
         installed: list[dict[str, str]] = []
@@ -92,8 +88,7 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                     )
                     continue
 
-                # 从 source (store+publisher/slug) 解析发布者 /
-                # Parse the publisher from the source field
+                # 从 source (store+publisher/slug) 解析发布者
                 source = plugin["source"]
                 publisher = ""
                 if "/" in source:
@@ -116,7 +111,7 @@ def status(plugin_slug: str | None, as_json: bool) -> None:
                 current_norm = normalize_version(current_ver.lstrip("vV"))
                 latest_norm = normalize_version(latest_ver.lstrip("vV"))
 
-                # 归一化后比较版本 / Compare normalized versions
+                # 归一化后比较版本
                 if current_norm == latest_norm:
                     update_status = "✓ Up to date"
                 else:

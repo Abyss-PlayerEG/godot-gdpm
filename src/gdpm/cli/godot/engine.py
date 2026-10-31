@@ -1,16 +1,13 @@
 """
 gdpm godot 引擎管理命令, 管理本地引擎与默认引擎.
 
-Godot engine commands (add/remove/use/default) for managing local engines
-and the default engine.
-
 ----
 
 Note:
-    - godot_add: 添加本地 Godot 引擎 / Add a local Godot engine.
-    - godot_remove: 移除本地 Godot 引擎 / Remove a local Godot engine.
-    - godot_use: 为当前项目设置引擎 / Set engine for the current project.
-    - godot_default: 设置或显示默认引擎 / Set or show the default engine.
+    - godot_add: 添加本地 Godot 引擎.
+    - godot_remove: 移除本地 Godot 引擎.
+    - godot_use: 为当前项目设置引擎.
+    - godot_default: 设置或显示默认引擎.
 """
 
 from __future__ import annotations
@@ -37,7 +34,7 @@ from gdpm.cli.godot.common import find_engine
 @click.argument("path")
 @click.option("--name", "-n", default="", help="Alias for the engine")
 def godot_add(path: str, name: str) -> None:
-    """添加本地 Godot 引擎 / Add a local Godot engine."""
+    """添加本地 Godot 引擎."""
     from gdpm.config.local_engines import add_local_engine, load_local_engines
     from gdpm.utils.godot import detect_godot_binary, get_godot_version
 
@@ -98,7 +95,7 @@ def godot_add(path: str, name: str) -> None:
 )
 @click.argument("name_or_id")
 def godot_remove(name_or_id: str) -> None:
-    """移除本地 Godot 引擎 / Remove a local Godot engine."""
+    """移除本地 Godot 引擎."""
     from gdpm.config.local_engines import (
         get_default_engine,
         load_local_engines,
@@ -136,7 +133,7 @@ def godot_remove(name_or_id: str) -> None:
 )
 @click.argument("id")
 def godot_use(engine_id: str) -> None:
-    """为当前项目设置 Godot 引擎 / Set the Godot engine for the current project."""
+    """为当前项目设置 Godot 引擎."""
     if "@" not in engine_id:
         console.print(
             "[red]Error:[/red] Invalid format. Use [cyan]Name@Version[/cyan]\n"
@@ -186,7 +183,7 @@ def godot_use(engine_id: str) -> None:
 @click.argument("engine_id", required=False)
 @click.option("--unset", is_flag=True, help="Remove default engine")
 def godot_default(engine_id: str | None, unset: bool) -> None:
-    """设置或显示默认 Godot 引擎 / Set or show the default Godot engine."""
+    """设置或显示默认 Godot 引擎."""
     from gdpm.config.local_engines import (
         get_default_engine,
         load_local_engines,

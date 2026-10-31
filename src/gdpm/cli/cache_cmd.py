@@ -2,17 +2,12 @@
 gdpm cache 命令. 管理全局下载缓存: 查看缓存目录/大小/插件数, 清理已缓存
 的插件压缩包.
 
-Manages the global download cache: inspect directory, size and plugin
-count, and clean cached plugin archives.
-
 ----
 
 Note:
-    - cache: 子命令组, 挂载 info 与 clean / Subgroup mounting info and clean.
-    - cache_info: 显示缓存目录, 大小和插件数量 /
-        Shows cache directory, size and plugin count.
-    - cache_clean: 清空全部缓存文件 (支持 -y 跳过确认) /
-        Cleans all cached files (with -y to skip confirmation).
+    - cache: 子命令组, 挂载 info 与 clean.
+    - cache_info: 显示缓存目录, 大小和插件数量.
+    - cache_clean: 清空全部缓存文件 (支持 -y 跳过确认).
 """
 
 from __future__ import annotations
@@ -38,7 +33,7 @@ console = Console()
     ],
 )
 def cache() -> None:
-    """管理全局缓存 / Manage the global cache."""
+    """管理全局缓存."""
 
 
 @cache.command(
@@ -49,12 +44,12 @@ def cache() -> None:
     ],
 )
 def cache_info() -> None:
-    """显示缓存信息 / Show cache information."""
+    """显示缓存信息."""
     config = read_global_config()
     cache_dir = Path(config.cache_dir)
     file_cache = FileCache(cache_dir)
 
-    # 人性化字节单位: B -> KB -> MB / Human-readable size: B -> KB -> MB.
+    # 人性化字节单位: B -> KB -> MB
     size = file_cache.size()
     if size < 1024:
         size_str = f"{size} B"
@@ -63,8 +58,7 @@ def cache_info() -> None:
     else:
         size_str = f"{size / (1024 * 1024):.1f} MB"
 
-    # 下载缓存按首字母分桶存放: downloads/<letter>/*.zip /
-    # Downloads are bucketed by first letter: downloads/<letter>/*.zip.
+    # 下载缓存按首字母分桶存放: downloads/<letter>/*.zip
     count = 0
     for letter_dir in cache_dir.glob("downloads/*/"):
         if letter_dir.is_dir():
@@ -86,12 +80,12 @@ def cache_info() -> None:
 )
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
 def cache_clean(yes: bool) -> None:
-    """清理全部缓存文件 / Clean all cached files."""
+    """清理全部缓存文件."""
     config = read_global_config()
     cache_dir = Path(config.cache_dir)
     file_cache = FileCache(cache_dir)
 
-    # 计算并格式化待清理的大小 / Compute and format the size to free.
+    # 计算并格式化待清理的大小
     size = file_cache.size()
     if size == 0:
         console.print("  Cache is already empty.")
@@ -104,8 +98,7 @@ def cache_clean(yes: bool) -> None:
     else:
         size_str = f"{size / (1024 * 1024):.1f} MB"
 
-    # 未指定 -y 时进行二次确认, 取消则中止 /
-    # Confirm unless -y is given; abort when cancelled.
+    # 未指定 -y 时进行二次确认, 取消则中止
     if not yes:
         click.echo(f"  This will remove {size_str} of cached files.")
         if not click.confirm("  Continue?"):

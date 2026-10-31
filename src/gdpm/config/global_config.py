@@ -1,13 +1,10 @@
 """
 全局配置管理, 读写 gdpm 全局配置文件 config.toml, 管理跨项目共享的默认设置.
 
-Global configuration management. Read and write the gdpm global config
-file config.toml, managing default settings shared across projects.
-
 ----
 
 example:
-    配置文件结构 / Config file layout:
+    配置文件结构:
 
         [defaults]
         godot_path = "godot"
@@ -23,10 +20,10 @@ example:
 ----
 
 Note:
-    - GlobalConfig: 全局配置数据类 / Global configuration dataclass.
-    - get_config_path: 获取配置文件路径 / Get the config file path.
-    - read_global_config: 读取全局配置 / Read the global config.
-    - write_global_config: 写入全局配置 / Write the global config.
+    - GlobalConfig: 全局配置数据类.
+    - get_config_path: 获取配置文件路径.
+    - read_global_config: 读取全局配置.
+    - write_global_config: 写入全局配置.
 """
 
 from __future__ import annotations
@@ -44,18 +41,14 @@ class GlobalConfig:
     """
     全局配置数据类.
 
-    Global configuration dataclass.
-
     ----
 
     Note:
-        - godot_path: Godot 可执行文件路径或命令名 /
-            Path or command name of the Godot executable.
-        - addons_dir: 插件安装目录名 / Addon installation directory name.
-        - parallel_downloads: 并行下载数 / Number of parallel downloads.
-        - cache_dir: 下载缓存目录 / Download cache directory.
-        - store_url: Godot Asset Store API 基础地址 /
-            Base URL of the Godot Asset Store API.
+        - godot_path: Godot 可执行文件路径或命令名.
+        - addons_dir: 插件安装目录名.
+        - parallel_downloads: 并行下载数.
+        - cache_dir: 下载缓存目录.
+        - store_url: Godot Asset Store API 基础地址.
     """
 
     godot_path: str = "godot"
@@ -67,16 +60,13 @@ class GlobalConfig:
     def __post_init__(self) -> None:
         """
         初始化后处理, 若 cache_dir 为空, 回退到 ~/.gdpm/cache.
-
-        Post-init processing. Fall back to ~/.gdpm/cache when cache_dir
-        is empty.
         """
         if not self.cache_dir:
             self.cache_dir = str(Path.home() / ".gdpm" / "cache")
 
 
 def get_config_path() -> Path:
-    """获取全局配置文件路径 / Get the global config file path."""
+    """获取全局配置文件路径."""
     return Path(platformdirs.user_config_dir("gdpm")) / "config.toml"
 
 
@@ -84,11 +74,8 @@ def read_global_config() -> GlobalConfig:
     """
     读取全局配置, 配置文件不存在时返回默认配置.
 
-    Read the global config. Return the default config when the config
-    file does not exist.
-
     Returns:
-        GlobalConfig 实例 / A GlobalConfig instance.
+        GlobalConfig 实例.
     """
     path = get_config_path()
     if not path.exists():
@@ -114,13 +101,10 @@ def write_global_config(config: GlobalConfig) -> None:
     """
     写入全局配置, 按 [defaults]/[store]/[cache] 三节序列化为 TOML 并覆盖写入.
 
-    Write the global config. Serialize into TOML sections
-    [defaults]/[store]/[cache] and overwrite the config file.
-
     ----
 
     Args:
-        config: 要持久化的全局配置 / The global config to persist.
+        config: 要持久化的全局配置.
     """
     path = get_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)

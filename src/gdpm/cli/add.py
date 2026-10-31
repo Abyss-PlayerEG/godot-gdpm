@@ -1,21 +1,15 @@
 """
 gdpm add 命令: 从 Store 或本地路径添加插件.
 
-Add plugins from the Store or a local path.
-
 ----
 
 Note:
-    - 解析规格: 将 name@version 参数解析为插件名与版本约束 /
-        Parse name@version args into plugin names and version constraints.
-    - 下载安装: 从 Store 下载 zip 并解压安装到 addons/ /
-        Download zips from the Store and install them into addons/.
-    - 更新配置: 写入 gdproject.toml 与 gdpm.lock /
-        Write gdproject.toml and gdpm.lock.
-    - add(): 在线插件添加命令入口 / Command entry for adding online plugins.
-    - _add_local(): 打包本地插件到 gdpm-local/ 或从 zip 安装 /
-        Pack local plugins into gdpm-local/ or install from a zip file.
-    - _parse_spec(): 解析 name@version 插件规格 / Parse a name@version plugin spec.
+    - 解析规格: 将 name@version 参数解析为插件名与版本约束.
+    - 下载安装: 从 Store 下载 zip 并解压安装到 addons/.
+    - 更新配置: 写入 gdproject.toml 与 gdpm.lock.
+    - add(): 在线插件添加命令入口.
+    - _add_local(): 打包本地插件到 gdpm-local/ 或从 zip 安装.
+    - _parse_spec(): 解析 name@version 插件规格.
 """
 
 from __future__ import annotations
@@ -62,7 +56,7 @@ from gdpm.store.utils import resolve_publisher
 @click.option("--local", is_flag=True, help="Pack local plugins to gdpm-local/")
 @yes_option
 def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
-    """添加一个或多个插件到项目 / Add one or more plugins to the project."""
+    """添加一个或多个插件到项目."""
     if local:
         _add_local(plugins, yes=yes)
         return
@@ -72,7 +66,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
         raise SystemExit(1)
 
     async def _add() -> None:
-        """异步执行在线插件安装流程 / Run the async online install workflow."""
+        """异步执行在线插件安装流程."""
         ctx = get_project_context()
         svc = get_services(ctx)
 
@@ -84,7 +78,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
             for plugin_spec in plugins:
                 name, version_constraint = _parse_spec(plugin_spec)
 
-                # 检查是否已在依赖中 / Check if already in dependencies
+                # 检查是否已在依赖中
                 if (
                     name in ctx.config.dependencies
                     or name in ctx.config.dev_dependencies
@@ -95,7 +89,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                     )
                     continue
 
-                # 解析发布者 / Resolve publisher
+                # 解析发布者
                 resolved = await resolve_publisher(svc.store, name)
                 if not resolved.found:
                     errors.append(resolved.error)
@@ -104,8 +98,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                 publisher = resolved.publisher
                 slug = resolved.slug
 
-                # 检查是否为项目模板 (模板不可作为插件安装) /
-                # Check if it is a project template (not installable as addon)
+                # 检查是否为项目模板 (模板不可作为插件安装)
                 try:
                     detail = await svc.store.get_plugin(publisher, slug)
                     if is_template(detail.tags):
@@ -114,10 +107,10 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                 except Exception:
                     pass
 
-                # 显示版本信息 / Show version info
+                # 显示版本信息
                 versions = await svc.store.get_versions(publisher, slug)
                 if versions:
-                    # 查找符合版本约束的版本 / Find the version matching the constraint
+                    # 查找符合版本约束的版本
                     target_ver = versions[0].get("version", "")
                     if version_constraint:
                         from gdpm.models.version import Version, VersionConstraint
@@ -138,7 +131,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                         ver_display = f"v{target_ver}"
                     console.print(f"  [dim]{ver_display}[/dim]")
 
-                # 下载并安装插件 / Download and install the plugin
+                # 下载并安装插件
                 try:
                     with Progress(
                         TextColumn("[bold blue]{task.fields[name]}"),
@@ -155,7 +148,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                             speed: float,
                             _task: TaskID = task_id,
                         ) -> None:
-                            """更新下载进度条 / Update the download progress bar."""
+                            """更新下载进度条."""
                             if progress.tasks[_task].total is None:
                                 progress.update(_task, total=total)
                             progress.update(_task, completed=current)
@@ -186,8 +179,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                     )
 
                 except Exception as e:
-                    # 404 时搜索同名插件并给出提示 /
-                    # On 404, search for the slug and suggest a match
+                    # 404 时搜索同名插件并给出提示
                     if "404" in str(e):
                         search_results = await svc.store.search(slug, limit=5)
                         exact = next(
@@ -205,7 +197,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                         errors.append(f"Failed to install {slug}: {e}")
                     continue
 
-                # 更新项目配置 / Update project config
+                # 更新项目配置
                 dep = Dependency.from_spec(
                     slug,
                     version_constraint or result["version"],
@@ -248,14 +240,11 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
     """
     打包本地插件到 gdpm-local/ 或从 zip 安装.
 
-    Pack local plugins into gdpm-local/ or install from a zip file.
-
     ----
 
     Args:
-        plugins: zip 文件路径或插件目录名 /
-            Zip file paths or plugin directory names.
-        yes: 是否跳过确认提示 / Whether to skip confirmation prompts.
+        plugins: zip 文件路径或插件目录名.
+        yes: 是否跳过确认提示.
     """
     from gdpm.lockfile.lock import find_lockfile, read_lockfile, write_lockfile
     from gdpm.models.lock import LockEntry
@@ -274,7 +263,7 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
     ctx = get_project_context()
     local_dir = ctx.root / LOCAL_DIR_NAME
 
-    # 分离 zip 文件与目录名 / Separate zip files and directory names
+    # 分离 zip 文件与目录名
     zip_files: list[Path] = []
     dir_names: list[str] = []
 
@@ -285,7 +274,7 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
         else:
             dir_names.append(item)
 
-    # 从 zip 文件安装插件 / Install plugins from zip files
+    # 从 zip 文件安装插件
     for zip_path in zip_files:
         slug = zip_path.stem
         dest = ctx.addons_dir / slug
@@ -294,7 +283,7 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
         extract_full_zip(zip_path, dest)
         tag_plugin(ctx.addons_dir, slug)
 
-        # 复制 zip 到 gdpm-local/ (跳过已存在) / Copy zip to gdpm-local/ (skip existing)
+        # 复制 zip 到 gdpm-local/ (跳过已存在)
         local_dir.mkdir(parents=True, exist_ok=True)
         local_zip = local_dir / zip_path.name
         import shutil
@@ -302,11 +291,11 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
         if zip_path.resolve() != local_zip.resolve():
             shutil.copy2(zip_path, local_zip)
 
-        # 更新配置 / Update config
+        # 更新配置
         dep = Dependency.from_spec(slug, "*", is_local=True, is_dev=False)
         ctx.config.dependencies[slug] = dep
 
-        # 更新锁文件 / Update lock file
+        # 更新锁文件
         lock_path = find_lockfile(ctx.root)
         lock_entries = {e.name: e for e in read_lockfile(lock_path)}
         lock_entries[slug] = LockEntry(
@@ -318,7 +307,7 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
 
         console.print(f"[green]✓[/green] Installed [bold]{slug}[/bold] from zip")
 
-    # 处理目录名 (沿用原有逻辑) / Handle directory names (existing logic)
+    # 处理目录名 (沿用原有逻辑)
     if dir_names:
         targets = dir_names
     else:
@@ -431,17 +420,13 @@ def _parse_spec(spec: str) -> tuple[str, str]:
     """
     解析插件规格字符串.
 
-    Parse a plugin spec string.
-
     ----
 
     Args:
-        spec: 形如 name 或 name@version 的插件规格 /
-            A plugin spec like name or name@version.
+        spec: 形如 name 或 name@version 的插件规格.
 
     Returns:
-        (插件名, 版本约束) 元组; 无约束时约束为空串 /
-            (plugin name, version constraint) tuple; "" when no constraint given.
+        (插件名, 版本约束) 元组; 无约束时约束为空串.
     """
     if "@" in spec:
         name, constraint = spec.split("@", 1)

@@ -1,28 +1,21 @@
 """
 gdpm import 命令: 从 zip 归档或目录导入插件.
 
-Import plugins from a zip archive or directory.
-
 ----
 
 Note:
-    - 读取清单: 解析 manifest.json / Parse manifest.json.
-    - 安装 Store 插件: 下载并安装在线插件 /
-        Download and install Store plugins.
-    - 解压本地插件: 释放到 addons/ 并复制 zip 到 gdpm-local/ /
-        Extract local plugins into addons/ and copy zips into gdpm-local/.
-    - 更新配置: 写入 gdproject.toml 与 gdpm.lock /
-        Write gdproject.toml and gdpm.lock.
-    - manifest.json 结构 / manifest.json structure:
-        - version: 清单格式版本 / Manifest format version.
-        - exported_at: 导出时间 (ISO 8601) / Export timestamp (ISO 8601).
-        - project: 项目名与 Godot 约束 / Project name and Godot constraint.
+    - 读取清单: 解析 manifest.json.
+    - 安装 Store 插件: 下载并安装在线插件.
+    - 解压本地插件: 释放到 addons/ 并复制 zip 到 gdpm-local/.
+    - 更新配置: 写入 gdproject.toml 与 gdpm.lock.
+    - manifest.json 结构:
+        - version: 清单格式版本.
+        - exported_at: 导出时间 (ISO 8601).
+        - project: 项目名与 Godot 约束.
         - plugins: 插件列表, 每项含 name, version, source, type, file
-            (仅 local) 与 publisher (仅 store) / Plugin list, each entry
-            holds name, version, source, type, file (local only) and
-            publisher (store only).
-    - import_cmd(): 命令入口 / Command entry.
-    - _import_store(): 异步安装 Store 插件 / Async Store plugin installer.
+            (仅 local) 与 publisher (仅 store).
+    - import_cmd(): 命令入口.
+    - _import_store(): 异步安装 Store 插件.
 """
 
 from __future__ import annotations
@@ -60,11 +53,11 @@ from gdpm.utils.local import LOCAL_DIR_NAME, tag_plugin
 @click.argument("source", type=click.Path(exists=True))
 @yes_option
 def import_cmd(source: str, yes: bool) -> None:
-    """从 zip 归档或目录导入插件 / Import plugins from a zip archive or directory."""
+    """从 zip 归档或目录导入插件."""
     root = require_project()
     source_path = Path(source)
 
-    # 判定来源类型并读取 manifest / Determine source type and read manifest
+    # 判定来源类型并读取 manifest
     if source_path.is_dir():
         manifest_path = source_path / "manifest.json"
         if not manifest_path.exists():
@@ -91,8 +84,7 @@ def import_cmd(source: str, yes: bool) -> None:
     local_dir = root / LOCAL_DIR_NAME
     lock_entries = {e.name: e for e in read_lockfile(find_lockfile(root))}
 
-    # 按 type 字段区分 Store 插件与本地插件 /
-    # Split Store plugins and local plugins by the type field
+    # 按 type 字段区分 Store 插件与本地插件
     store_plugins: list[dict[str, str]] = []
     local_plugins: list[dict[str, str]] = []
 
@@ -106,11 +98,11 @@ def import_cmd(source: str, yes: bool) -> None:
     errors: list[str] = []
     lock_updates: dict[str, LockEntry] = {}
 
-    # 导入 Store 插件 / Import Store plugins
+    # 导入 Store 插件
     if store_plugins:
 
         async def _import_store() -> None:
-            """异步下载并安装 Store 插件 / Download and install Store plugins."""
+            """异步下载并安装 Store 插件."""
             nonlocal imported
             store = StoreClient()
             cache = FileCache(root / ".gdpm" / "cache")
@@ -122,7 +114,7 @@ def import_cmd(source: str, yes: bool) -> None:
                     publisher = p.get("publisher", "")
                     version = p.get("version", "")
 
-                    # 检查是否已安装 / Check if already installed
+                    # 检查是否已安装
                     existing = config.dependencies.get(name)
                     if existing:
                         entry = lock_entries.get(name)
@@ -180,12 +172,12 @@ def import_cmd(source: str, yes: bool) -> None:
 
         asyncio.run(_import_store())
 
-    # 导入本地插件 / Import local plugins
+    # 导入本地插件
     for p in local_plugins:
         name = p["name"]
         zip_file = p.get("file", "")
 
-        # 检查是否已安装 / Check if already installed
+        # 检查是否已安装
         if name in config.dependencies:
             if not yes:
                 if (
@@ -204,7 +196,7 @@ def import_cmd(source: str, yes: bool) -> None:
                     f"  [yellow]![/yellow] {name} already installed, overwriting..."
                 )
 
-        # 定位 zip 来源路径 / Locate the zip source path
+        # 定位 zip 来源路径
         if source_type == "dir":
             zip_source = source_path / zip_file
             if not zip_source.exists():
@@ -216,7 +208,7 @@ def import_cmd(source: str, yes: bool) -> None:
                     errors.append(f"Local plugin zip not found in archive: {zip_file}")
                     continue
 
-        # 复制 zip 到 gdpm-local/ / Copy the zip into gdpm-local/
+        # 复制 zip 到 gdpm-local/
         local_dir.mkdir(parents=True, exist_ok=True)
         local_zip = local_dir / f"{name}.zip"
 
@@ -229,8 +221,7 @@ def import_cmd(source: str, yes: bool) -> None:
             ):
                 local_zip.write_bytes(src.read())
 
-        # 解压到 addons/ (先清空旧目录) /
-        # Extract into addons/ (clearing any old directory first)
+        # 解压到 addons/ (先清空旧目录)
         dest = addons_dir / name
         if dest.exists():
             shutil.rmtree(dest)
@@ -246,7 +237,7 @@ def import_cmd(source: str, yes: bool) -> None:
         imported += 1
         console.print(f"[green]✓[/green] Installed [bold]{name}[/bold] (local)")
 
-    # 更新配置和锁文件 / Update config and lock file
+    # 更新配置和锁文件
     if imported:
         write_project_config(config, root / "gdproject.toml")
         update_lockfile(find_lockfile(root), lock_updates)

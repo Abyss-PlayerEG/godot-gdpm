@@ -2,14 +2,10 @@
 gdpm lock 命令. 解析项目依赖并生成或更新 gdpm.lock 锁文件, 支持 --check
 检查模式.
 
-Resolves project dependencies and generates or updates the gdpm.lock
-lockfile, with a --check mode.
-
 ----
 
 Note:
-    - lock: 命令入口, 内部通过 asyncio 运行解析与写入流程 /
-        Command entry running the resolution and write flow via asyncio.
+    - lock: 命令入口, 内部通过 asyncio 运行解析与写入流程.
 """
 
 from __future__ import annotations
@@ -35,10 +31,9 @@ from gdpm.store.utils import resolve_publisher
 )
 @click.option("--check", is_flag=True, help="Check if lock file is up to date")
 def lock(check: bool) -> None:
-    """生成或更新锁文件 / Generate or update the lock file."""
+    """生成或更新锁文件."""
 
-    # 解析流程为异步逻辑, 在独立协程中执行 /
-    # The resolution flow is async and runs in a dedicated coroutine.
+    # 解析流程为异步逻辑, 在独立协程中执行
     async def _lock() -> None:
         ctx = get_project_context()
         store = ctx.store if hasattr(ctx, "store") else None
@@ -52,11 +47,9 @@ def lock(check: bool) -> None:
         try:
             console.print("Resolving dependencies...")
 
-            # 逐个解析依赖: 本地插件直接写入, 在线插件解析发布者与版本 /
-            # Resolve each dep: local plugins are direct, online ones need
-            # publisher and version resolution.
+            # 逐个解析依赖: 本地插件直接写入, 在线插件解析发布者与版本
             for name, dep in ctx.all_deps.items():
-                # 本地插件 / Local plugins
+                # 本地插件
                 if dep.is_local:
                     console.print(f"  {name} (local)")
                     entries.append(
@@ -64,7 +57,7 @@ def lock(check: bool) -> None:
                     )
                     continue
 
-                # 解析发布者, 未指定时经商店 API 查询 / Resolve publisher via API
+                # 解析发布者, 未指定时经商店 API 查询
                 if dep.publisher_slug:
                     publisher = dep.publisher_slug
                 else:
@@ -74,16 +67,14 @@ def lock(check: bool) -> None:
                         continue
                     publisher = resolved.publisher
 
-                # 获取该插件的全部版本 / Get versions
+                # 获取该插件的全部版本
                 versions = await store.get_versions(publisher, name)
                 if not versions:
                     errors.append(f"No versions found for '{name}'")
                     continue
 
-                # 在版本列表中找到第一个满足约束的版本 / Match version
-                # 逐个版本去掉 v 前缀后匹配约束; 惰性构造 Version 对象 /
-                # Match each version (v prefix stripped) against the constraint,
-                # lazily building the Version object.
+                # 在版本列表中找到第一个满足约束的版本
+                # 逐个版本去掉 v 前缀后匹配约束; 惰性构造 Version 对象
                 matched = None
                 for v in versions:
                     api_ver = v["version"].lstrip("v")
@@ -108,8 +99,7 @@ def lock(check: bool) -> None:
         finally:
             await store.close()
 
-        # 输出解析错误; 只要有解析成功的条目就写入锁文件 /
-        # Print resolution errors; write the lockfile if any entry resolved.
+        # 输出解析错误; 只要有解析成功的条目就写入锁文件
         if errors:
             for err in errors:
                 console.print(f"[red]✗[/red] {err}")

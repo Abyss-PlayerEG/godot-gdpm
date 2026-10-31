@@ -1,14 +1,11 @@
 """
 下载工具, 提供带进度回调的文件下载与 Rich 进度条创建.
 
-Download utilities. Provide file downloads with progress callbacks and
-Rich progress bars.
-
 ----
 
 Note:
-    - download_file: 流式下载文件 / Stream-download a file.
-    - create_progress: 创建下载进度条 / Create a download progress bar.
+    - download_file: 流式下载文件.
+    - create_progress: 创建下载进度条.
 """
 
 from __future__ import annotations
@@ -42,21 +39,17 @@ def download_file(
     """
     下载文件, 支持进度回调.
 
-    Download a file with an optional progress callback.
-
     ----
 
     Args:
-        url: 下载地址 / Download URL.
-        dest: 目标目录 / Destination directory.
-        filename: 文件名, 为空时从 URL 推断 /
-            Filename, inferred from the URL when empty.
-        on_progress: 进度回调 (已下载, 总大小, 速度) /
-            Progress callback (downloaded, total, speed).
-        timeout: 请求超时秒数 / Request timeout in seconds.
+        url: 下载地址.
+        dest: 目标目录.
+        filename: 文件名, 为空时从 URL 推断.
+        on_progress: 进度回调 (已下载, 总大小, 速度).
+        timeout: 请求超时秒数.
 
     Returns:
-        下载文件的路径 / Path to the downloaded file.
+        下载文件的路径.
     """
     dest.mkdir(parents=True, exist_ok=True)
 
@@ -89,11 +82,8 @@ def create_progress() -> Progress:
     """
     创建下载用的 Rich 进度条.
 
-    Create a Rich Progress instance for downloads.
-
     Returns:
-        配置好下载列的进度条实例 /
-            A progress instance configured with download columns.
+        配置好下载列的进度条实例.
     """
     return Progress(
         TextColumn("[bold blue]{task.fields[name]}"),

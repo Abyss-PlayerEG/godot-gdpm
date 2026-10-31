@@ -1,14 +1,12 @@
 """
 gdpm godot list 命令, 列出本地或远程 Godot 版本.
 
-gdpm godot list command for listing local or remote Godot versions.
-
 ----
 
 Note:
-    - _list_local: 列出已安装的 Godot 版本 / List installed Godot versions.
-    - _list_remote: 列出 GitHub 上可用的版本 / List available versions on GitHub.
-    - godot_list: click 命令入口 / Click command entry point.
+    - _list_local: 列出已安装的 Godot 版本.
+    - _list_remote: 列出 GitHub 上可用的版本.
+    - godot_list: click 命令入口.
 """
 
 from __future__ import annotations
@@ -31,17 +29,13 @@ def _list_local(show_id: bool = False) -> None:
     """
     列出已安装的 Godot 版本.
 
-    List installed Godot versions.
-
     ----
 
     Args:
-        show_id: 以 ID 列 (Name@Version) 展示, 而非名称和版本两列 /
-            Show an ID column (Name@Version) instead of name and version.
+        show_id: 以 ID 列 (Name@Version) 展示, 而非名称和版本两列.
 
     Returns:
-        无, 结果直接打印到终端 /
-            None, results are printed to the terminal.
+        无, 结果直接打印到终端.
     """
     from gdpm.config.local_engines import load_local_engines
     from gdpm.utils.path import shorten_path
@@ -117,20 +111,15 @@ def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
     """
     列出 GitHub 上可用的 Godot 版本.
 
-    List available Godot versions from GitHub.
-
     ----
 
     Args:
-        version_filter: 版本前缀过滤, 如 '4.7' /
-            Version prefix filter such as '4.7'.
-        show_all: 是否显示 1.x/2.x 等旧版本 /
-            Whether to show old versions such as 1.x/2.x.
-        page: 远程列表页码 / Page number for the remote list.
+        version_filter: 版本前缀过滤, 如 '4.7'.
+        show_all: 是否显示 1.x/2.x 等旧版本.
+        page: 远程列表页码.
 
     Returns:
-        无, 结果直接打印到终端 /
-            None, results are printed to the terminal.
+        无, 结果直接打印到终端.
     """
     try:
         if version_filter:
@@ -270,7 +259,7 @@ def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
 def godot_list(
     remote: bool, version_filter: str, show_all: bool, page: int, show_id: bool
 ) -> None:
-    """列出 Godot 引擎版本 / List Godot engine versions."""
+    """列出 Godot 引擎版本."""
     if remote:
         _list_remote(version_filter, show_all, page)
     else:

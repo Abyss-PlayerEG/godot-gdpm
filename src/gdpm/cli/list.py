@@ -2,14 +2,10 @@
 gdpm list 命令. 列出项目中已安装的插件及其版本与来源, 支持表格和 JSON
 两种输出.
 
-Lists plugins installed in the project with their versions and sources,
-in either table or JSON output.
-
 ----
 
 Note:
-    - list_cmd: 命令入口, 扫描 addons 并渲染表格或 JSON /
-        Command entry scanning addons and rendering a table or JSON.
+    - list_cmd: 命令入口, 扫描 addons 并渲染表格或 JSON.
 """
 
 from __future__ import annotations
@@ -35,22 +31,19 @@ from gdpm.utils.tag import scan_addons
 )
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
 def list_cmd(as_json: bool) -> None:
-    """列出已安装的插件 / List installed plugins."""
+    """列出已安装的插件."""
     root = require_project()
     config = read_project_config(root / "gdproject.toml")
     addons_dir = root / config.addons_dir
-    # 锁条目按插件名索引, 用于查询已锁定版本 /
-    # Index lock entries by name for looking up locked versions.
+    # 锁条目按插件名索引, 用于查询已锁定版本
     lock_entries = {e.name: e for e in read_lockfile(find_lockfile(root))}
 
     installed: list[dict[str, str]] = []
 
-    # 扫描 addons 目录, 汇总每个插件的名称, slug, 版本和来源 /
-    # Scan addons/ and collect each plugin's name, slug, version and source.
+    # 扫描 addons 目录, 汇总每个插件的名称, slug, 版本和来源
     for addon_path, tag in scan_addons(addons_dir):
         locked = lock_entries.get(tag.slug)
-        # 本地插件显示 "local"; 其余取锁文件版本, 缺失时显示 "?" /
-        # Local plugins show "local"; others use the lock version or "?".
+        # 本地插件显示 "local"; 其余取锁文件版本, 缺失时显示 "?"
         version = "local" if tag.is_local else (locked.version if locked else "?")
 
         installed.append(
@@ -88,8 +81,7 @@ def list_cmd(as_json: bool) -> None:
     table.add_column("Version", style="green", min_width=10)
     table.add_column("Source", min_width=10)
 
-    # 为表格渲染准备带高亮的显示字段 /
-    # Prepare highlighted display fields for the table rendering.
+    # 为表格渲染准备带高亮的显示字段
     for p in installed:
         version = p["version"]
         if version == "local":
@@ -104,8 +96,7 @@ def list_cmd(as_json: bool) -> None:
 
         p["source_display"] = source
 
-    # 按来源排序, 使 store/local 插件分组展示 /
-    # Sort by source so store/local plugins are grouped together.
+    # 按来源排序, 使 store/local 插件分组展示
     installed.sort(key=lambda p: p["source"])
 
     for p in installed:

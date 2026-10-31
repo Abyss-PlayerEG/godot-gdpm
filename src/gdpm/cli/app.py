@@ -1,20 +1,13 @@
 """
 CLI 应用入口. 本模块定义 gdpm 命令行主入口和基于 Rich 的帮助渲染系统.
 
-CLI application entry point. This module defines the gdpm CLI entry point
-and the Rich-based help rendering system.
-
 ----
 
 Note:
-    - BANNER / COMMANDS: ASCII 横幅与主帮助中的命令分类清单 /
-        ASCII banner and the categorized command catalog for main help.
-    - GdpmCommand / GdpmGroup: 自定义 click 命令与命令组类, 渲染 Rich 帮助 /
-        Custom click command/group classes that render Rich help panels.
-    - print_info / print_version / print_completion: 全局选项的回调 /
-        Eager callbacks for the global options.
-    - main: 根命令组, 在模块尾部挂载全部子命令 /
-        Root command group, with all subcommands mounted at module bottom.
+    - BANNER / COMMANDS: ASCII 横幅与主帮助中的命令分类清单.
+    - GdpmCommand / GdpmGroup: 自定义 click 命令与命令组类, 渲染 Rich 帮助.
+    - print_info / print_version / print_completion: 全局选项的回调.
+    - main: 根命令组, 在模块尾部挂载全部子命令.
 """
 
 from __future__ import annotations
@@ -33,8 +26,7 @@ from gdpm.constants import GITHUB_API_URL, REPO_URL
 
 console = Console()
 
-# ASCII 艺术字横幅, 由 gdpm --info 展示 /
-# ASCII art banner displayed by gdpm --info.
+# ASCII 艺术字横幅, 由 gdpm --info 展示
 BANNER = r""" ██████╗ ██████╗ ██████╗ ███╗   ███╗
 ██╔════╝ ██╔══██╗██╔══██╗████╗ ████║
 ██║  ███╗██║  ██║██████╔╝██╔████╔██║
@@ -42,8 +34,7 @@ BANNER = r""" ██████╗ ██████╗ ██████╗ 
 ╚██████╔╝██████╔╝██║     ██║ ╚═╝ ██║
  ╚═════╝ ╚═════╝ ╚═╝     ╚═╝     ╚═╝"""
 
-# 主帮助中的命令分类: 分类名 -> {命令名: 简介} /
-# Command catalog for main help: category -> {command: summary}.
+# 主帮助中的命令分类: 分类名 -> {命令名: 简介}
 COMMANDS = {
     "Project": {
         "init": "Initialize a new gdpm project",
@@ -73,10 +64,6 @@ class GdpmCommand(click.Command):
     """
     使用 Rich 渲染帮助的自定义命令类. 在 click 标准帮助之外渲染: 标题行,
     Usage 行, Options 表格和 Examples 面板.
-
-    Custom click command with Rich help. Renders a title line, Usage line,
-    Options table and Examples panel on top of the standard click help
-    output.
     """
 
     def __init__(
@@ -88,15 +75,12 @@ class GdpmCommand(click.Command):
         """
         初始化命令并保存示例列表.
 
-        Initialize the command and store examples.
-
         ----
 
         Args:
-            *args: 透传给 click.Command / Passed through to click.Command.
-            examples: (命令, 说明) 示例对, 展示在 Examples 面板 /
-                (command, description) pairs shown in the Examples panel.
-            **kwargs: 透传给 click.Command / Passed through to click.Command.
+            *args: 透传给 click.Command.
+            examples: (命令, 说明) 示例对, 展示在 Examples 面板.
+            **kwargs: 透传给 click.Command.
         """
         super().__init__(*args, **kwargs)
         self.examples: list[tuple[str, str]] = examples or []
@@ -105,16 +89,11 @@ class GdpmCommand(click.Command):
         """
         渲染 Rich 风格的命令帮助. 依次输出标题, 用法行, 选项表格和示例面板.
 
-        Render Rich-styled command help. Prints the title, usage line, options
-        table and examples panel.
-
         ----
 
         Args:
-            ctx: click 上下文, 提供命令名等信息 /
-                click context providing the command name and more.
-            formatter: click 帮助格式化器, 本实现未使用 /
-                click help formatter, unused in this implementation.
+            ctx: click 上下文, 提供命令名等信息.
+            formatter: click 帮助格式化器, 本实现未使用.
         """
         console.print()
         console.print(
@@ -123,9 +102,7 @@ class GdpmCommand(click.Command):
         )
         console.print()
 
-        # 根据参数类型拼装 Usage: 必填用 <name>, 标志用 [--name], 其余用 VALUE /
-        # Build Usage from params: <name> for required, [--name] for flags,
-        # [--name VALUE] otherwise.
+        # 根据参数类型拼装 Usage: 必填用 <name>, 标志用 [--name], 其余用 [--name VALUE]
         usage_parts = [f"gdpm {ctx.info_name}"]
         for param in self.params:
             if param.name == "help":
@@ -141,8 +118,7 @@ class GdpmCommand(click.Command):
         )
         console.print()
 
-        # 收集全部 Option 参数 (排除 help), 渲染为选项表格 /
-        # Collect all Option params (except help) for the options table.
+        # 收集全部 Option 参数 (排除 help), 渲染为选项表格
         options = [
             p for p in self.params if p.name != "help" and isinstance(p, click.Option)
         ]
@@ -160,8 +136,7 @@ class GdpmCommand(click.Command):
             for param in options:
                 opts = ", ".join(param.opts)
                 desc = param.help or ""
-                # 非标志参数显示默认值; 默认开启的标志显示 (default: on) /
-                # Show default for non-flags; flags defaulting on show (default: on).
+                # 非标志参数显示默认值; 默认开启的标志显示 (default: on)
                 default = ""
                 if param.default is not None and not param.is_flag:
                     default = f" [dim](default: {param.default})[/dim]"
@@ -179,8 +154,7 @@ class GdpmCommand(click.Command):
                 )
             )
 
-        # 示例面板: 每条示例渲染为一行说明注释和一行命令 /
-        # Examples panel: each example renders as a comment line plus a command line.
+        # 示例面板: 每条示例渲染为一行说明注释和一行命令
         if self.examples:
             lines = []
             for example_cmd, example_desc in self.examples:
@@ -201,9 +175,6 @@ class GdpmGroup(click.Group):
     """
     使用 Rich 渲染帮助的自定义命令组类. 根据上下文区分主帮助 (gdpm) 与
     子命令组帮助 (如 gdpm cache), 分别交给不同布局的渲染方法处理.
-
-    Custom click group with Rich help. Dispatches to different layouts for
-    the main help (gdpm) and subgroup help (e.g. gdpm cache).
     """
 
     def __init__(
@@ -215,15 +186,12 @@ class GdpmGroup(click.Group):
         """
         初始化命令组并保存示例列表.
 
-        Initialize the group and store examples.
-
         ----
 
         Args:
-            *args: 透传给 click.Group / Passed through to click.Group.
-            examples: (命令, 说明) 示例对, 展示在 Examples 面板 /
-                (command, description) pairs shown in the Examples panel.
-            **kwargs: 透传给 click.Group / Passed through to click.Group.
+            *args: 透传给 click.Group.
+            examples: (命令, 说明) 示例对, 展示在 Examples 面板.
+            **kwargs: 透传给 click.Group.
         """
         super().__init__(*args, **kwargs)
         self.examples: list[tuple[str, str]] = examples or []
@@ -233,19 +201,14 @@ class GdpmGroup(click.Group):
         按上下文分发帮助渲染. 主命令 (gdpm) 渲染总览帮助, 其余命令组渲染
         子命令帮助.
 
-        Dispatch help rendering by context. The root command (gdpm) renders
-        the overview help; other groups render the subcommand help.
-
         ----
 
         Args:
-            ctx: click 上下文 / click context.
-            formatter: click 帮助格式化器, 本实现未使用 /
-                click help formatter, unused in this implementation.
+            ctx: click 上下文.
+            formatter: click 帮助格式化器, 本实现未使用.
         """
         terminal_width = console.width
-        # 面板宽度留出边距, 并限制在 80 列内 /
-        # Keep some margin and cap the panel width at 80 columns.
+        # 面板宽度留出边距, 并限制在 80 列内
         panel_width = min(terminal_width - 6, 80)
 
         if ctx.info_name == "gdpm":
@@ -258,14 +221,11 @@ class GdpmGroup(click.Group):
         渲染主帮助: 命令总览, 用法与公共选项. 显示按类别分组的命令清单,
         Usage/Help 提示行和公共选项面板.
 
-        Render the main help. Shows the categorized command list, Usage/Help
-        hint lines and the Common Options panel.
-
         ----
 
         Args:
-            ctx: click 上下文 / click context.
-            panel_width: 面板宽度 (字符) / Panel width in characters.
+            ctx: click 上下文.
+            panel_width: 面板宽度 (字符).
         """
         console.print()
 
@@ -277,8 +237,7 @@ class GdpmGroup(click.Group):
         )
         table.add_column("Content", justify="left")
 
-        # 按分类渲染命令清单, 分类名用品红色标题行 /
-        # Render the command list per category with magenta category headers.
+        # 按分类渲染命令清单, 分类名用品红色标题行
         for category, cmds in COMMANDS.items():
             table.add_row(Text(f"  {category}", style="bold magenta"))
             for cmd_name, desc in cmds.items():
@@ -328,14 +287,11 @@ class GdpmGroup(click.Group):
         """
         渲染子命令组帮助. 显示组标题, 用法行, 子命令表格以及可选的示例面板.
 
-        Render subgroup help. Shows the group title, usage line, subcommand
-        table and the optional examples panel.
-
         ----
 
         Args:
-            ctx: click 上下文 / click context.
-            panel_width: 面板宽度 (字符) / Panel width in characters.
+            ctx: click 上下文.
+            panel_width: 面板宽度 (字符).
         """
         console.print()
         console.print(
@@ -373,8 +329,7 @@ class GdpmGroup(click.Group):
             )
         )
 
-        # 示例面板: 每条示例渲染为一行说明注释和一行命令 /
-        # Examples panel: each example renders as a comment line plus a command line.
+        # 示例面板: 每条示例渲染为一行说明注释和一行命令
         if self.examples:
             lines = []
             for example_cmd, example_desc in self.examples:
@@ -395,18 +350,14 @@ def _version_text() -> Text:
     """
     构建含发布标签与平台信息的版本文本.
 
-    Build version text with tag info.
-
     Returns:
-        富文本版本行: 基础版本, 发布标签, 安装方式与平台 /
-            Rich text: base version, release tag, install type and platform.
+        富文本版本行: 基础版本, 发布标签, 安装方式与平台.
     """
     import re
 
     from gdpm.utils.install import get_install_type, get_platform
 
-    # 去掉 dev/a/b/rc 等预发布后缀得到展示用基础版本 /
-    # Strip dev/a/b/rc prerelease suffixes for the displayed base version.
+    # 去掉 dev/a/b/rc 等预发布后缀得到展示用基础版本
     base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
     tag_display = f" [{__tag__}]" if __tag__ else ""
     install_type = get_install_type()
@@ -424,14 +375,12 @@ def print_completion(ctx: click.Context, _param: click.Parameter, value: str) ->
     """
     生成 shell 补全脚本.
 
-    Generate shell completion script.
-
     ----
 
     Args:
-        ctx: click 上下文 / click context.
-        _param: 触发回调的参数, 未使用 / Triggering parameter, unused.
-        value: 目标 shell (zsh/bash/fish) / Target shell (zsh/bash/fish).
+        ctx: click 上下文.
+        _param: 触发回调的参数, 未使用.
+        value: 目标 shell (zsh/bash/fish).
     """
     if not value or ctx.resilient_parsing:
         return
@@ -439,8 +388,7 @@ def print_completion(ctx: click.Context, _param: click.Parameter, value: str) ->
     import os
     import subprocess
 
-    # 复用 click 的补全协议: 设置 _GDPM_COMPLETE 后重新调用 gdpm 自身 /
-    # Reuse click's completion protocol: set _GDPM_COMPLETE and re-run gdpm.
+    # 复用 click 的补全协议: 设置 _GDPM_COMPLETE 后重新调用 gdpm 自身
     env = os.environ.copy()
     env["_GDPM_COMPLETE"] = f"{value}_source"
 
@@ -460,15 +408,12 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     打印项目信息横幅与版本. 显示 ASCII 横幅, 版本, 仓库地址和贡献者列表,
     随后退出.
 
-    Print project info banner and version. Shows the ASCII banner, version,
-    repo URL and contributor list, then exits.
-
     ----
 
     Args:
-        ctx: click 上下文 / click context.
-        _param: 触发回调的参数, 未使用 / Triggering parameter, unused.
-        value: 是否指定了 -i/--info / Whether -i/--info was given.
+        ctx: click 上下文.
+        _param: 触发回调的参数, 未使用.
+        value: 是否指定了 -i/--info.
     """
     if not value:
         return
@@ -476,8 +421,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     import httpx
     from rich.console import Group
 
-    # 组装信息面板内容: 横幅, 版本行和仓库地址 /
-    # Assemble the info panel: banner, version line and repo URL.
+    # 组装信息面板内容: 横幅, 版本行和仓库地址
     info_lines = []
     info_lines.append(Text(BANNER, style="bold cyan"))
     info_lines.append(Text(""))
@@ -500,8 +444,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
         )
     )
 
-    # 从 GitHub API 拉取贡献者列表; 网络失败时静默跳过 /
-    # Fetch the contributor list from the GitHub API; silently skip on failure.
+    # 从 GitHub API 拉取贡献者列表; 网络失败时静默跳过
     try:
         resp = httpx.get(f"{GITHUB_API_URL}contributors", timeout=5, verify=False)
         if resp.status_code == 200:
@@ -535,14 +478,12 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
     """
     打印版本信息并退出.
 
-    Print version info and exit.
-
     ----
 
     Args:
-        ctx: click 上下文 / click context.
-        _param: 触发回调的参数, 未使用 / Triggering parameter, unused.
-        value: 是否指定了 -V/--version / Whether -V/--version was given.
+        ctx: click 上下文.
+        _param: 触发回调的参数, 未使用.
+        value: 是否指定了 -V/--version.
     """
     if not value:
         return
@@ -579,11 +520,10 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
     help="Generate shell completion script.",
 )
 def main() -> None:
-    """Godot 依赖包管理器 / Godot Dependency Package Manager."""
+    """Godot 依赖包管理器."""
 
 
-# 子命令导入放在 main 定义之后, 避免模块间循环导入 /
-# Import subcommands after main is defined to avoid circular imports.
+# 子命令导入放在 main 定义之后, 避免模块间循环导入
 from gdpm.cli.add import add as add_cmd  # noqa: E402
 from gdpm.cli.cache_cmd import cache as cache_cmd  # noqa: E402
 from gdpm.cli.create import create as create_cmd  # noqa: E402
@@ -600,8 +540,7 @@ from gdpm.cli.status import status as status_cmd  # noqa: E402
 from gdpm.cli.sync import sync as sync_cmd  # noqa: E402
 from gdpm.cli.update import update as update_cmd  # noqa: E402
 
-# 将全部子命令挂载到根命令组 /
-# Mount all subcommands on the root command group.
+# 将全部子命令挂载到根命令组
 main.add_command(add_cmd, "add")  # type: ignore[has-type]
 main.add_command(cache_cmd, "cache")
 main.add_command(create_cmd, "create")

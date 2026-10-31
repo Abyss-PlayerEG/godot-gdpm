@@ -1,17 +1,15 @@
 """
 gdpm godot 子命令组, 负责 Godot 引擎版本管理.
 
-gdpm godot command group for Godot engine management.
-
 ----
 
 Note:
-    - list: 列出已安装或远程可用的版本 / List installed or remote versions.
-    - install / uninstall: 安装或卸载 Godot 引擎 / Install or uninstall engines.
-    - add / remove: 管理本地 Godot 引擎 / Manage local Godot engines.
-    - use / default: 设置项目或全局默认引擎 / Set project or global default engine.
-    - info: 显示当前引擎配置 / Show current engine configuration.
-    - open: 打开 Godot 编辑器或运行项目 / Open the editor or run the project.
+    - list: 列出已安装或远程可用的版本.
+    - install / uninstall: 安装或卸载 Godot 引擎.
+    - add / remove: 管理本地 Godot 引擎.
+    - use / default: 设置项目或全局默认引擎.
+    - info: 显示当前引擎配置.
+    - open: 打开 Godot 编辑器或运行项目.
 """
 
 from __future__ import annotations
@@ -35,7 +33,7 @@ from gdpm.cli.godot.open import godot_open
     ],
 )
 def godot() -> None:
-    """管理 Godot 引擎版本 / Manage Godot engine versions."""
+    """管理 Godot 引擎版本."""
 
 
 godot.add_command(godot_list, "list")

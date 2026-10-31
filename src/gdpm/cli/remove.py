@@ -1,21 +1,15 @@
 """
 gdpm remove 命令: 从项目移除插件.
 
-Remove plugins from the project.
-
 ----
 
 Note:
-    - 删除依赖条目: 从 gdproject.toml 中移除 /
-        Drop the entries from gdproject.toml.
-    - 删除插件目录: 移除 addons/ 下的插件目录 /
-        Delete addon directories under addons/.
-    - 删除本地 zip: 可选删除 gdpm-local/ 中的 zip /
-        Optionally delete zips in gdpm-local/.
-    - 更新锁文件: 同步 gdpm.lock /
-        Update gdpm.lock accordingly.
-    - remove(): 命令入口 / Command entry.
-    - _find_addon_dir(): 按 slug 查找插件目录 / Locate the addon directory by slug.
+    - 删除依赖条目: 从 gdproject.toml 中移除.
+    - 删除插件目录: 移除 addons/ 下的插件目录.
+    - 删除本地 zip: 可选删除 gdpm-local/ 中的 zip.
+    - 更新锁文件: 同步 gdpm.lock.
+    - remove(): 命令入口.
+    - _find_addon_dir(): 按 slug 查找插件目录.
 """
 
 from __future__ import annotations
@@ -52,7 +46,7 @@ if TYPE_CHECKING:
 )
 @yes_option
 def remove(plugins: tuple[str, ...], recursive: bool, yes: bool) -> None:
-    """从项目移除一个或多个插件 / Remove one or more plugins from the project."""
+    """从项目移除一个或多个插件."""
     root = require_project()
     config_path = root / "gdproject.toml"
     config = read_project_config(config_path)
@@ -69,21 +63,21 @@ def remove(plugins: tuple[str, ...], recursive: bool, yes: bool) -> None:
             not_found.append(slug)
             continue
 
-        # 检查是否为本地插件 / Check if it is a local plugin
+        # 检查是否为本地插件
         dep = config.dependencies.get(slug) or config.dev_dependencies.get(slug)
         is_local = dep.is_local if dep else False
 
         config.dependencies.pop(slug, None)
         config.dev_dependencies.pop(slug, None)
 
-        # 删除 addons/ 下的插件目录 / Remove the addon directory
+        # 删除 addons/ 下的插件目录
         actual_dir = _find_addon_dir(addons_dir, slug)
         if actual_dir and actual_dir.exists():
             import shutil
 
             shutil.rmtree(actual_dir)
 
-        # 若存在则删除本地 zip / Remove the local zip if it exists
+        # 若存在则删除本地 zip
         if is_local:
             local_zip = local_dir / f"{slug}.zip"
             if local_zip.exists():
@@ -132,18 +126,14 @@ def _find_addon_dir(addons_dir: Path, slug: str) -> Path | None:
     按 slug 查找 addons/ 下的插件目录. 先尝试直接目录名, 再通过 plugin.cfg
     名称或目录名做模糊匹配.
 
-    Find the addon directory for a slug. Try the directory name first, then
-    match loosely via plugin.cfg or directory name.
-
     ----
 
     Args:
-        addons_dir: addons/ 目录路径 / Path to the addons/ directory.
-        slug: 插件标识 / Plugin slug.
+        addons_dir: addons/ 目录路径.
+        slug: 插件标识.
 
     Returns:
-        匹配的插件目录; 未找到返回 None /
-            Matching plugin directory, or None if not found.
+        匹配的插件目录; 未找到返回 None.
     """
     if not addons_dir.exists():
         return None
@@ -152,8 +142,7 @@ def _find_addon_dir(addons_dir: Path, slug: str) -> Path | None:
     if direct.exists():
         return direct
 
-    # 模糊匹配: plugin.cfg 名称或下划线目录名 /
-    # Loose match: plugin.cfg name or underscore directory name
+    # 模糊匹配: plugin.cfg 名称或下划线目录名
 
     for child in addons_dir.iterdir():
         if not child.is_dir():

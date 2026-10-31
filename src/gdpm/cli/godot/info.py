@@ -1,13 +1,10 @@
 """
 gdpm godot info 命令, 显示当前 Godot 引擎配置.
 
-gdpm godot info command for showing the current Godot engine configuration.
-
 ----
 
 Note:
-    - godot_info: 显示当前项目或默认 Godot 引擎配置 /
-        Show config of the current project or default Godot engine.
+    - godot_info: 显示当前项目或默认 Godot 引擎配置.
 """
 
 from __future__ import annotations
@@ -32,7 +29,7 @@ from gdpm.cli.godot.common import resolve_engine_path
     ],
 )
 def godot_info() -> None:
-    """显示当前 Godot 引擎配置 / Show current Godot engine configuration."""
+    """显示当前 Godot 引擎配置."""
     from gdpm.config.local_engines import get_default_engine
     from gdpm.utils.path import shorten_path
 

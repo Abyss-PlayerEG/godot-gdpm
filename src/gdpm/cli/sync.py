@@ -1,25 +1,16 @@
 """
 gdpm sync 命令: 将 addons/ 同步到锁文件状态.
 
-Sync addons/ to the lock file state.
-
 ----
 
 Note:
-    - 同步本地插件: 从 gdpm-local/ 释放 zip 到 addons/ /
-        Sync local plugins from gdpm-local/ into addons/.
-    - 并行下载: 补齐缺失的 Store 插件 /
-        Download missing Store plugins in parallel.
-    - 移除多余插件: 删除锁文件之外的插件 /
-        Remove plugins not listed in the lock file.
-    - 更新锁文件: 记录本次变更 /
-        Update the lock file with the changes.
-    - MAX_PARALLEL: 最大并发下载数, 默认 5 /
-        Max parallel downloads, 5 by default.
-    - sync(): 命令入口, 内部定义异步 _sync() /
-        Command entry with the async _sync() worker inside.
-    - download_one(): 单个插件的并发下载任务 /
-        Concurrent download task for a single plugin.
+    - 同步本地插件: 从 gdpm-local/ 释放 zip 到 addons/.
+    - 并行下载: 补齐缺失的 Store 插件.
+    - 移除多余插件: 删除锁文件之外的插件.
+    - 更新锁文件: 记录本次变更.
+    - MAX_PARALLEL: 最大并发下载数, 默认 5.
+    - sync(): 命令入口, 内部定义异步 _sync().
+    - download_one(): 单个插件的并发下载任务.
 """
 
 from __future__ import annotations
@@ -50,7 +41,7 @@ from gdpm.utils.tag import scan_addons
 if TYPE_CHECKING:
     from pathlib import Path
 
-MAX_PARALLEL = 5  # 最大并行下载数 / Max parallel downloads
+MAX_PARALLEL = 5  # 最大并行下载数
 
 
 @click.command(
@@ -72,7 +63,7 @@ MAX_PARALLEL = 5  # 最大并行下载数 / Max parallel downloads
 @click.option("-nc", "--no-cache", is_flag=True, help="Don't use local cache")
 @yes_option
 def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
-    """将 addons/ 目录同步到锁文件状态 / Sync addons/ directory to lock file state."""
+    """将 addons/ 目录同步到锁文件状态."""
     ctx = get_project_context()
 
     if frozen and not ctx.lock_path.exists():
@@ -117,7 +108,7 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
         return
 
     async def _sync() -> None:
-        """执行同步流程 / Run the sync workflow."""
+        """执行同步流程."""
         from gdpm.utils.local import sync_local_plugins
 
         local_synced = sync_local_plugins(ctx.root, ctx.addons_dir)
@@ -130,7 +121,7 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
         errors: list[str] = []
         lock_updates: dict[str, LockEntry] = {}
 
-        # 准备下载任务 / Prepare download tasks
+        # 准备下载任务
         download_tasks: list[tuple[str, str, str]] = []
 
         for name in sorted(to_install):
@@ -148,7 +139,7 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                 else:
                     errors.append(f"Plugin '{name}' not found in Store")
 
-        # 并行下载插件 / Download plugins in parallel
+        # 并行下载插件
         if download_tasks:
             console.print(
                 f"Downloading {len(download_tasks)} plugin(s) "
@@ -170,19 +161,15 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                 """
                 下载单个插件, 返回结果元组.
 
-                Download one plugin and return a result tuple.
-
                 ----
 
                 Args:
-                    name: 插件名 / Plugin name.
-                    publisher: 发布者 / Publisher slug.
-                    version: 目标版本, 空串表示最新 /
-                        Target version, "" means the latest.
+                    name: 插件名.
+                    publisher: 发布者.
+                    version: 目标版本, 空串表示最新.
 
                 Returns:
-                    (名称, 版本, 发布者, 是否成功, zip 路径) /
-                        (name, version, publisher, success, zip path).
+                    (名称, 版本, 发布者, 是否成功, zip 路径).
                 """
                 async with semaphore:
                     task_id = progress.add_task("download", name=name, total=None)
@@ -193,7 +180,7 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                         speed: float,
                         _task: TaskID = task_id,
                     ) -> None:
-                        """更新下载进度条 / Update the download progress bar."""
+                        """更新下载进度条."""
                         if progress.tasks[_task].total is None:
                             progress.update(_task, total=total)
                         progress.update(_task, completed=current)
@@ -215,7 +202,7 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                     *[download_one(n, p, v) for n, p, v in download_tasks]
                 )
 
-            # 安装已下载的插件 / Install downloaded plugins
+            # 安装已下载的插件
             installed_lines = []
             console.print()
             for name, ver, publisher, success, zip_path in results:
@@ -238,14 +225,13 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                 except Exception as e:
                     errors.append(f"Failed to install {name}: {e}")
 
-        # 移除多余插件 / Remove extra plugins
+        # 移除多余插件
         removed_lines = []
         for name in sorted(to_remove):
             svc.manager.remove(name)
             removed_lines.append(f"  [green]✓[/green] Removed [bold]{name}[/bold]")
 
-        # 更新锁文件 (frozen 模式下跳过) /
-        # Update the lock file (skipped in frozen mode)
+        # 更新锁文件 (frozen 模式下跳过)
         if local_synced:
             for name in local_synced:
                 lock_updates[name] = LockEntry(
