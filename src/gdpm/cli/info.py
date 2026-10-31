@@ -41,9 +41,9 @@ def info(plugin_slug: str) -> None:
     # 商店 API 调用是异步的, 在独立协程中执行
     async def _info() -> None:
         """
-        查询插件详情并输出结果表.
+        查询插件详情与版本列表并渲染信息面板.
 
-        未提供 publisher 时先搜索定位发布者, 再获取详情与版本列表.
+        未提供 publisher 时先经搜索定位发布者, 查询失败输出错误并退出.
         """
         client = StoreClient()
 

@@ -36,10 +36,9 @@ def lock(check: bool) -> None:
     # 解析流程为异步逻辑, 在独立协程中执行
     async def _lock() -> None:
         """
-        解析所有在线依赖并生成锁文件条目.
+        解析全部依赖并生成锁文件.
 
-        本地插件直接以 version = "local" 写入, 在线插件经发布者解析与
-        版本约束匹配后写入; --check 模式下仅比对不落盘.
+        本地插件直接写入条目, 在线插件解析发布者并匹配版本约束.
         """
         ctx = get_project_context()
         store = ctx.store if hasattr(ctx, "store") else None

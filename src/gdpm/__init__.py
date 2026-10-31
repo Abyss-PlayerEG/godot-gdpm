@@ -9,5 +9,5 @@ Note:
     - __tag__: 版本标签 (如 stable, beta, alpha).
 """
 
-__version__ = "0.1.0b1"
-__tag__ = "beta"
+__version__ = "0.1.0"
+__tag__ = ""
