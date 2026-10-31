@@ -1,4 +1,16 @@
-"""gdpm info command."""
+"""
+gdpm info 命令. 查询并展示 Godot Asset Store 插件的详细信息, 包括描述,
+元数据和版本历史.
+
+Queries and displays detailed Godot Asset Store plugin information,
+including description, metadata and version history.
+
+----
+
+Note:
+    - info: 命令入口, 解析 publisher/slug 并输出详情面板 /
+        Command entry parsing publisher/slug and printing the detail panel.
+"""
 
 from __future__ import annotations
 
@@ -21,8 +33,9 @@ from gdpm.store.client import StoreClient
 )
 @click.argument("plugin_slug")
 def info(plugin_slug: str) -> None:
-    """Show detailed information about a plugin."""
-
+    """显示插件的详细信息 / Show detailed information about a plugin."""
+    # 支持 "publisher/slug" 与仅 "slug" 两种输入形式 /
+    # Accept both "publisher/slug" and bare "slug" input forms.
     parts = plugin_slug.split("/")
     if len(parts) == 2:
         publisher, slug = parts
@@ -30,10 +43,14 @@ def info(plugin_slug: str) -> None:
         publisher = ""
         slug = plugin_slug
 
+    # 商店 API 调用是异步的, 在独立协程中执行 /
+    # Store API calls are async; run them in a dedicated coroutine.
     async def _info() -> None:
         client = StoreClient()
 
         try:
+            # 未提供 publisher 时先搜索定位发布者, 优先精确匹配 slug /
+            # Without a publisher, search first and prefer an exact slug match.
             if not publisher:
                 results = await client.search(slug, limit=20)
                 if not results:
@@ -62,7 +79,7 @@ def info(plugin_slug: str) -> None:
 
         add_route = f"{author}/{slug}"
 
-        # Build info content
+        # 组装详情面板内容 / Build info content
         info_lines = []
         info_lines.append(
             f"[bold cyan]{detail.name}[/bold cyan]"
@@ -82,6 +99,8 @@ def info(plugin_slug: str) -> None:
             info_lines.append(f"  Tags:       {', '.join(detail.tags)}")
         info_lines.append("")
 
+        # 模板类插件不可作为 addon 安装, 显示提示而非安装命令 /
+        # Template plugins cannot be installed as addons; show a hint instead.
         if is_template(detail.tags):
             info_lines.append(
                 "  [yellow]Project template - not installable as addon[/yellow]"
@@ -89,7 +108,8 @@ def info(plugin_slug: str) -> None:
         else:
             info_lines.append(f"  Install:    [green]gdpm add {add_route}[/green]")
 
-        # Add versions table if available
+        # 如有版本数据则追加版本表, 最多展示 10 条 /
+        # Add a versions table if available, showing at most 10 entries.
         if versions:
             info_lines.append("")
             info_lines.append("  [bold]Versions:[/bold]")

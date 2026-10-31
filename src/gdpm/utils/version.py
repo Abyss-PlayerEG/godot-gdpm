@@ -1,7 +1,20 @@
-"""Version normalization and parsing utilities.
+"""
+版本规范化与解析工具, 提供宽松的版本解析, 兼容 Godot Asset Store 中
+常见的非标准格式.
 
-Provides lenient version parsing compatible with non-standard formats
-commonly found in Godot Asset Store (e.g., "4.6.2-stable", "V1.1").
+Version normalization and parsing utilities. Provide lenient version
+parsing compatible with non-standard formats commonly found in Godot
+Asset Store (e.g., "4.6.2-stable", "V1.1").
+
+----
+
+Note:
+    - normalize_version / normalize_constraint: 版本与约束规范化 /
+        Version and constraint normalization.
+    - parse_version / parse_specifier_set: 版本与约束解析 / Version and
+        constraint parsing.
+    - version_matches / is_compatible: 版本匹配与兼容性检查 / Version
+        matching and compatibility checks.
 """
 
 from __future__ import annotations
@@ -13,36 +26,50 @@ from packaging.version import InvalidVersion, Version
 
 
 def normalize_version(version: str) -> str:
-    """Normalize a version string to PEP 440 compatible format.
+    """
+    将版本字符串规范化为 PEP 440 兼容格式.
 
-    Handles common non-standard formats:
-    - "v1.0.0" → "1.0.0"
-    - "V2.0" → "2.0"
-    - "1.0.0-stable" → "1.0.0.stable"
-    - "1.0.0-beta1" → "1.0.0.beta1"
-    - "1.0.0-rc2" → "1.0.0.rc2"
+    Normalize a version string to PEP 440 compatible format.
+
+    ----
+
+    Note:
+        - 处理常见的非标准格式 / Handles common non-standard formats:
+        - "v1.0.0" -> "1.0.0"
+        - "V2.0" -> "2.0"
+        - "1.0.0-stable" -> "1.0.0.stable"
+        - "1.0.0-beta1" -> "1.0.0.beta1"
+        - "1.0.0-rc2" -> "1.0.0.rc2"
+
+    ----
+
+    Args:
+        version: 原始版本字符串 / Raw version string.
+
+    Returns:
+        规范化后的版本字符串 / Normalized version string.
     """
     if not version:
         return "0.0.0"
 
     v = version.strip()
 
-    # Remove v/V prefix
+    # 去除 v/V 前缀 / Remove v/V prefix
     v = re.sub(r"^[vV]+", "", v)
 
-    # Handle -stable, -beta, -alpha, -rc suffixes
+    # 处理稳定性后缀 / Handle -stable, -beta, -alpha, -rc suffixes
     # -stable → .stable
     # -beta1 → .beta1
     # -rc2 → .rc2
     v = re.sub(r"-(stable|alpha|beta|rc)(\d*)$", r".\1\2", v, flags=re.IGNORECASE)
 
-    # Replace remaining hyphens with dots
+    # 将剩余连字符替换为点号 / Replace remaining hyphens with dots
     v = v.replace("-", ".")
 
-    # Remove any non-alphanumeric characters except dots
+    # 移除点号以外的非字母数字字符 / Remove any non-alphanumeric chars except dots
     v = re.sub(r"[^a-zA-Z0-9.]", "", v)
 
-    # Ensure it starts with a digit
+    # 确保以数字开头 / Ensure it starts with a digit
     if not v or not v[0].isdigit():
         v = "0.0.0"
 
@@ -50,35 +77,49 @@ def normalize_version(version: str) -> str:
 
 
 def normalize_constraint(constraint: str) -> str:
-    """Normalize a version constraint string.
+    """
+    规范化版本约束字符串.
 
-    Handles:
-    - ">=v1.0.0" → ">=1.0.0"
-    - "^1.0.0" → ">=1.0.0,<2.0.0"
-    - "~1.0.0" → ">=1.0.0,<1.1.0"
-    - "v1.0.0" → "==1.0.0"
+    Normalize a version constraint string.
+
+    ----
+
+    Note:
+        - 处理常见约束形式 / Handles common constraint forms:
+        - ">=v1.0.0" -> ">=1.0.0"
+        - "^1.0.0" -> ">=1.0.0,<2.0.0"
+        - "~1.0.0" -> ">=1.0.0,<1.1.0"
+        - "v1.0.0" -> "==1.0.0"
+
+    ----
+
+    Args:
+        constraint: 原始约束字符串 / Raw constraint string.
+
+    Returns:
+        规范化后的约束字符串 / Normalized constraint string.
     """
     c = constraint.strip()
 
-    # Handle caret constraint
+    # 处理 ^ 约束 / Handle caret constraint
     if c.startswith("^"):
         base = normalize_version(c[1:])
         parts = base.split(".")
         major = int(parts[0])
         return f">={base},<{major + 1}.0.0"
 
-    # Handle tilde constraint
+    # 处理 ~ 约束 / Handle tilde constraint
     if c.startswith("~"):
         base = normalize_version(c[1:])
         parts = base.split(".")
         major, minor = int(parts[0]), int(parts[1])
         return f">={base},<{major}.{minor + 1}.0"
 
-    # Handle wildcard
+    # 处理通配符 / Handle wildcard
     if c == "*":
         return ">=0.0.0"
 
-    # Normalize version in constraint operators
+    # 规范化约束操作符后的版本 / Normalize version in constraint operators
     # >=v1.0.0 → >=1.0.0
     # ==V2.0 → ==2.0
     c = re.sub(
@@ -91,21 +132,67 @@ def normalize_constraint(constraint: str) -> str:
 
 
 def parse_version(version: str) -> Version:
-    """Parse a version string, normalizing it first."""
+    """
+    解析版本字符串, 解析前先规范化.
+
+    Parse a version string, normalizing it first.
+
+    ----
+
+    Args:
+        version: 原始版本字符串 / Raw version string.
+
+    Returns:
+        解析后的版本对象 / Parsed version object.
+
+    Raises:
+        InvalidVersion: 规范化后仍不是合法版本 /
+            The normalized string is still not a valid version.
+    """
     normalized = normalize_version(version)
     return Version(normalized)
 
 
 def parse_specifier_set(constraint: str) -> SpecifierSet:
-    """Parse a version constraint, normalizing it first."""
+    """
+    解析版本约束, 解析前先规范化.
+
+    Parse a version constraint, normalizing it first.
+
+    ----
+
+    Args:
+        constraint: 原始约束字符串 / Raw constraint string.
+
+    Returns:
+        解析后的约束集合 / Parsed specifier set.
+
+    Raises:
+        InvalidSpecifier: 规范化后仍不是合法约束 /
+            The normalized string is still not a valid specifier.
+    """
     normalized = normalize_constraint(constraint)
     return SpecifierSet(normalized)
 
 
 def version_matches(version: str, constraint: str) -> bool:
-    """Check if a version matches a constraint."""
+    """
+    判断版本是否满足约束, 解析失败时回退为字符串比较.
+
+    Check if a version matches a constraint. Falls back to string
+    comparison when parsing fails.
+
+    ----
+
+    Args:
+        version: 版本字符串 / Version string.
+        constraint: 约束字符串 / Constraint string.
+
+    Returns:
+        满足约束返回 True / True if the version matches the constraint.
+    """
     try:
-        # Wildcard always matches
+        # 通配符始终匹配 / Wildcard always matches
         if constraint.strip() == "*":
             return True
 
@@ -113,7 +200,7 @@ def version_matches(version: str, constraint: str) -> bool:
         spec = parse_specifier_set(constraint)
         return ver in spec
     except InvalidVersion, InvalidSpecifier:
-        # Fallback: string comparison
+        # 回退为字符串比较 / Fallback: string comparison
         return normalize_version(version) == normalize_version(constraint)
 
 
@@ -122,14 +209,25 @@ def is_compatible(
     min_godot: str,
     max_godot: str,
 ) -> tuple[bool, str]:
-    """Check if a plugin is compatible with the project's Godot version.
+    """
+    检查插件是否与项目 Godot 版本兼容.
 
-    Returns (compatible, message).
+    Check if a plugin is compatible with the project's Godot version.
+
+    ----
+
+    Args:
+        project_godot: 项目 Godot 版本约束 / Project Godot version constraint.
+        min_godot: 插件要求的最低版本 / Minimum Godot version required.
+        max_godot: 插件支持的最高版本 / Maximum Godot version supported.
+
+    Returns:
+        (是否兼容, 说明信息) 元组 / Tuple of (compatible, message).
     """
     if not project_godot or project_godot == "*":
         return True, ""
 
-    # Filter out None/empty values
+    # 过滤 None 与空值 / Filter out None/empty values
     min_godot = min_godot if min_godot and min_godot != "None" else ""
     max_godot = max_godot if max_godot and max_godot != "None" else ""
 
@@ -140,7 +238,7 @@ def is_compatible(
         return True, ""
 
     try:
-        # Extract the base version from the project constraint
+        # 从项目约束中提取基础版本 / Extract the base version from the constraint
         # ">=4.2.0" → "4.2.0"
         # ">=4.2.0,<5.0.0" → "4.2.0"
         base = re.sub(r"[><=!~^*\s]", "", project_godot)

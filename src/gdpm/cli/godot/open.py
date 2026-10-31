@@ -1,4 +1,14 @@
-"""gdpm godot open 命令 / gdpm godot open command."""
+"""
+gdpm godot open 命令, 打开 Godot 编辑器或运行当前项目.
+
+gdpm godot open command for opening the Godot editor or running the project.
+
+----
+
+Note:
+    - godot_open: 打开 Godot 编辑器或运行当前项目 /
+        Open the Godot editor or run the current project.
+"""
 
 from __future__ import annotations
 
@@ -65,12 +75,14 @@ def godot_open(run: bool) -> None:
         return
 
     binary_path = Path(binary)
+    # .app 包时深入 Contents/MacOS 取真实二进制 / Resolve real binary inside .app
     if binary_path.suffix == ".app":
         macos_binary = binary_path / "Contents" / "MacOS" / "Godot"
         if macos_binary.exists():
             binary = str(macos_binary)
 
     args = [binary]
+    # --run 仅指定项目目录, 编辑器模式追加 -e / --run only sets path, editor adds -e
     if run:
         args.extend(["--path", str(root)])
     else:
@@ -85,6 +97,7 @@ def godot_open(run: bool) -> None:
             stderr=subprocess.DEVNULL,
         )
         try:
+            # 短暂等待以捕获启动失败 / Brief wait to catch early launch failure
             ret: int | None = proc.wait(timeout=1)
         except subprocess.TimeoutExpired:
             ret = None

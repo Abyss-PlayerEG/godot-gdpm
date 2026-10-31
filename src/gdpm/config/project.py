@@ -1,4 +1,40 @@
-"""Project configuration (gdproject.toml) reader and writer."""
+"""
+读写项目根目录的 gdproject.toml, 声明项目元信息与插件依赖.
+
+Project config (gdproject.toml) reader and writer. Read and write
+gdproject.toml in the project root, declaring project metadata and
+plugin dependencies.
+
+----
+
+example:
+    配置文件结构 / Config file layout:
+
+        [project]
+        name = "my-game"
+        version = "0.1.0"
+        godot = ">=4.0"
+        license = "MIT"
+        addons_dir = "addons"
+
+        [dependencies]
+        limbo-ai = "1.2.0"  # 简写版本约束 / Short version constraint
+        my-plugin = { version = "1.0", publisher = "someone", path = "..." }
+        local-plugin = { local = true }
+
+        [dev-dependencies]
+        debug-tool = "*"
+
+        [scripts]
+        run = "godot --path ."
+
+----
+
+Note:
+    - ProjectConfig: 项目配置数据类 / Project configuration dataclass.
+    - read_project_config: 读取 gdproject.toml / Read gdproject.toml.
+    - write_project_config: 写入 gdproject.toml / Write gdproject.toml.
+"""
 
 from __future__ import annotations
 
@@ -14,6 +50,28 @@ if TYPE_CHECKING:
 
 @dataclass
 class ProjectConfig:
+    """
+    项目配置, 对应 gdproject.toml 中的 [project] 及各依赖/脚本小节.
+
+    Project configuration. Maps to the [project] section and
+    dependency/script sections of gdproject.toml.
+
+    ----
+
+    Note:
+        - name: 项目名称 / Project name.
+        - version: 项目版本 / Project version.
+        - description: 项目描述 / Project description.
+        - godot: Godot 引擎版本约束 / Godot engine version constraint.
+        - license: 开源许可证 / Open source license.
+        - addons_dir: 插件安装目录名 / Addon installation directory name.
+        - dependencies: 运行时插件依赖 / Runtime plugin dependencies.
+        - dev_dependencies: 开发期插件依赖 /
+            Development plugin dependencies.
+        - scripts: 自定义脚本命令 / Custom script commands.
+        - registries: 自定义注册表地址 / Custom registry URLs.
+    """
+
     name: str = ""
     version: str = "0.1.0"
     description: str = ""
@@ -27,6 +85,25 @@ class ProjectConfig:
 
 
 def read_project_config(path: Path) -> ProjectConfig:
+    """
+    读取项目配置文件, 解析 gdproject.toml 中的 [project], [dependencies],
+    [dev-dependencies], [scripts] 与 [registries] 小节.
+
+    Read the project configuration file. Parse the [project],
+    [dependencies], [dev-dependencies], [scripts] and [registries]
+    sections of gdproject.toml.
+
+    ----
+
+    Args:
+        path: gdproject.toml 的路径 / Path to gdproject.toml.
+
+    Returns:
+        解析得到的 ProjectConfig / The parsed ProjectConfig.
+
+    Raises:
+        FileNotFoundError: 配置文件不存在 / The config file does not exist.
+    """
     if not path.exists():
         raise FileNotFoundError(f"Config not found: {path}")
 
@@ -41,6 +118,8 @@ def read_project_config(path: Path) -> ProjectConfig:
 
     dependencies: dict[str, Dependency] = {}
     for name, spec in deps_raw.items():
+        # 依赖支持简写字符串与完整对象表两种写法 /
+        # Dependencies accept a shorthand string or a full inline table
         if isinstance(spec, str):
             dependencies[name] = Dependency.from_spec(name, spec)
         elif isinstance(spec, dict):
@@ -82,6 +161,27 @@ def read_project_config(path: Path) -> ProjectConfig:
 
 
 def write_project_config(config: ProjectConfig, path: Path) -> None:
+    """
+    写入项目配置文件, 将配置序列化为 TOML 并覆盖写入目标文件.
+
+    Write the project configuration file. Serialize the config as TOML
+    and overwrite the target file.
+
+    ----
+
+    Note:
+        依赖的三种写法 / Three dependency notations:
+        - 本地插件 / local plugin: ``name = { local = true }``.
+        - 含 publisher 或 path / with publisher or path:
+            ``name = { version = "...", publisher = "...", path = "..." }``.
+        - 普通版本约束 / plain version constraint: ``name = "1.0"``.
+
+    ----
+
+    Args:
+        config: 要写入的项目配置 / The project config to write.
+        path: gdproject.toml 的路径 / Path to gdproject.toml.
+    """
     lines: list[str] = []
 
     lines.append("[project]")

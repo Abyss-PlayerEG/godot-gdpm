@@ -1,4 +1,22 @@
-"""Shared constants for gdpm."""
+"""
+gdpm 全局常量. 定义项目内共享的文件名, 目录名与外部 URL 等常量, 以及
+GitHub API 认证辅助函数.
+
+Shared constants for gdpm: filenames, directory names, and external
+URLs, plus GitHub API authentication helpers.
+
+----
+
+Note:
+    - 项目文件名常量: 配置文件, 锁文件, 插件标签文件 /
+        Project filename constants: config, lock file, plugin tag file.
+    - 本地插件常量: 本地目录名与哈希清单 /
+        Local plugin constants: local directory and hash manifest.
+    - 仓库与 API URL 常量 / Repository and API URL constants.
+    - get_github_token: 读取 GitHub token / Read the GitHub token.
+    - get_github_headers: 构造 GitHub API 请求头 /
+        Build GitHub API request headers.
+"""
 
 from __future__ import annotations
 
@@ -18,7 +36,17 @@ GODOT_RELEASES_URL = "https://api.github.com/repos/godotengine/godot/releases"
 
 
 def get_github_token() -> str:
-    """Read GitHub token from ~/.gdpm/github_token.txt."""
+    """
+    从 ~/.gdpm/github_token.txt 读取 GitHub token. 文件不存在或读取失败时
+    返回空字符串.
+
+    Read GitHub token from ~/.gdpm/github_token.txt. Return an empty
+    string when the file is missing or unreadable.
+
+    Returns:
+        str: token 内容 (已去除首尾空白), 失败时为空字符串 /
+            The token content (stripped), or an empty string on failure.
+    """
     token_path = Path.home() / ".gdpm" / "github_token.txt"
     if not token_path.exists():
         return ""
@@ -30,7 +58,16 @@ def get_github_token() -> str:
 
 
 def get_github_headers() -> dict[str, str]:
-    """Get headers for GitHub API requests."""
+    """
+    获取 GitHub API 请求头. 有 token 时返回带 Authorization 的请求头,
+    否则返回空字典.
+
+    Get headers for GitHub API requests. Return headers with
+    Authorization when a token exists, otherwise return an empty dict.
+
+    Returns:
+        dict[str, str]: HTTP 请求头字典 / The HTTP headers dict.
+    """
     token = get_github_token()
     if token:
         return {"Authorization": f"Bearer {token}"}

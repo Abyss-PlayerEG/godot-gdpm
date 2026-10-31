@@ -1,4 +1,20 @@
-"""gdpm search command."""
+"""
+gdpm search 命令: 在 Godot Asset Store 中搜索插件.
+
+Search plugins in the Godot Asset Store.
+
+----
+
+Note:
+    - 查询 Store API: 按关键词检索插件 /
+        Query the Store API for plugins by keyword.
+    - 过滤项目模板: 默认排除模板类插件 /
+        Filter out project templates by default.
+    - 输出结果: 格式化列表或 JSON /
+        Print formatted results or JSON.
+    - search(): 命令入口, 内部定义异步 _search() /
+        Command entry with the async _search() worker inside.
+"""
 
 from __future__ import annotations
 
@@ -35,9 +51,10 @@ from gdpm.store.client import StoreClient
 @click.option("--all", "show_all", is_flag=True, help="Include project templates")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
 def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> None:
-    """Search for plugins in the Godot Asset Store."""
+    """在 Godot Asset Store 中搜索插件 / Search for plugins in the Godot Asset Store."""
 
     async def _search() -> None:
+        """执行搜索并格式化输出 / Run the search and print formatted output."""
         from gdpm.cli.common import find_project_root
 
         root = find_project_root()
@@ -59,6 +76,7 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
         finally:
             await client.close()
 
+        # 除非指定 --all, 否则过滤项目模板 /
         # Filter out templates unless --all is used
         if not show_all:
             results = [r for r in results if not is_template(r.tags)]
@@ -109,6 +127,8 @@ def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> 
             lines.extend(meta)
 
             if not is_template(plugin.tags):
+                # 查询最新版本并校验 Godot 兼容性 /
+                # Fetch the latest version and check Godot compatibility
                 try:
                     versions = await client.get_versions(
                         plugin.publisher_slug, plugin.slug

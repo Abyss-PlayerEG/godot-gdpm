@@ -1,4 +1,16 @@
-"""gdpm godot install/uninstall 命令 / gdpm godot install/uninstall commands."""
+"""
+gdpm godot install/uninstall 命令, 安装与卸载 Godot 引擎.
+
+gdpm godot install/uninstall commands for installing and uninstalling
+Godot engines.
+
+----
+
+Note:
+    - godot_install: 下载, 校验并解压 Godot 引擎 /
+        Download, verify and extract a Godot engine.
+    - godot_uninstall: 删除已安装的 Godot 引擎 / Remove an installed Godot engine.
+"""
 
 from __future__ import annotations
 
@@ -54,6 +66,7 @@ def godot_install(version: str, csharp: bool) -> None:
             f"  Godot [cyan]{tag}{suffix}[/cyan] is already installed. Reinstall?"
         ):
             return
+        # 确认后删除旧安装目录以便重装 / Remove old install dir before reinstalling
         shutil.rmtree(ver_dir, onexc=lambda *args: None)
 
     url = build_download_url(tag, csharp)
@@ -108,6 +121,7 @@ def godot_install(version: str, csharp: bool) -> None:
 
         if expected_hash:
             actual_hash = sha256.hexdigest()
+            # 校验失败时删除下载文件 / Remove the download when verification fails
             if actual_hash != expected_hash:
                 zip_path.unlink()
                 console.print(
@@ -129,6 +143,7 @@ def godot_install(version: str, csharp: bool) -> None:
     try:
         from gdpm.cli.godot.common import prepare_engine_dir
 
+        # 解压到版本目录并修复执行权限 / Extract into version dir, fix exec perms
         ver_dir.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(zip_path) as zf:
             zf.extractall(ver_dir)
@@ -139,6 +154,7 @@ def godot_install(version: str, csharp: bool) -> None:
         console.print(f"[green]✓[/green] Installed Godot [bold]{tag}{suffix}[/bold]")
     except Exception as e:
         console.print(f"[red]Error:[/red] Extraction failed: {e}")
+        # 解压失败时清理残留目录和压缩包 / Clean partial dir and archive on failure
         if ver_dir.exists():
             shutil.rmtree(ver_dir)
         if zip_path.exists():

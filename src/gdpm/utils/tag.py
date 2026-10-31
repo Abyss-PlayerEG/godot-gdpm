@@ -1,4 +1,16 @@
-"""Tag file utilities."""
+"""
+标记文件工具, 读取和解析插件目录中的 tag.gdpm 标记文件.
+
+Tag file utilities. Read and parse the tag.gdpm marker files inside
+plugin directories.
+
+----
+
+Note:
+    - PluginTag: 插件标记信息 / Plugin tag information.
+    - read_plugin_tag: 读取单个标记 / Read a single tag.
+    - scan_addons: 扫描带标记的插件 / Scan addons for tagged plugins.
+"""
 
 from __future__ import annotations
 
@@ -13,15 +25,38 @@ if TYPE_CHECKING:
 
 @dataclass
 class PluginTag:
+    """
+    插件标记信息.
+
+    Plugin tag information.
+
+    ----
+
+    Attributes:
+        slug: 插件 slug / Plugin slug.
+        source: 标记文件的完整来源标识 / Full source string from the tag file.
+        is_local: 是否为本地插件 / Whether the plugin is local.
+    """
+
     slug: str
     source: str
     is_local: bool
 
 
 def read_plugin_tag(addon_dir: Path) -> PluginTag | None:
-    """Read tag.gdpm from an addon directory.
+    """
+    读取 addon 目录下的 tag.gdpm.
 
-    Returns None if tag file doesn't exist.
+    Read tag.gdpm from an addon directory.
+
+    ----
+
+    Args:
+        addon_dir: addon 目录路径 / Path to the addon directory.
+
+    Returns:
+        插件标记信息; 标记文件不存在或为空时返回 None /
+            Plugin tag, or None if the tag file is missing or empty.
     """
     tag_path = addon_dir / TAG_FILENAME
     if not tag_path.exists():
@@ -39,9 +74,18 @@ def read_plugin_tag(addon_dir: Path) -> PluginTag | None:
 
 
 def scan_addons(addons_dir: Path) -> list[tuple[Path, PluginTag]]:
-    """Scan addons directory for tagged plugins.
+    """
+    扫描 addons 目录下带标记的插件.
 
-    Returns list of (directory_path, tag) tuples.
+    Scan addons directory for tagged plugins.
+
+    ----
+
+    Args:
+        addons_dir: addons 目录路径 / Path to the addons directory.
+
+    Returns:
+        (目录路径, 标记) 元组的列表 / List of (directory_path, tag) tuples.
     """
     if not addons_dir.exists():
         return []

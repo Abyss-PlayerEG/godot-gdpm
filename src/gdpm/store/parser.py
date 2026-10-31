@@ -1,4 +1,18 @@
-"""API response parser."""
+"""
+Asset Store API 响应解析器, 将 API 返回的原始 JSON 转换为内部数据模型.
+
+Asset Store API response parsers. Convert the raw JSON returned by the
+API into internal data models.
+
+----
+
+Note:
+    - parse_search_hit: 搜索命中项转 Plugin / Convert a search hit to Plugin.
+    - parse_asset_detail: 资产详情转 PluginDetail /
+        Convert asset detail to PluginDetail.
+    - parse_release: 发布记录规范化为字符串字典 /
+        Normalize a release record into a string dict.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +22,21 @@ from gdpm.models.plugin import Plugin, PluginDetail
 
 
 def parse_search_hit(hit: dict[str, Any]) -> Plugin:
+    """
+    将搜索命中项解析为 Plugin.
+
+    Parse a search hit into a Plugin.
+
+    ----
+
+    Args:
+        hit: API 返回的搜索命中项 / A search hit from the API.
+
+    Returns:
+        解析后的插件模型 / The parsed plugin model.
+    """
+    # 命中项可能直接是资产或嵌套在 asset 字段 /
+    # A hit may be the asset itself or nested under "asset".
     asset = hit.get("asset", hit)
     publisher_data = asset.get("publisher", {})
     tags_data = asset.get("tags", [])
@@ -31,6 +60,20 @@ def parse_search_hit(hit: dict[str, Any]) -> Plugin:
 
 
 def parse_asset_detail(data: dict[str, Any]) -> PluginDetail:
+    """
+    将资产详情解析为 PluginDetail, 版本相关字段留空, 由调用方按需补充.
+
+    Parse asset detail into PluginDetail. Release-related fields are left
+    empty for the caller to fill in.
+
+    ----
+
+    Args:
+        data: API 返回的资产详情 / Asset detail from the API.
+
+    Returns:
+        解析后的插件详情模型 / The parsed plugin detail model.
+    """
     publisher_data = data.get("publisher", {})
     tags_data = data.get("tags", [])
 
@@ -58,6 +101,21 @@ def parse_asset_detail(data: dict[str, Any]) -> PluginDetail:
 
 
 def parse_release(data: dict[str, Any]) -> dict[str, str]:
+    """
+    将发布记录规范化为字符串字典.
+
+    Normalize a release record to a string dict.
+
+    ----
+
+    Args:
+        data: API 返回的发布记录 / Release record from the API.
+
+    Returns:
+        含 id, version, stable, created, 版本范围和下载地址的字典 /
+            Dict with id, version, stable, created, Godot version range and
+            download URL.
+    """
     return {
         "id": str(data.get("id", "")),
         "version": data.get("version", ""),

@@ -1,4 +1,14 @@
-"""gdpm godot info 命令 / gdpm godot info command."""
+"""
+gdpm godot info 命令, 显示当前 Godot 引擎配置.
+
+gdpm godot info command for showing the current Godot engine configuration.
+
+----
+
+Note:
+    - godot_info: 显示当前项目或默认 Godot 引擎配置 /
+        Show config of the current project or default Godot engine.
+"""
 
 from __future__ import annotations
 

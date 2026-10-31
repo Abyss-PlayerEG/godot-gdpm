@@ -1,4 +1,19 @@
-"""gdpm init command."""
+"""
+gdpm init 命令: 在现有 Godot 项目中初始化 gdpm.
+
+Initialize gdpm in an existing Godot project.
+
+----
+
+Note:
+    - 校验 project.godot: 检查文件与配置有效性 /
+        Validate project.godot: check the file and its contents.
+    - 检测版本约束: 推断 Godot 版本约束 /
+        Detect the Godot version constraint.
+    - 生成配置: 写入 gdproject.toml 并创建 addons/ 目录 /
+        Write gdproject.toml and create the addons/ directory.
+    - init(): 命令入口 / Command entry.
+"""
 
 from __future__ import annotations
 
@@ -19,7 +34,7 @@ from gdpm.utils.godot import detect_version_constraint, parse_project_godot
     ],
 )
 def init() -> None:
-    """Initialize a new gdpm project."""
+    """初始化新的 gdpm 项目 / Initialize a new gdpm project."""
     project_dir = Path.cwd()
     config_path = project_dir / "gdproject.toml"
 
@@ -60,6 +75,7 @@ def init() -> None:
         )
         raise SystemExit(1)
 
+    # 项目名为空时回退到目录名 / Fall back to the directory name
     name = godot_project.name or project_dir.name
 
     godot = detect_version_constraint(project_dir)

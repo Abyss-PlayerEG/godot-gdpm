@@ -106,6 +106,8 @@ disable = [
     # 项目约定
     "missing-class-docstring",
     "missing-function-docstring",
+    # 协议桩方法需要 ... 函数体 / Protocol stubs need ... bodies
+    "unnecessary-ellipsis",
     # 复杂度（CLI 命令天然参数多、分支多）
     "too-many-instance-attributes",
     "too-many-arguments",

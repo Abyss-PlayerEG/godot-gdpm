@@ -1,4 +1,21 @@
-"""gdpm update command."""
+"""
+gdpm update 命令: 将插件更新到较新版本.
+
+Update plugins to newer versions.
+
+----
+
+Note:
+    - 查询版本列表: 从 Store 获取全部版本 /
+        Query the Store for the version list.
+    - 挑选版本: 按版本约束选择最新兼容版本 /
+        Pick the newest version matching the version constraint.
+    - 下载安装: 下载并安装选定版本 /
+        Download and install the chosen version.
+    - 更新锁文件: 记录新版本 / Update the lock file.
+    - update(): 命令入口, 内部定义异步 _update() /
+        Command entry with the async _update() worker inside.
+"""
 
 from __future__ import annotations
 
@@ -35,9 +52,10 @@ from gdpm.utils.version import normalize_version
 )
 @yes_option
 def update(plugins: tuple[str, ...], latest: bool, check: bool, yes: bool) -> None:
-    """Update plugins to newer versions."""
+    """将插件更新到较新版本 / Update plugins to newer versions."""
 
     async def _update() -> None:
+        """检查并应用插件更新 / Check for and apply plugin updates."""
         ctx = get_project_context()
 
         if plugins:
@@ -58,12 +76,12 @@ def update(plugins: tuple[str, ...], latest: bool, check: bool, yes: bool) -> No
                     errors.append(f"Plugin '{name}' not in dependencies")
                     continue
 
-                # Skip local plugins
+                # 跳过本地插件 / Skip local plugins
                 if dep.is_local:
                     console.print(f"  [dim]Skipping {name} (local plugin)[/dim]")
                     continue
 
-                # Resolve publisher
+                # 解析发布者 / Resolve publisher
                 if dep.publisher_slug:
                     publisher = dep.publisher_slug
                 else:
@@ -75,7 +93,7 @@ def update(plugins: tuple[str, ...], latest: bool, check: bool, yes: bool) -> No
                         continue
                     publisher = resolved.publisher
 
-                # Get versions
+                # 获取版本列表 / Get the version list
                 try:
                     versions = await svc.store.get_versions(publisher, name)
                 except Exception as e:
@@ -86,14 +104,15 @@ def update(plugins: tuple[str, ...], latest: bool, check: bool, yes: bool) -> No
                     errors.append(f"No versions found for '{name}'")
                     continue
 
-                # Find current version
+                # 查找当前安装的版本 / Find the current version
                 current = ctx.lock_map.get(name)
                 current_ver = current.version.lstrip("v") if current else ""
 
-                # Find latest compatible version
+                # 查找最新兼容版本 / Find the latest compatible version
                 latest_ver = None
                 for v in versions:
                     api_ver = v["version"].lstrip("v")
+                    # 延迟导入 Version 类 / Lazy import of the Version class
                     if latest or dep.constraint.matches(
                         __import__("gdpm.models.version", fromlist=["Version"]).Version(
                             api_ver
@@ -140,7 +159,7 @@ def update(plugins: tuple[str, ...], latest: bool, check: bool, yes: bool) -> No
             console.print("[yellow]Dry run complete.[/yellow]")
             return
 
-        # Apply updates
+        # 应用更新 / Apply updates
         svc2 = get_services(ctx)
         applied = 0
         lock_updates: dict[str, LockEntry] = {}

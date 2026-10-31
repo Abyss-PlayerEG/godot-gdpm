@@ -1,4 +1,17 @@
-"""Godot Asset Store API client."""
+"""
+Godot Asset Store API 客户端, 通过 httpx 异步访问 Asset Store,
+负责插件搜索, 详情, 版本查询与下载.
+
+Access the Asset Store asynchronously via httpx for plugin search,
+details, version listing and downloads.
+
+----
+
+Note:
+    - DEFAULT_BASE_URL: Asset Store API 默认地址 / Default API base URL.
+    - ProgressCallback: 下载进度回调类型 / Download progress callback type.
+    - StoreClient: REST API 异步客户端 / Async REST API client.
+"""
 
 from __future__ import annotations
 
@@ -16,11 +29,38 @@ if TYPE_CHECKING:
 
 DEFAULT_BASE_URL = "https://store.godotengine.org/api/v1"
 
+# 下载进度回调: (已下载字节数, 总字节数, 速度 B/s) /
+# Download progress callback: (downloaded bytes, total bytes, speed in B/s).
 ProgressCallback = Callable[[int, int, float], None]
 
 
 class StoreClient:
+    """
+    Godot Asset Store REST API 异步客户端, 基于 httpx.AsyncClient,
+    提供搜索, 详情, 版本与流式下载接口.
+
+    Async Asset Store REST client. Built on httpx.AsyncClient, providing
+    search, detail, version and streaming download APIs.
+
+    ----
+
+    Attributes:
+        _base_url: API 基础地址, 末尾不含斜杠 / API base URL without a trailing slash.
+        _client: 底层 httpx 异步 HTTP 客户端 / Underlying httpx async HTTP client.
+    """
+
     def __init__(self, base_url: str = DEFAULT_BASE_URL) -> None:
+        """
+        初始化客户端.
+
+        Initialize the client.
+
+        ----
+
+        Args:
+            base_url: API 基础地址, 末尾斜杠会被去除 /
+                API base URL; a trailing slash is stripped.
+        """
         self._base_url = base_url.rstrip("/")
         self._client = httpx.AsyncClient(
             base_url=self._base_url,
@@ -28,6 +68,7 @@ class StoreClient:
         )
 
     async def close(self) -> None:
+        """关闭底层 HTTP 客户端 / Close the underlying HTTP client."""
         await self._client.aclose()
 
     async def search(
@@ -38,12 +79,42 @@ class StoreClient:
         sort: str = "relevance",
         include_projects: bool = False,
     ) -> list[Plugin]:
+        """
+        搜索插件.
+
+        Search plugins.
+
+        ----
+
+        Note:
+            - 调用 GET /search/query/ 检索资产, 默认只返回插件类型 /
+                Call GET /search/query/ to search assets; plugin type only
+                by default.
+
+        ----
+
+        Args:
+            query: 搜索关键词 / Search keyword.
+            limit: 返回数量上限 / Maximum number of results.
+            sort: 排序方式, 如 relevance / Sort order, e.g. relevance.
+            include_projects: 是否包含项目类型资产 /
+                Whether to include project-type assets.
+
+        Returns:
+            解析后的插件列表 / List of parsed plugins.
+
+        Raises:
+            httpx.HTTPError: 请求失败或响应状态码非 2xx /
+                Request failed or response status is not 2xx.
+        """
         params: dict[str, Any] = {
             "query": query,
             "sort": sort,
             "batch_size": limit,
         }
         if not include_projects:
+            # type=0 只返回插件类型, 过滤掉项目模板 /
+            # type=0 keeps plugin-type assets only, excluding templates.
             params["type"] = 0
 
         resp = await self._client.get("/search/query/", params=params)
@@ -53,6 +124,31 @@ class StoreClient:
         return [parse_search_hit(hit) for hit in hits]
 
     async def get_plugin(self, publisher: str, slug: str) -> PluginDetail:
+        """
+        获取插件详情.
+
+        Get plugin details.
+
+        ----
+
+        Note:
+            - 调用 GET /assets/{publisher}/{slug}/, 并用发布列表补全版本信息 /
+                Call GET /assets/{publisher}/{slug}/ and enrich the result
+                with release info.
+
+        ----
+
+        Args:
+            publisher: 发布者 slug / Publisher slug.
+            slug: 插件 slug / Plugin slug.
+
+        Returns:
+            插件详情 / Plugin details.
+
+        Raises:
+            httpx.HTTPError: 请求失败或响应状态码非 2xx /
+                Request failed or response status is not 2xx.
+        """
         resp = await self._client.get(f"/assets/{publisher}/{slug}/")
         resp.raise_for_status()
         data: dict[str, Any] = resp.json()
@@ -62,6 +158,8 @@ class StoreClient:
         releases = await self.get_versions(publisher, slug)
         if releases:
             latest = releases[0]
+            # 用最新 3 个发布补全版本与下载信息 /
+            # Fill version and download info from the latest 3 releases.
             detail = PluginDetail(
                 slug=detail.slug,
                 name=detail.name,
@@ -81,6 +179,30 @@ class StoreClient:
         return detail
 
     async def get_versions(self, publisher: str, slug: str) -> list[dict[str, str]]:
+        """
+        获取插件的版本列表.
+
+        List the releases of a plugin.
+
+        ----
+
+        Note:
+            - 调用 GET /releases/{publisher}/{slug}/ /
+                Call GET /releases/{publisher}/{slug}/.
+
+        ----
+
+        Args:
+            publisher: 发布者 slug / Publisher slug.
+            slug: 插件 slug / Plugin slug.
+
+        Returns:
+            版本信息字典列表 / List of release info dicts.
+
+        Raises:
+            httpx.HTTPError: 请求失败或响应状态码非 2xx /
+                Request failed or response status is not 2xx.
+        """
         resp = await self._client.get(f"/releases/{publisher}/{slug}/")
         resp.raise_for_status()
         data: list[dict[str, Any]] = resp.json()
@@ -94,6 +216,31 @@ class StoreClient:
         dest: Path,
         on_progress: ProgressCallback | None = None,
     ) -> Path:
+        """
+        下载插件 zip 包, 按版本号匹配发布, 找不到时回退到最新发布.
+
+        Download the plugin zip archive. Match a release by version, falling
+        back to the latest release.
+
+        ----
+
+        Args:
+            publisher: 发布者 slug / Publisher slug.
+            slug: 插件 slug / Plugin slug.
+            version: 目标版本号 / Target version.
+            dest: 保存目录 / Destination directory.
+            on_progress: 进度回调 (已下载, 总量, 速度 B/s) /
+                Progress callback (downloaded, total, speed in B/s).
+
+        Returns:
+            zip 文件路径 / Path of the saved zip file.
+
+        Raises:
+            ValueError: 找不到发布记录或下载地址 /
+                No release record or download URL found.
+            httpx.HTTPError: 下载失败或响应状态码非 2xx /
+                Download failed or response status is not 2xx.
+        """
         releases = await self.get_versions(publisher, slug)
         target = None
         for r in releases:
@@ -101,6 +248,8 @@ class StoreClient:
                 target = r
                 break
 
+        # 未找到指定版本时回退到最新发布 /
+        # Fall back to the latest release when the version is missing.
         if target is None and releases:
             target = releases[0]
 
@@ -117,6 +266,8 @@ class StoreClient:
         start_time = time.monotonic()
         downloaded = 0
 
+        # 流式分块写入, 边下载边计算速度并回调进度 /
+        # Stream chunks to disk, computing speed and reporting progress.
         async with self._client.stream("GET", download_url) as resp:
             resp.raise_for_status()
             total = int(resp.headers.get("content-length", 0))
