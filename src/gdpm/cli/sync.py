@@ -1,16 +1,19 @@
 """
-gdpm sync 命令: 将 addons/ 同步到锁文件状态.
+gdpm sync 命令
+
+- 将 addons/ 同步到锁文件状态: 同步本地插件, 并行下载, 移除多余插件.
 
 ----
 
-Note:
-    - 同步本地插件: 从 gdpm-local/ 释放 zip 到 addons/.
-    - 并行下载: 补齐缺失的 Store 插件.
-    - 移除多余插件: 删除锁文件之外的插件.
-    - 更新锁文件: 记录本次变更.
-    - MAX_PARALLEL: 最大并发下载数, 默认 5.
-    - sync(): 命令入口, 内部定义异步 _sync().
-    - download_one(): 单个插件的并发下载任务.
+Notes
+----
+- 同步本地插件: 从 gdpm-local/ 释放 zip 到 addons/.
+- 并行下载: 补齐缺失的 Store 插件.
+- 移除多余插件: 删除锁文件之外的插件.
+- 更新锁文件: 记录本次变更.
+- MAX_PARALLEL: 最大并发下载数, 默认 5.
+- sync: 命令入口, 内部定义异步 _sync.
+- download_one: 单个插件的并发下载任务.
 """
 
 from __future__ import annotations
@@ -163,12 +166,18 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
 
                 ----
 
-                Args:
-                    name: 插件名.
-                    publisher: 发布者.
-                    version: 目标版本, 空串表示最新.
+                Parameters
+                ----
+                name : str
+                    插件名.
+                publisher : str
+                    发布者.
+                version : str
+                    目标版本, 空串表示最新.
 
-                Returns:
+                Returns
+                ----
+                tuple[str, str, str, bool, Path | None]
                     (名称, 版本, 发布者, 是否成功, zip 路径).
                 """
                 async with semaphore:

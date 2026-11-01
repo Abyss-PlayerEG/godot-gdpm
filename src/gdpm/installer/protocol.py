@@ -1,10 +1,13 @@
 """
-安装器协议, 定义插件安装器的抽象接口, 便于依赖注入与测试替换.
+安装器协议
+
+- 定义插件安装器的抽象接口, 便于依赖注入与测试替换.
 
 ----
 
-Note:
-    - InstallerProtocol: 安装器接口协议.
+Notes
+----
+- InstallerProtocol: 安装器接口协议.
 """
 
 from __future__ import annotations
@@ -14,7 +17,9 @@ from typing import Protocol
 
 class InstallerProtocol(Protocol):
     """
-    安装器接口协议, 实现类需提供插件安装, 卸载与状态查询能力.
+    安装器接口协议.
+
+    实现类需提供插件安装, 卸载与状态查询能力.
     """
 
     def install(self, name: str, version: str) -> None:
@@ -23,9 +28,12 @@ class InstallerProtocol(Protocol):
 
         ----
 
-        Args:
-            name: 插件名称.
-            version: 插件版本号.
+        Parameters
+        ----
+        name : str
+            插件名称.
+        version : str
+            插件版本号.
         """
         ...
 
@@ -35,8 +43,10 @@ class InstallerProtocol(Protocol):
 
         ----
 
-        Args:
-            name: 插件名称.
+        Parameters
+        ----
+        name : str
+            插件名称.
         """
         ...
 
@@ -46,10 +56,14 @@ class InstallerProtocol(Protocol):
 
         ----
 
-        Args:
-            name: 插件名称.
+        Parameters
+        ----
+        name : str
+            插件名称.
 
-        Returns:
+        Returns
+        ----
+        bool
             已安装返回 True.
         """
         ...
@@ -60,10 +74,14 @@ class InstallerProtocol(Protocol):
 
         ----
 
-        Args:
-            name: 插件名称.
+        Parameters
+        ----
+        name : str
+            插件名称.
 
-        Returns:
+        Returns
+        ----
+        str | None
             版本号, 未安装时返回 None.
         """
         ...

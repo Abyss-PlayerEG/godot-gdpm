@@ -1,18 +1,21 @@
 """
-gdpm godot 命令共享工具.
+gdpm godot 命令共享工具
+
+- 引擎查找与版本规范化共享工具.
 
 ----
 
-Note:
-    - get_engines_dir: 获取全局引擎目录.
-    - normalize_version: 版本号规范化为 tag 格式.
-    - build_download_url: 从 GitHub API 获取下载地址.
-    - get_asset_hash: 获取发布资源的 SHA256 哈希.
-    - ensure_executable: 确保文件具有执行权限.
-    - find_engine_binary: 在引擎目录中查找二进制.
-    - prepare_engine_dir: 解压后修复权限.
-    - find_engine: 按名称和版本查找引擎.
-    - resolve_engine_path: 解析 Godot 二进制路径.
+Notes
+----
+- get_engines_dir: 获取全局引擎目录.
+- normalize_version: 版本号规范化为 tag 格式.
+- build_download_url: 从 GitHub API 获取下载地址.
+- get_asset_hash: 获取发布资源的 SHA256 哈希.
+- ensure_executable: 确保文件具有执行权限.
+- find_engine_binary: 在引擎目录中查找二进制.
+- prepare_engine_dir: 解压后修复权限.
+- find_engine: 按名称和版本查找引擎.
+- resolve_engine_path: 解析 Godot 二进制路径.
 """
 
 from __future__ import annotations
@@ -32,7 +35,11 @@ def get_engines_dir() -> Path:
     """
     获取全局引擎目录.
 
-    Returns:
+    ----
+
+    Returns
+    ----
+    pathlib.Path
         全局引擎目录路径, 不存在时自动创建.
     """
     engines_dir = Path.home() / ".gdpm" / "engines"
@@ -44,21 +51,27 @@ def normalize_version(version: str) -> str:
     """
     将版本字符串规范化为 tag 格式.
 
-    ----
-
-    Note:
-        - '4.7' -> '4.7-stable'
-        - '4.7-stable' -> '4.7-stable'
-        - '3.6.2' -> '3.6.2-stable'
-        - '4.7-stable-csharp' -> '4.7-stable'
+    - '4.7' -> '4.7-stable'
+    - '4.7-stable' -> '4.7-stable'
+    - '3.6.2' -> '3.6.2-stable'
+    - '4.7-stable-csharp' -> '4.7-stable'
 
     ----
 
-    Args:
-        version: 版本字符串, 可带 -csharp 或 -mono 后缀.
+    Parameters
+    ----
+    version : str
+        版本字符串, 可带 -csharp 或 -mono 后缀.
 
-    Returns:
+    Returns
+    ----
+    str
         规范化后的 tag 字符串, 如 '4.7-stable'.
+
+    Examples
+    ----
+    >>> normalize_version("4.7")
+        '4.7-stable'
     """
     version = version.replace("-csharp", "").replace("-mono", "")
 
@@ -73,11 +86,16 @@ def build_download_url(tag: str, csharp: bool = False) -> str:
 
     ----
 
-    Args:
-        tag: 发布 tag, 如 '4.7-stable'.
-        csharp: 是否获取 C# (mono) 版本.
+    Parameters
+    ----
+    tag : str
+        发布 tag, 如 '4.7-stable'.
+    csharp : bool, optional
+        是否获取 C# (mono) 版本.
 
-    Returns:
+    Returns
+    ----
+    str
         下载 URL 字符串, 未匹配到资源或请求失败时返回空字符串.
     """
     mono = "_mono" if csharp else ""
@@ -120,11 +138,16 @@ def get_asset_hash(tag: str, filename: str) -> str:
 
     ----
 
-    Args:
-        tag: 发布 tag, 如 '4.7-stable'.
-        filename: 资源文件名.
+    Parameters
+    ----
+    tag : str
+        发布 tag, 如 '4.7-stable'.
+    filename : str
+        资源文件名.
 
-    Returns:
+    Returns
+    ----
+    str
         十六进制 SHA256 哈希字符串, 获取失败时返回空字符串.
     """
     try:
@@ -153,10 +176,14 @@ def ensure_executable(path: Path) -> None:
 
     ----
 
-    Args:
-        path: 需要设置执行权限的文件路径.
+    Parameters
+    ----
+    path : Path
+        需要设置执行权限的文件路径.
 
-    Returns:
+    Returns
+    ----
+    None
         无.
     """
     if platform.system() == "Windows":
@@ -176,19 +203,20 @@ def find_engine_binary(directory: Path) -> str | None:
     """
     在引擎目录中查找可启动的 Godot 二进制文件 (跨平台).
 
-    ----
-
-    Note:
-        - macOS: .app 包 -> Contents/MacOS/Godot, 回退到无后缀二进制.
-        - Windows: .exe (优先非 console 版), 兼容 mono 子目录布局.
-        - Linux: Godot* 开头的可执行文件 (名字以 .x86_64/.arm64 结尾), 恢复执行位.
+    - macOS: .app 包 -> Contents/MacOS/Godot, 回退到无后缀二进制.
+    - Windows: .exe (优先非 console 版), 兼容 mono 子目录布局.
+    - Linux: Godot* 开头的可执行文件 (名字以 .x86_64/.arm64 结尾), 恢复执行位.
 
     ----
 
-    Args:
-        directory: 引擎解压目录.
+    Parameters
+    ----
+    directory : Path
+        引擎解压目录.
 
-    Returns:
+    Returns
+    ----
+    str | None
         Godot 二进制文件路径, 未找到时返回 None.
     """
     system = platform.system()
@@ -263,10 +291,14 @@ def prepare_engine_dir(directory: Path) -> None:
 
     ----
 
-    Args:
-        directory: 解压后的引擎目录.
+    Parameters
+    ----
+    directory : Path
+        解压后的引擎目录.
 
-    Returns:
+    Returns
+    ----
+    None
         无.
     """
     if platform.system() == "Darwin":
@@ -300,11 +332,16 @@ def find_engine(name: str, version: str) -> str | None:
 
     ----
 
-    Args:
-        name: 引擎名称, 'gdpm-godot' 或本地引擎别名.
-        version: 版本字符串, 本地引擎可为空.
+    Parameters
+    ----
+    name : str
+        引擎名称, 'gdpm-godot' 或本地引擎别名.
+    version : str
+        版本字符串, 本地引擎可为空.
 
-    Returns:
+    Returns
+    ----
+    str | None
         Godot 二进制路径字符串, 未找到时返回 None.
     """
     from gdpm.config.local_engines import load_local_engines
@@ -333,18 +370,20 @@ def resolve_engine_path(name: str, version: str) -> str:
     """
     按引擎名称和版本解析 Godot 二进制路径.
 
-    ----
-
-    Note:
-        - 比 find_engine 更宽松: 本地引擎仅按名称匹配.
+    比 find_engine 更宽松: 本地引擎仅按名称匹配.
 
     ----
 
-    Args:
-        name: 引擎名称, 'gdpm-godot' 或本地引擎别名.
-        version: 版本字符串, 本地引擎可忽略.
+    Parameters
+    ----
+    name : str
+        引擎名称, 'gdpm-godot' 或本地引擎别名.
+    version : str
+        版本字符串, 本地引擎可忽略.
 
-    Returns:
+    Returns
+    ----
+    str
         Godot 二进制路径字符串, 未找到时返回空字符串.
     """
     from gdpm.config.local_engines import get_local_engine

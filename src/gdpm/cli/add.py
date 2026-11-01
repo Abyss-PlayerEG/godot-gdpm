@@ -1,15 +1,18 @@
 """
-gdpm add 命令: 从 Store 或本地路径添加插件.
+gdpm add 命令
+
+- 从 Store 或本地路径添加插件: 解析参数, 下载, 写入配置与锁文件.
 
 ----
 
-Note:
-    - 解析规格: 将 name@version 参数解析为插件名与版本约束.
-    - 下载安装: 从 Store 下载 zip 并解压安装到 addons/.
-    - 更新配置: 写入 gdproject.toml 与 gdpm.lock.
-    - add(): 在线插件添加命令入口.
-    - _add_local(): 打包本地插件到 gdpm-local/ 或从 zip 安装.
-    - _parse_spec(): 解析 name@version 插件规格.
+Notes
+----
+- 解析规格: 将 name@version 参数解析为插件名与版本约束.
+- 下载安装: 从 Store 下载 zip 并解压安装到 addons/.
+- 更新配置: 写入 gdproject.toml 与 gdpm.lock.
+- add: 在线插件添加命令入口.
+- _add_local: 打包本地插件到 gdpm-local/ 或从 zip 安装.
+- _parse_spec: 解析 name@version 插件规格.
 """
 
 from __future__ import annotations
@@ -242,9 +245,12 @@ def _add_local(plugins: tuple[str, ...], yes: bool = False) -> None:
 
     ----
 
-    Args:
-        plugins: zip 文件路径或插件目录名.
-        yes: 是否跳过确认提示.
+    Parameters
+    ----
+    plugins : tuple[str, ...]
+        zip 文件路径或插件目录名.
+    yes : bool, optional
+        是否跳过确认提示.
     """
     from gdpm.lockfile.lock import find_lockfile, read_lockfile, write_lockfile
     from gdpm.models.lock import LockEntry
@@ -422,10 +428,14 @@ def _parse_spec(spec: str) -> tuple[str, str]:
 
     ----
 
-    Args:
-        spec: 形如 name 或 name@version 的插件规格.
+    Parameters
+    ----
+    spec : str
+        形如 name 或 name@version 的插件规格.
 
-    Returns:
+    Returns
+    ----
+    tuple[str, str]
         (插件名, 版本约束) 元组; 无约束时约束为空串.
     """
     if "@" in spec:

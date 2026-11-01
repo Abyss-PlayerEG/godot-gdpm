@@ -1,10 +1,13 @@
 """
-校验和工具, 提供文件 SHA256 校验和计算.
+校验和工具
+
+- 提供文件 SHA256 校验和计算.
 
 ----
 
-Note:
-    - sha256_file: 计算文件校验和.
+Notes
+----
+- sha256_file: 计算文件校验和.
 """
 
 from __future__ import annotations
@@ -22,10 +25,14 @@ def sha256_file(path: Path) -> str:
 
     ----
 
-    Args:
-        path: 文件路径.
+    Parameters
+    ----
+    path : Path
+        文件路径.
 
-    Returns:
+    Returns
+    ----
+    str
         形如 "sha256:<hex>" 的校验和字符串.
     """
     h = hashlib.sha256()

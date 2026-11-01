@@ -1,12 +1,15 @@
 """
-gdpm godot list 命令, 列出本地或远程 Godot 版本.
+gdpm godot list 命令
+
+- 列出本地或远程 Godot 版本.
 
 ----
 
-Note:
-    - _list_local: 列出已安装的 Godot 版本.
-    - _list_remote: 列出 GitHub 上可用的版本.
-    - godot_list: click 命令入口.
+Notes
+----
+- _list_local: 列出已安装的 Godot 版本.
+- _list_remote: 列出 GitHub 上可用的版本.
+- godot_list: click 命令入口.
 """
 
 from __future__ import annotations
@@ -31,10 +34,14 @@ def _list_local(show_id: bool = False) -> None:
 
     ----
 
-    Args:
-        show_id: 以 ID 列 (Name@Version) 展示, 而非名称和版本两列.
+    Parameters
+    ----
+    show_id : bool, optional
+        以 ID 列 (Name@Version) 展示, 而非名称和版本两列.
 
-    Returns:
+    Returns
+    ----
+    None
         无, 结果直接打印到终端.
     """
     from gdpm.config.local_engines import load_local_engines
@@ -113,12 +120,18 @@ def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
 
     ----
 
-    Args:
-        version_filter: 版本前缀过滤, 如 '4.7'.
-        show_all: 是否显示 1.x/2.x 等旧版本.
-        page: 远程列表页码.
+    Parameters
+    ----
+    version_filter : str
+        版本前缀过滤, 如 '4.7'.
+    show_all : bool
+        是否显示 1.x/2.x 等旧版本.
+    page : int, optional
+        远程列表页码.
 
-    Returns:
+    Returns
+    ----
+    None
         无, 结果直接打印到终端.
     """
     try:

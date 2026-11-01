@@ -1,19 +1,22 @@
 """
-gdpm export 命令: 将项目插件导出为 zip 归档.
+gdpm export 命令
+
+- 将项目插件导出为 zip 归档: 收集插件, 生成清单, 打包本地插件.
 
 ----
 
-Note:
-    - 收集插件: 汇总依赖与 addons/ 中的插件.
-    - 生成清单: 写入 manifest.json.
-    - 打包本地插件: 放入归档的 local-plugins/ 目录.
-    - manifest.json 结构:
-        - version: 清单格式版本.
-        - exported_at: 导出时间 (ISO 8601).
-        - project: 项目名与 Godot 约束.
-        - plugins: 插件列表, 每项含 name, version, source, type ("store"
-            或 "local"), file (本地 zip 路径) 与 publisher (仅 store).
-    - export(): 命令入口.
+Notes
+----
+- 收集插件: 汇总依赖与 addons/ 中的插件.
+- 生成清单: 写入 manifest.json.
+- 打包本地插件: 放入归档的 local-plugins/ 目录.
+- manifest.json 结构:
+    - version: 清单格式版本.
+    - exported_at: 导出时间 (ISO 8601).
+    - project: 项目名与 Godot 约束.
+    - plugins: 插件列表, 每项含 name, version, source, type ("store"
+      或 "local"), file (本地 zip 路径) 与 publisher (仅 store).
+- export: 命令入口.
 """
 
 from __future__ import annotations

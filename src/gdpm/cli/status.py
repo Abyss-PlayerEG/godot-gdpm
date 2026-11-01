@@ -1,14 +1,17 @@
 """
-gdpm status 命令: 展示插件状态与可用更新.
+gdpm status 命令
+
+- 展示插件状态与可用更新: 扫描 addons/, 查询版本, 对比输出.
 
 ----
 
-Note:
-    - 扫描 addons/: 收集已安装插件.
-    - 查询最新版本: 从 Store 获取.
-    - 对比版本: 归一化后比较并标注可更新项.
-    - 输出结果: 表格或 JSON.
-    - status(): 命令入口, 内部定义异步 _status().
+Notes
+----
+- 扫描 addons/: 收集已安装插件.
+- 查询最新版本: 从 Store 获取.
+- 对比版本: 归一化后比较并标注可更新项.
+- 输出结果: 表格或 JSON.
+- status: 命令入口, 内部定义异步 _status.
 """
 
 from __future__ import annotations

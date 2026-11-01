@@ -1,13 +1,16 @@
 """
-缓存索引管理, 支持快速查找缓存, 索引按首字母拆分为多个 index.json,
-与 FileCache 的分片目录一致.
+缓存索引管理
+
+- 支持快速查找缓存.
+- 索引按首字母拆分为多个 index.json, 与 FileCache 的分片目录一致.
 
 ----
 
-Note:
-    - CacheEntry: 单条缓存记录.
-    - CacheIndex: 索引的读写与查询.
-    - make_cache_key: 生成缓存键.
+Notes
+----
+- CacheEntry: 单条缓存记录.
+- CacheIndex: 索引的读写与查询.
+- make_cache_key: 生成缓存键.
 """
 
 from __future__ import annotations
@@ -28,14 +31,20 @@ INDEX_FILE = "index.json"
 @dataclass
 class CacheEntry:
     """
-    单条缓存索引记录.
+    单条缓存索引记录
+
+    记录缓存文件名, zip 文件的 SHA256 校验和与下载时间.
 
     ----
 
-    Attributes:
-        file: 缓存文件名.
-        hash: zip 文件的 SHA256 校验和.
-        downloaded_at: 下载时间 (ISO 格式).
+    Attributes
+    ----
+    file : str
+        缓存文件名.
+    hash : str
+        zip 文件的 SHA256 校验和.
+    downloaded_at : str
+        下载时间 (ISO 格式).
     """
 
     file: str
@@ -45,24 +54,33 @@ class CacheEntry:
 
 class CacheIndex:
     """
-    管理按首字母拆分的缓存索引文件, 每个分片目录下保存 index.json,
+    缓存索引管理
+
+    按首字母拆分缓存索引文件, 每个分片目录下保存 index.json,
     已加载的索引缓存在内存中.
 
     ----
 
-    Attributes:
-        _downloads: downloads 分片根目录.
-        _cache: 字母到索引的内存缓存.
+    Attributes
+    ----
+    _downloads : Path
+        downloads 分片根目录.
+    _cache : dict[str, dict[str, CacheEntry]]
+        字母到索引的内存缓存.
     """
 
     def __init__(self, downloads_dir: Path) -> None:
         """
         初始化索引管理器.
 
+        已加载的索引缓存在内存中.
+
         ----
 
-        Args:
-            downloads_dir: downloads 分片根目录.
+        Parameters
+        ----
+        downloads_dir : Path
+            downloads 分片根目录.
         """
         self._downloads = downloads_dir
         self._cache: dict[str, dict[str, CacheEntry]] = {}
@@ -71,26 +89,38 @@ class CacheIndex:
         """
         获取分片索引文件路径.
 
+        按分片字母拼出 index.json 路径.
+
         ----
 
-        Args:
-            letter: 分片字母.
+        Parameters
+        ----
+        letter : str
+            分片字母.
 
-        Returns:
+        Returns
+        ----
+        Path
             分片目录下的 index.json 路径.
         """
         return self._downloads / letter / INDEX_FILE
 
     def _load_letter(self, letter: str) -> dict[str, CacheEntry]:
         """
-        加载分片索引, 优先使用内存缓存.
+        加载分片索引.
+
+        优先使用内存缓存.
 
         ----
 
-        Args:
-            letter: 分片字母.
+        Parameters
+        ----
+        letter : str
+            分片字母.
 
-        Returns:
+        Returns
+        ----
+        dict[str, CacheEntry]
             该分片的键到记录映射.
         """
         if letter in self._cache:
@@ -115,10 +145,14 @@ class CacheIndex:
         """
         将分片索引写回磁盘.
 
+        写入分片目录下的 index.json.
+
         ----
 
-        Args:
-            letter: 分片字母.
+        Parameters
+        ----
+        letter : str
+            分片字母.
         """
         if letter not in self._cache:
             return
@@ -135,12 +169,18 @@ class CacheIndex:
         """
         由缓存键推导分片字母.
 
+        取缓存键的发布者首字母小写作为分片字母.
+
         ----
 
-        Args:
-            key: 缓存键.
+        Parameters
+        ----
+        key : str
+            缓存键.
 
-        Returns:
+        Returns
+        ----
+        str
             发布者首字母小写, 无发布者时为 "x".
         """
         publisher = key.split("/")[0] if "/" in key else key
@@ -150,12 +190,18 @@ class CacheIndex:
         """
         查询缓存记录.
 
+        按缓存键查询, 不存在则返回 None.
+
         ----
 
-        Args:
-            key: 缓存键.
+        Parameters
+        ----
+        key : str
+            缓存键.
 
-        Returns:
+        Returns
+        ----
+        CacheEntry | None
             缓存记录, 不存在则返回 None.
         """
         letter = self._letter_for_key(key)
@@ -166,12 +212,18 @@ class CacheIndex:
         """
         判断缓存记录是否存在.
 
+        按缓存键检查记录是否存在.
+
         ----
 
-        Args:
-            key: 缓存键.
+        Parameters
+        ----
+        key : str
+            缓存键.
 
-        Returns:
+        Returns
+        ----
+        bool
             存在则为 True.
         """
         return self.get(key) is not None
@@ -185,14 +237,22 @@ class CacheIndex:
         """
         写入或更新缓存记录.
 
+        为 zip 文件计算 SHA256 校验和并记录下载时间.
+
         ----
 
-        Args:
-            key: 缓存键.
-            file: 缓存文件名.
-            zip_path: 用于计算校验和的 zip 文件.
+        Parameters
+        ----
+        key : str
+            缓存键.
+        file : str
+            缓存文件名.
+        zip_path : Path
+            用于计算校验和的 zip 文件.
 
-        Returns:
+        Returns
+        ----
+        CacheEntry
             写入的缓存记录.
         """
         hash_val = sha256_file(zip_path) if zip_path.exists() else ""
@@ -211,12 +271,18 @@ class CacheIndex:
         """
         删除缓存记录.
 
+        删除后同步保存分片索引.
+
         ----
 
-        Args:
-            key: 缓存键.
+        Parameters
+        ----
+        key : str
+            缓存键.
 
-        Returns:
+        Returns
+        ----
+        bool
             是否删除了记录.
         """
         letter = self._letter_for_key(key)
@@ -229,14 +295,20 @@ class CacheIndex:
 
     def find_by_slug(self, slug: str) -> list[tuple[str, CacheEntry]]:
         """
-        按插件 slug 查找缓存记录, 匹配 "slug@version" 形式的键或完全相等的键.
+        按插件 slug 查找缓存记录.
+
+        匹配 "slug@version" 形式的键或完全相等的键.
 
         ----
 
-        Args:
-            slug: 插件 slug.
+        Parameters
+        ----
+        slug : str
+            插件 slug.
 
-        Returns:
+        Returns
+        ----
+        list[tuple[str, CacheEntry]]
             命中的 (键, 记录) 列表.
         """
         results = []
@@ -254,7 +326,13 @@ class CacheIndex:
         """
         列出全部缓存记录.
 
-        Returns:
+        合并所有分片的索引.
+
+        ----
+
+        Returns
+        ----
+        dict[str, CacheEntry]
             合并所有分片后的键到记录映射.
         """
         result: dict[str, CacheEntry] = {}
@@ -270,20 +348,27 @@ def make_cache_key(publisher: str, slug: str, version: str) -> str:
     """
     由发布者, slug 和版本号生成缓存键.
 
-    ----
-
-    example:
-        >>> make_cache_key("rsubtil", "controller-icons", "v2.0.1")
-        'rsubtil/controller-icons@v2.0.1'
+    发布者与 slug 用斜杠分隔, 与版本号用 @ 连接.
 
     ----
 
-    Args:
-        publisher: 发布者 slug.
-        slug: 插件 slug.
-        version: 版本号.
+    Parameters
+    ----
+    publisher : str
+        发布者 slug.
+    slug : str
+        插件 slug.
+    version : str
+        版本号.
 
-    Returns:
+    Returns
+    ----
+    str
         形如 "publisher/slug@version" 的缓存键.
+
+    Examples
+    ----
+    >>> make_cache_key("rsubtil", "controller-icons", "v2.0.1")
+        'rsubtil/controller-icons@v2.0.1'
     """
     return f"{publisher}/{slug}@{version}"

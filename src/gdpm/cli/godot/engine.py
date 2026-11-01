@@ -1,13 +1,16 @@
 """
-gdpm godot 引擎管理命令, 管理本地引擎与默认引擎.
+gdpm godot 引擎管理命令
+
+- 管理本地引擎与默认引擎.
 
 ----
 
-Note:
-    - godot_add: 添加本地 Godot 引擎.
-    - godot_remove: 移除本地 Godot 引擎.
-    - godot_use: 为当前项目设置引擎.
-    - godot_default: 设置或显示默认引擎.
+Notes
+----
+- godot_add: 添加本地 Godot 引擎.
+- godot_remove: 移除本地 Godot 引擎.
+- godot_use: 为当前项目设置引擎.
+- godot_default: 设置或显示默认引擎.
 """
 
 from __future__ import annotations

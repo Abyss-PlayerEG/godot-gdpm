@@ -1,18 +1,21 @@
 """
-gdpm create 命令: 创建新的 Godot 项目.
+gdpm create 命令
+
+- 创建新的 Godot 项目: 询问信息, 生成文件, 可选设置引擎并打开编辑器.
 
 ----
 
-Note:
-    - 询问信息: 项目名与 Godot 版本.
-    - 生成文件: project.godot, gdproject.toml 与 addons/ 目录.
-    - 后续操作: 可选设置项目引擎并打开 Godot 编辑器.
-    - create(): 命令入口.
-    - _get_installed_engines(): 收集已安装引擎 ID.
-    - _get_installed_versions(): 提取去重版本并过滤 csharp/mono.
-    - _get_godot_version_tag(): 版本转特性标签.
-    - _set_project_engine(): 写入 .engines-conf.json.
-    - _open_godot(): 启动 Godot 编辑器.
+Notes
+----
+- 询问信息: 项目名与 Godot 版本.
+- 生成文件: project.godot, gdproject.toml 与 addons/ 目录.
+- 后续操作: 可选设置项目引擎并打开 Godot 编辑器.
+- create: 命令入口.
+- _get_installed_engines: 收集已安装引擎 ID.
+- _get_installed_versions: 提取去重版本并过滤 csharp/mono.
+- _get_godot_version_tag: 版本转特性标签.
+- _set_project_engine: 写入 .engines-conf.json.
+- _open_godot: 启动 Godot 编辑器.
 """
 
 from __future__ import annotations
@@ -34,7 +37,11 @@ def _get_installed_engines() -> list[str]:
     """
     获取所有已安装引擎 ID.
 
-    Returns:
+    ----
+
+    Returns
+    ----
+    list[str]
         ID 列表, 如 ['gdpm-godot@4.7-stable', 'steam@4.7-stable'].
     """
     engines: list[str] = []
@@ -56,14 +63,20 @@ def _get_installed_engines() -> list[str]:
     # 排序: stable 优先, 再按版本降序
     def sort_key(item: str) -> tuple[int, str]:
         """
-        生成排序键: stable 版本优先, 其余按版本字符串降序.
+        生成排序键.
+
+        stable 版本优先, 其余按版本字符串降序.
 
         ----
 
-        Args:
-            item: 形如 name@version 的引擎 ID.
+        Parameters
+        ----
+        item : str
+            形如 name@version 的引擎 ID.
 
-        Returns:
+        Returns
+        ----
+        tuple[int, str]
             (是否非 stable, 版本字符串) 二元组.
         """
         ver = item.split("@", 1)[1]
@@ -80,10 +93,14 @@ def _get_installed_versions(engines: list[str]) -> list[str]:
 
     ----
 
-    Args:
-        engines: 引擎 ID 列表.
+    Parameters
+    ----
+    engines : list[str]
+        引擎 ID 列表.
 
-    Returns:
+    Returns
+    ----
+    list[str]
         去重且不含 csharp/mono 的版本列表.
     """
     versions: list[str] = []
@@ -106,19 +123,22 @@ def _get_godot_version_tag(version: str) -> str:
 
     ----
 
-    example:
-        >>> _get_godot_version_tag("4.7-stable")
-        '4.7'
-        >>> _get_godot_version_tag("3.6.2-stable")
-        '3.6'
-
+    Parameters
     ----
+    version : str
+        Godot 版本字符串.
 
-    Args:
-        version: Godot 版本字符串.
-
-    Returns:
+    Returns
+    ----
+    str
         主次版本号标签, 如 '4.7'.
+
+    Examples
+    ----
+    >>> _get_godot_version_tag("4.7-stable")
+        '4.7'
+    >>> _get_godot_version_tag("3.6.2-stable")
+        '3.6'
     """
     ver = version.replace("-stable", "").replace("-rc", "").replace("-beta", "")
     parts = ver.split(".")
@@ -293,9 +313,12 @@ def _set_project_engine(project_dir: Path, engine_id: str) -> None:
 
     ----
 
-    Args:
-        project_dir: 项目根目录.
-        engine_id: 引擎 ID, 如 gdpm-godot@4.7-stable.
+    Parameters
+    ----
+    project_dir : Path
+        项目根目录.
+    engine_id : str
+        引擎 ID, 如 gdpm-godot@4.7-stable.
     """
     import json
 
@@ -347,9 +370,12 @@ def _open_godot(project_dir: Path, version: str) -> None:
 
     ----
 
-    Args:
-        project_dir: 项目根目录.
-        version: Godot 版本.
+    Parameters
+    ----
+    project_dir : Path
+        项目根目录.
+    version : str
+        Godot 版本.
     """
     binary = ""
 

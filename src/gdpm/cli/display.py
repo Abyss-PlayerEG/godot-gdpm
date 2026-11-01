@@ -1,12 +1,15 @@
 """
-CLI 展示工具. 提供插件版本兼容性与元数据的格式化/打印函数, 以及 JSON 输出工具.
+CLI 展示工具
+
+- 提供插件版本兼容性与元数据的格式化/打印函数, 以及 JSON 输出工具.
 
 ----
 
-Note:
-    - format_version_info / display_version_info: 版本与兼容性信息.
-    - format_plugin_meta / display_plugin_meta: 插件元数据.
-    - output_json: JSON 输出.
+Notes
+----
+- format_version_info / display_version_info: 版本与兼容性信息.
+- format_plugin_meta / display_plugin_meta: 插件元数据.
+- output_json: JSON 输出.
 """
 
 from __future__ import annotations
@@ -26,13 +29,20 @@ def format_version_info(
 
     ----
 
-    Args:
-        ver: 插件版本号.
-        min_godot: 最低 Godot 版本, 可为空.
-        max_godot: 最高 Godot 版本, 可为空.
-        project_godot: 项目 Godot 版本, 为空则不做兼容性判断.
+    Parameters
+    ----
+    ver : str
+        插件版本号.
+    min_godot : str
+        最低 Godot 版本, 可为空.
+    max_godot : str
+        最高 Godot 版本, 可为空.
+    project_godot : str, optional
+        项目 Godot 版本, 为空则不做兼容性判断.
 
-    Returns:
+    Returns
+    ----
+    list[str]
         可直接传给 console.print 的富文本行列表.
     """
     lines = []
@@ -72,13 +82,20 @@ def format_plugin_meta(
 
     ----
 
-    Args:
-        license_name: 许可证名称.
-        stars: 商店评分或星数.
-        tags: 标签列表.
-        store_url: 商店页面地址.
+    Parameters
+    ----
+    license_name : str, optional
+        许可证名称.
+    stars : int, optional
+        商店评分或星数.
+    tags : list[str] | None, optional
+        标签列表.
+    store_url : str, optional
+        商店页面地址.
 
-    Returns:
+    Returns
+    ----
+    list[str]
         可直接传给 console.print 的富文本行列表.
     """
     lines = []
@@ -108,11 +125,16 @@ def display_version_info(
 
     ----
 
-    Args:
-        ver: 插件版本号.
-        min_godot: 最低 Godot 版本.
-        max_godot: 最高 Godot 版本.
-        project_godot: 项目 Godot 版本.
+    Parameters
+    ----
+    ver : str
+        插件版本号.
+    min_godot : str
+        最低 Godot 版本.
+    max_godot : str
+        最高 Godot 版本.
+    project_godot : str, optional
+        项目 Godot 版本.
     """
     lines = format_version_info(ver, min_godot, max_godot, project_godot)
     console.print("\n".join(lines))
@@ -129,11 +151,16 @@ def display_plugin_meta(
 
     ----
 
-    Args:
-        license_name: 许可证名称.
-        stars: 商店评分或星数.
-        tags: 标签列表.
-        store_url: 商店页面地址.
+    Parameters
+    ----
+    license_name : str, optional
+        许可证名称.
+    stars : int, optional
+        商店评分或星数.
+    tags : list[str] | None, optional
+        标签列表.
+    store_url : str, optional
+        商店页面地址.
     """
     lines = format_plugin_meta(license_name, stars, tags, store_url)
     console.print("\n".join(lines))
@@ -145,8 +172,10 @@ def output_json(data: object) -> None:
 
     ----
 
-    Args:
-        data: 可被 json 序列化的数据.
+    Parameters
+    ----
+    data : object
+        可被 json 序列化的数据.
     """
     import json
 

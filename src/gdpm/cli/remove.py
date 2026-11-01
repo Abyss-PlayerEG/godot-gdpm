@@ -1,15 +1,18 @@
 """
-gdpm remove 命令: 从项目移除插件.
+gdpm remove 命令
+
+- 从项目移除插件: 删除依赖条目与插件目录, 同步锁文件.
 
 ----
 
-Note:
-    - 删除依赖条目: 从 gdproject.toml 中移除.
-    - 删除插件目录: 移除 addons/ 下的插件目录.
-    - 删除本地 zip: 可选删除 gdpm-local/ 中的 zip.
-    - 更新锁文件: 同步 gdpm.lock.
-    - remove(): 命令入口.
-    - _find_addon_dir(): 按 slug 查找插件目录.
+Notes
+----
+- 删除依赖条目: 从 gdproject.toml 中移除.
+- 删除插件目录: 移除 addons/ 下的插件目录.
+- 删除本地 zip: 可选删除 gdpm-local/ 中的 zip.
+- 更新锁文件: 同步 gdpm.lock.
+- remove: 命令入口.
+- _find_addon_dir: 按 slug 查找插件目录.
 """
 
 from __future__ import annotations
@@ -123,16 +126,22 @@ def remove(plugins: tuple[str, ...], recursive: bool, yes: bool) -> None:
 
 def _find_addon_dir(addons_dir: Path, slug: str) -> Path | None:
     """
-    按 slug 查找 addons/ 下的插件目录. 先尝试直接目录名, 再通过 plugin.cfg
-    名称或目录名做模糊匹配.
+    按 slug 查找 addons/ 下的插件目录.
+
+    先尝试直接目录名, 再通过 plugin.cfg 名称或目录名做模糊匹配.
 
     ----
 
-    Args:
-        addons_dir: addons/ 目录路径.
-        slug: 插件标识.
+    Parameters
+    ----
+    addons_dir : Path
+        addons/ 目录路径.
+    slug : str
+        插件标识.
 
-    Returns:
+    Returns
+    ----
+    Path | None
         匹配的插件目录; 未找到返回 None.
     """
     if not addons_dir.exists():

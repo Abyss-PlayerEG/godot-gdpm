@@ -1,13 +1,16 @@
 """
-gdpm search 命令: 在 Godot Asset Store 中搜索插件.
+gdpm search 命令
+
+- 在 Godot Asset Store 中搜索插件: 查询 Store API, 过滤模板, 输出结果.
 
 ----
 
-Note:
-    - 查询 Store API: 按关键词检索插件.
-    - 过滤项目模板: 默认排除模板类插件.
-    - 输出结果: 格式化列表或 JSON.
-    - search(): 命令入口, 内部定义异步 _search().
+Notes
+----
+- 查询 Store API: 按关键词检索插件.
+- 过滤项目模板: 默认排除模板类插件.
+- 输出结果: 格式化列表或 JSON.
+- search: 命令入口, 内部定义异步 _search.
 """
 
 from __future__ import annotations

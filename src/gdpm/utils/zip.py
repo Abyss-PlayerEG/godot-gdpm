@@ -1,13 +1,16 @@
 """
-ZIP 解压工具, 分析压缩包结构并按插件布局解压 addon 与资产.
+ZIP 解压工具
+
+- 分析压缩包结构并按插件布局解压 addon 与资产.
 
 ----
 
-Note:
-    - ZipAnalysis: 压缩包结构分析结果.
-    - analyze_zip: 分析压缩包结构.
-    - extract_addon_from_zip: 按 addon 布局解压.
-    - extract_zip / extract_full_zip: 完整解压.
+Notes
+----
+- ZipAnalysis: 压缩包结构分析结果.
+- analyze_zip: 分析压缩包结构.
+- extract_addon_from_zip: 按 addon 布局解压.
+- extract_zip / extract_full_zip: 完整解压.
 """
 
 from __future__ import annotations
@@ -27,11 +30,16 @@ class ZipAnalysis:
 
     ----
 
-    Attributes:
-        has_addons: 是否包含 addon.
-        has_assets: 是否包含资产目录.
-        addon_dirs: addon 目录名列表.
-        asset_dirs: 资产目录名列表.
+    Attributes
+    ----
+    has_addons : bool
+        是否包含 addon.
+    has_assets : bool
+        是否包含资产目录.
+    addon_dirs : list[str] | None
+        addon 目录名列表.
+    asset_dirs : list[str] | None
+        资产目录名列表.
     """
 
     has_addons: bool = False
@@ -46,10 +54,14 @@ def analyze_zip(zip_path: Path) -> ZipAnalysis:
 
     ----
 
-    Args:
-        zip_path: 压缩包路径.
+    Parameters
+    ----
+    zip_path : Path
+        压缩包路径.
 
-    Returns:
+    Returns
+    ----
+    ZipAnalysis
         压缩包结构分析结果.
     """
     result = ZipAnalysis()
@@ -123,9 +135,12 @@ def extract_zip(zip_path: Path, dest: Path) -> None:
 
     ----
 
-    Args:
-        zip_path: 压缩包路径.
-        dest: 解压目标目录.
+    Parameters
+    ----
+    zip_path : Path
+        压缩包路径.
+    dest : Path
+        解压目标目录.
     """
     with zipfile.ZipFile(zip_path, "r") as zf:
         zf.extractall(dest)
@@ -138,12 +153,18 @@ def extract_addon_from_zip(zip_path: Path, dest: Path, addon_name: str) -> list[
 
     ----
 
-    Args:
-        zip_path: 压缩包路径.
-        dest: 解压目标目录.
-        addon_name: 插件名称.
+    Parameters
+    ----
+    zip_path : Path
+        压缩包路径.
+    dest : Path
+        解压目标目录.
+    addon_name : str
+        插件名称.
 
-    Returns:
+    Returns
+    ----
+    list[str]
         解压得到的 addon 目录名列表, 失败时返回空列表.
     """
     with zipfile.ZipFile(zip_path, "r") as zf:
@@ -232,9 +253,12 @@ def extract_full_zip(zip_path: Path, dest: Path) -> None:
 
     ----
 
-    Args:
-        zip_path: 压缩包路径.
-        dest: 解压目标目录.
+    Parameters
+    ----
+    zip_path : Path
+        压缩包路径.
+    dest : Path
+        解压目标目录.
     """
     with zipfile.ZipFile(zip_path, "r") as zf:
         zf.extractall(dest)

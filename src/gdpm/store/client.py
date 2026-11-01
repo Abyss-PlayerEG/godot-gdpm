@@ -1,13 +1,15 @@
 """
-Godot Asset Store API 客户端, 通过 httpx 异步访问 Asset Store,
-负责插件搜索, 详情, 版本查询与下载.
+Godot Asset Store API 客户端
+
+- 通过 httpx 异步访问 Asset Store, 负责插件搜索, 详情, 版本查询与下载.
 
 ----
 
-Note:
-    - DEFAULT_BASE_URL: Asset Store API 默认地址.
-    - ProgressCallback: 下载进度回调类型.
-    - StoreClient: REST API 异步客户端.
+Notes
+----
+- DEFAULT_BASE_URL: Asset Store API 默认地址.
+- ProgressCallback: 下载进度回调类型.
+- StoreClient: REST API 异步客户端.
 """
 
 from __future__ import annotations
@@ -32,24 +34,32 @@ ProgressCallback = Callable[[int, int, float], None]
 
 class StoreClient:
     """
-    Godot Asset Store REST API 异步客户端, 基于 httpx.AsyncClient,
-    提供搜索, 详情, 版本与流式下载接口.
+    Godot Asset Store REST API 异步客户端
+
+    基于 httpx.AsyncClient, 提供搜索, 详情, 版本与流式下载接口.
 
     ----
 
-    Attributes:
-        _base_url: API 基础地址, 末尾不含斜杠.
-        _client: 底层 httpx 异步 HTTP 客户端.
+    Attributes
+    ----
+    _base_url : str
+        API 基础地址, 末尾不含斜杠.
+    _client : httpx.AsyncClient
+        底层 httpx 异步 HTTP 客户端.
     """
 
     def __init__(self, base_url: str = DEFAULT_BASE_URL) -> None:
         """
         初始化客户端.
 
+        创建底层 httpx 异步 HTTP 客户端.
+
         ----
 
-        Args:
-            base_url: API 基础地址, 末尾斜杠会被去除.
+        Parameters
+        ----
+        base_url : str, optional
+            API 基础地址, 末尾斜杠会被去除.
         """
         self._base_url = base_url.rstrip("/")
         self._client = httpx.AsyncClient(
@@ -72,24 +82,30 @@ class StoreClient:
         """
         搜索插件.
 
-        ----
-
-        Note:
-            - 调用 GET /search/query/ 检索资产, 默认只返回插件类型.
+        调用 GET /search/query/ 检索资产, 默认只返回插件类型.
 
         ----
 
-        Args:
-            query: 搜索关键词.
-            limit: 返回数量上限.
-            sort: 排序方式, 如 relevance.
-            include_projects: 是否包含项目类型资产.
+        Parameters
+        ----
+        query : str
+            搜索关键词.
+        limit : int, optional
+            返回数量上限.
+        sort : str, optional
+            排序方式, 如 relevance.
+        include_projects : bool, optional
+            是否包含项目类型资产.
 
-        Returns:
+        Returns
+        ----
+        list[Plugin]
             解析后的插件列表.
 
-        Raises:
-            httpx.HTTPError: 请求失败或响应状态码非 2xx.
+        Raises
+        ----
+        httpx.HTTPError
+            请求失败或响应状态码非 2xx.
         """
         params: dict[str, Any] = {
             "query": query,
@@ -110,22 +126,26 @@ class StoreClient:
         """
         获取插件详情.
 
-        ----
-
-        Note:
-            - 调用 GET /assets/{publisher}/{slug}/, 并用发布列表补全版本信息.
+        调用 GET /assets/{publisher}/{slug}/, 并用发布列表补全版本信息.
 
         ----
 
-        Args:
-            publisher: 发布者 slug.
-            slug: 插件 slug.
+        Parameters
+        ----
+        publisher : str
+            发布者 slug.
+        slug : str
+            插件 slug.
 
-        Returns:
+        Returns
+        ----
+        PluginDetail
             插件详情.
 
-        Raises:
-            httpx.HTTPError: 请求失败或响应状态码非 2xx.
+        Raises
+        ----
+        httpx.HTTPError
+            请求失败或响应状态码非 2xx.
         """
         resp = await self._client.get(f"/assets/{publisher}/{slug}/")
         resp.raise_for_status()
@@ -159,22 +179,26 @@ class StoreClient:
         """
         获取插件的版本列表.
 
-        ----
-
-        Note:
-            - 调用 GET /releases/{publisher}/{slug}/.
+        调用 GET /releases/{publisher}/{slug}/.
 
         ----
 
-        Args:
-            publisher: 发布者 slug.
-            slug: 插件 slug.
+        Parameters
+        ----
+        publisher : str
+            发布者 slug.
+        slug : str
+            插件 slug.
 
-        Returns:
+        Returns
+        ----
+        list[dict[str, str]]
             版本信息字典列表.
 
-        Raises:
-            httpx.HTTPError: 请求失败或响应状态码非 2xx.
+        Raises
+        ----
+        httpx.HTTPError
+            请求失败或响应状态码非 2xx.
         """
         resp = await self._client.get(f"/releases/{publisher}/{slug}/")
         resp.raise_for_status()
@@ -190,23 +214,36 @@ class StoreClient:
         on_progress: ProgressCallback | None = None,
     ) -> Path:
         """
-        下载插件 zip 包, 按版本号匹配发布, 找不到时回退到最新发布.
+        下载插件 zip 包.
+
+        按版本号匹配发布, 找不到时回退到最新发布.
 
         ----
 
-        Args:
-            publisher: 发布者 slug.
-            slug: 插件 slug.
-            version: 目标版本号.
-            dest: 保存目录.
-            on_progress: 进度回调 (已下载, 总量, 速度 B/s).
+        Parameters
+        ----
+        publisher : str
+            发布者 slug.
+        slug : str
+            插件 slug.
+        version : str
+            目标版本号.
+        dest : Path
+            保存目录.
+        on_progress : ProgressCallback | None, optional
+            进度回调 (已下载, 总量, 速度 B/s).
 
-        Returns:
+        Returns
+        ----
+        Path
             zip 文件路径.
 
-        Raises:
-            ValueError: 找不到发布记录或下载地址.
-            httpx.HTTPError: 下载失败或响应状态码非 2xx.
+        Raises
+        ----
+        ValueError
+            找不到发布记录或下载地址.
+        httpx.HTTPError
+            下载失败或响应状态码非 2xx.
         """
         releases = await self.get_versions(publisher, slug)
         target = None

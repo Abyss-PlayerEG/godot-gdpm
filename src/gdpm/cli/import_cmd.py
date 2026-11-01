@@ -1,21 +1,24 @@
 """
-gdpm import 命令: 从 zip 归档或目录导入插件.
+gdpm import 命令
+
+- 从 zip 归档或目录导入插件: 读取清单, 安装插件, 更新配置.
 
 ----
 
-Note:
-    - 读取清单: 解析 manifest.json.
-    - 安装 Store 插件: 下载并安装在线插件.
-    - 解压本地插件: 释放到 addons/ 并复制 zip 到 gdpm-local/.
-    - 更新配置: 写入 gdproject.toml 与 gdpm.lock.
-    - manifest.json 结构:
-        - version: 清单格式版本.
-        - exported_at: 导出时间 (ISO 8601).
-        - project: 项目名与 Godot 约束.
-        - plugins: 插件列表, 每项含 name, version, source, type, file
-            (仅 local) 与 publisher (仅 store).
-    - import_cmd(): 命令入口.
-    - _import_store(): 异步安装 Store 插件.
+Notes
+----
+- 读取清单: 解析 manifest.json.
+- 安装 Store 插件: 下载并安装在线插件.
+- 解压本地插件: 释放到 addons/ 并复制 zip 到 gdpm-local/.
+- 更新配置: 写入 gdproject.toml 与 gdpm.lock.
+- manifest.json 结构:
+    - version: 清单格式版本.
+    - exported_at: 导出时间 (ISO 8601).
+    - project: 项目名与 Godot 约束.
+    - plugins: 插件列表, 每项含 name, version, source, type, file
+      (仅 local) 与 publisher (仅 store).
+- import_cmd: 命令入口.
+- _import_store: 异步安装 Store 插件.
 """
 
 from __future__ import annotations

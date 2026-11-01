@@ -1,28 +1,30 @@
 """
-本地引擎配置管理, 维护 ~/.gdpm/local-engines.json, 记录用户手动注册的本地 Godot 引擎.
+本地引擎配置管理
+
+- 维护 ~/.gdpm/local-engines.json, 记录用户手动注册的本地 Godot 引擎.
 
 ----
 
-example:
-    配置文件结构:
-
-        {
-          "engines": {
-            "steam": { "path": "...", "version": "4.7-stable" }
-          },
-          "default": "steam@4.7-stable"
-        }
-
+Examples
 ----
+配置文件结构:
 
-Note:
-    - LocalEngine: 本地引擎条目.
-    - load_local_engines: 读取全部本地引擎.
-    - save_local_engines: 保存全部本地引擎.
-    - add_local_engine: 注册本地引擎.
-    - remove_local_engine: 移除本地引擎.
-    - get_default_engine: 获取默认引擎 ID.
-    - set_default_engine: 设置默认引擎 ID.
+    {
+      "engines": {
+        "steam": { "path": "...", "version": "4.7-stable" }
+      },
+      "default": "steam@4.7-stable"
+    }
+
+Notes
+----
+- LocalEngine: 本地引擎条目.
+- load_local_engines: 读取全部本地引擎.
+- save_local_engines: 保存全部本地引擎.
+- add_local_engine: 注册本地引擎.
+- remove_local_engine: 移除本地引擎.
+- get_default_engine: 获取默认引擎 ID.
+- set_default_engine: 设置默认引擎 ID.
 """
 
 from __future__ import annotations
@@ -35,13 +37,18 @@ from pathlib import Path
 @dataclass
 class LocalEngine:
     """
-    本地 Godot 引擎条目.
+    本地 Godot 引擎条目
+
+    记录本地 Godot 引擎的路径与版本信息.
 
     ----
 
-    Note:
-        - path: 引擎可执行文件或目录路径.
-        - version: 引擎版本标签, 如 4.7-stable.
+    Attributes
+    ----
+    path : str
+        引擎可执行文件或目录路径.
+    version : str
+        引擎版本标签, 如 4.7-stable.
     """
 
     path: str
@@ -55,9 +62,15 @@ def get_config_path() -> Path:
 
 def load_config() -> dict[str, object]:
     """
-    加载原始配置字典, 文件不存在或 JSON 非法时返回空字典.
+    加载原始配置字典.
 
-    Returns:
+    文件不存在或 JSON 非法时返回空字典.
+
+    ----
+
+    Returns
+    ----
+    dict[str, object]
         解析后的配置字典.
     """
     path = get_config_path()
@@ -75,12 +88,16 @@ def load_config() -> dict[str, object]:
 
 def save_config(config: dict[str, object]) -> None:
     """
-    保存原始配置字典, 以缩进 2 的 JSON 格式写入, 保留非 ASCII 字符.
+    保存原始配置字典.
+
+    以缩进 2 的 JSON 格式写入, 保留非 ASCII 字符.
 
     ----
 
-    Args:
-        config: 要写入的配置字典.
+    Parameters
+    ----
+    config : dict[str, object]
+        要写入的配置字典.
     """
     path = get_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -92,9 +109,15 @@ def save_config(config: dict[str, object]) -> None:
 
 def load_local_engines() -> dict[str, LocalEngine]:
     """
-    加载本地引擎配置, 兼容旧格式 (值为纯路径字符串) 与新格式 (值为对象).
+    加载本地引擎配置.
 
-    Returns:
+    兼容旧格式 (值为纯路径字符串) 与新格式 (值为对象).
+
+    ----
+
+    Returns
+    ----
+    dict[str, LocalEngine]
         以引擎名为键的 LocalEngine 字典.
     """
     config = load_config()
@@ -116,12 +139,16 @@ def load_local_engines() -> dict[str, LocalEngine]:
 
 def save_local_engines(engines: dict[str, LocalEngine]) -> None:
     """
-    保存本地引擎配置, 仅覆盖 engines 键, 保留配置中的其他字段 (如 default).
+    保存本地引擎配置.
+
+    仅覆盖 engines 键, 保留配置中的其他字段 (如 default).
 
     ----
 
-    Args:
-        engines: 以引擎名为键的 LocalEngine 字典.
+    Parameters
+    ----
+    engines : dict[str, LocalEngine]
+        以引擎名为键的 LocalEngine 字典.
     """
     config = load_config()
     config["engines"] = {
@@ -133,14 +160,20 @@ def save_local_engines(engines: dict[str, LocalEngine]) -> None:
 
 def add_local_engine(name: str, path: str, version: str = "") -> None:
     """
-    注册本地引擎, 同名引擎会被覆盖.
+    注册本地引擎.
+
+    同名引擎会被覆盖.
 
     ----
 
-    Args:
-        name: 引擎名称.
-        path: 引擎可执行文件或目录路径.
-        version: 引擎版本标签, 如 4.7-stable.
+    Parameters
+    ----
+    name : str
+        引擎名称.
+    path : str
+        引擎可执行文件或目录路径.
+    version : str, optional
+        引擎版本标签, 如 4.7-stable.
     """
     engines = load_local_engines()
     engines[name] = LocalEngine(path=path, version=version)
@@ -151,12 +184,18 @@ def remove_local_engine(name: str) -> bool:
     """
     移除本地引擎.
 
+    按名称从本地引擎配置中删除对应条目.
+
     ----
 
-    Args:
-        name: 引擎名称.
+    Parameters
+    ----
+    name : str
+        引擎名称.
 
-    Returns:
+    Returns
+    ----
+    bool
         移除成功返回 True, 未找到返回 False.
     """
     engines = load_local_engines()
@@ -171,12 +210,18 @@ def get_local_engine(name: str) -> LocalEngine | None:
     """
     按名称获取本地引擎.
 
+    从本地引擎配置中查找指定名称的条目.
+
     ----
 
-    Args:
-        name: 引擎名称.
+    Parameters
+    ----
+    name : str
+        引擎名称.
 
-    Returns:
+    Returns
+    ----
+    LocalEngine | None
         LocalEngine 实例, 未找到时返回 None.
     """
     return load_local_engines().get(name)
@@ -186,8 +231,14 @@ def get_default_engine() -> str:
     """
     获取默认引擎 ID.
 
-    Returns:
-        引擎 ID 字符串 (如 'steam@4.7-stable'), 未设置时为空字符串.
+    引擎 ID 形如 'steam@4.7-stable'.
+
+    ----
+
+    Returns
+    ----
+    str
+        引擎 ID 字符串, 未设置时为空字符串.
     """
     config = load_config()
     default = config.get("default", "")
@@ -198,10 +249,14 @@ def set_default_engine(engine_id: str) -> None:
     """
     设置默认引擎 ID.
 
+    将引擎 ID 记录到配置文件的 default 字段.
+
     ----
 
-    Args:
-        engine_id: 引擎 ID, 如 'steam@4.7-stable'.
+    Parameters
+    ----
+    engine_id : str
+        引擎 ID, 如 'steam@4.7-stable'.
     """
     config = load_config()
     config["default"] = engine_id

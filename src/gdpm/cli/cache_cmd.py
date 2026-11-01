@@ -1,13 +1,15 @@
 """
-gdpm cache 命令. 管理全局下载缓存: 查看缓存目录/大小/插件数, 清理已缓存
-的插件压缩包.
+gdpm cache 命令
+
+- 管理全局下载缓存: 查看缓存目录/大小/插件数, 清理已缓存的插件压缩包.
 
 ----
 
-Note:
-    - cache: 子命令组, 挂载 info 与 clean.
-    - cache_info: 显示缓存目录, 大小和插件数量.
-    - cache_clean: 清空全部缓存文件 (支持 -y 跳过确认).
+Notes
+----
+- cache: 子命令组, 挂载 info 与 clean.
+- cache_info: 显示缓存目录, 大小和插件数量.
+- cache_clean: 清空全部缓存文件 (支持 -y 跳过确认).
 """
 
 from __future__ import annotations

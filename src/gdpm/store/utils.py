@@ -1,11 +1,14 @@
 """
-Store 辅助工具, 提供插件名称解析能力, 统一 "slug" 与 "publisher/slug" 两种输入.
+Store 辅助工具
+
+- 提供插件名称解析能力, 统一 "slug" 与 "publisher/slug" 两种输入.
 
 ----
 
-Note:
-    - ResolvedPlugin: 名称解析结果.
-    - resolve_publisher: 由插件名解析发布者.
+Notes
+----
+- ResolvedPlugin: 名称解析结果.
+- resolve_publisher: 由插件名解析发布者.
 """
 
 from __future__ import annotations
@@ -20,15 +23,22 @@ if TYPE_CHECKING:
 @dataclass
 class ResolvedPlugin:
     """
-    插件名称解析结果.
+    插件名称解析结果
+
+    含发布者 slug 与解析失败时的错误信息.
 
     ----
 
-    Attributes:
-        publisher: 发布者 slug, 未解析时为空.
-        slug: 插件 slug.
-        found: 是否解析成功.
-        error: 错误信息, 成功时为空.
+    Attributes
+    ----
+    publisher : str
+        发布者 slug, 未解析时为空.
+    slug : str
+        插件 slug.
+    found : bool
+        是否解析成功.
+    error : str
+        错误信息, 成功时为空.
     """
 
     publisher: str
@@ -42,21 +52,22 @@ async def resolve_publisher(
     name: str,
 ) -> ResolvedPlugin:
     """
-    根据插件名解析发布者 slug, 支持两种输入形式.
+    根据插件名解析发布者 slug.
+
+    支持两种输入形式: "slug" 搜索商店并返回发布者, "publisher/slug" 直接返回.
 
     ----
 
-    Note:
-        - "slug": 搜索商店并返回发布者.
-        - "publisher/slug": 直接返回.
-
+    Parameters
     ----
+    store : StoreClient
+        商店客户端.
+    name : str
+        插件名或 "publisher/slug".
 
-    Args:
-        store: 商店客户端.
-        name: 插件名或 "publisher/slug".
-
-    Returns:
+    Returns
+    ----
+    ResolvedPlugin
         含发布者 slug 的解析结果.
     """
     parts = name.split("/")

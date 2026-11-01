@@ -1,10 +1,13 @@
 """
-gdpm godot open 命令, 打开 Godot 编辑器或运行当前项目.
+gdpm godot open 命令
+
+- 打开 Godot 编辑器或运行当前项目.
 
 ----
 
-Note:
-    - godot_open: 打开 Godot 编辑器或运行当前项目.
+Notes
+----
+- godot_open: 打开 Godot 编辑器或运行当前项目.
 """
 
 from __future__ import annotations

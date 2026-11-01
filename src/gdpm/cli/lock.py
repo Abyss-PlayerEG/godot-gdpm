@@ -1,11 +1,13 @@
 """
-gdpm lock 命令. 解析项目依赖并生成或更新 gdpm.lock 锁文件, 支持 --check
-检查模式.
+gdpm lock 命令
+
+- 解析项目依赖并生成或更新 gdpm.lock 锁文件, 支持 --check 检查模式.
 
 ----
 
-Note:
-    - lock: 命令入口, 内部通过 asyncio 运行解析与写入流程.
+Notes
+----
+- lock: 命令入口, 内部通过 asyncio 运行解析与写入流程.
 """
 
 from __future__ import annotations

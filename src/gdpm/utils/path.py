@@ -1,10 +1,13 @@
 """
-路径工具, 提供路径显示缩短等辅助函数.
+路径工具
+
+- 提供路径显示缩短等辅助函数.
 
 ----
 
-Note:
-    - shorten_path: 缩短路径显示.
+Notes
+----
+- shorten_path: 缩短路径显示.
 """
 
 from __future__ import annotations
@@ -18,11 +21,16 @@ def shorten_path(path: str, max_len: int = 35) -> str:
 
     ----
 
-    Args:
-        path: 完整路径字符串.
-        max_len: 截断前的最大长度.
+    Parameters
+    ----
+    path : str
+        完整路径字符串.
+    max_len : int, optional
+        截断前的最大长度.
 
-    Returns:
+    Returns
+    ----
+    str
         缩短后的路径字符串.
     """
     short = path.replace(str(Path.home()), "~")

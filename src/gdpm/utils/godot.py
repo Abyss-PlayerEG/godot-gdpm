@@ -1,14 +1,16 @@
 """
-Godot project.godot 文件解析, 从 project.godot 文件检测 Godot
-引擎版本, 支持 Godot 3.x 与 4.x 格式.
+Godot project.godot 文件解析
+
+- 从 project.godot 文件检测 Godot 引擎版本, 支持 Godot 3.x 与 4.x 格式.
 
 ----
 
-Note:
-    - 版本检测规则 (按 config_version):
-    - config_version=5 -> Godot 4.x:
-        config/features=PackedStringArray("4.7", "Forward Plus")
-    - config_version=4 -> Godot 3.x: config/version="3.5.2"
+Notes
+----
+- 版本检测规则 (按 config_version):
+- config_version=5 -> Godot 4.x:
+    config/features=PackedStringArray("4.7", "Forward Plus")
+- config_version=4 -> Godot 3.x: config/version="3.5.2"
 """
 
 from __future__ import annotations
@@ -29,12 +31,18 @@ class GodotProject:
 
     ----
 
-    Attributes:
-        name: 项目名称.
-        godot_version: Godot 版本, 如 "4.7".
-        config_version: project.godot 的 config_version 值.
-        renderer: 渲染器名称.
-        features: config/features 特性列表.
+    Attributes
+    ----
+    name : str
+        项目名称.
+    godot_version : str
+        Godot 版本, 如 "4.7".
+    config_version : int
+        project.godot 的 config_version 值.
+    renderer : str
+        渲染器名称.
+    features : list[str] | None
+        config/features 特性列表.
     """
 
     name: str = ""
@@ -48,7 +56,11 @@ class GodotProject:
         """
         生成 gdproject.toml 的版本约束字符串.
 
-        Returns:
+        ----
+
+        Returns
+        ----
+        str
             形如 ">=4.2.0" 的约束; 版本缺失时返回 ">=3.0".
         """
         if not self.godot_version:
@@ -70,10 +82,14 @@ def parse_project_godot(path: Path) -> GodotProject:
 
     ----
 
-    Args:
-        path: project.godot 文件路径.
+    Parameters
+    ----
+    path : Path
+        project.godot 文件路径.
 
-    Returns:
+    Returns
+    ----
+    GodotProject
         解析出的项目信息; 文件不存在或格式过旧时返回空对象.
     """
     if not path.exists():
@@ -94,10 +110,14 @@ def _parse_content(content: str) -> GodotProject:
 
     ----
 
-    Args:
-        content: project.godot 文件内容.
+    Parameters
+    ----
+    content : str
+        project.godot 文件内容.
 
-    Returns:
+    Returns
+    ----
+    GodotProject
         解析出的项目信息.
     """
     project = GodotProject()
@@ -170,10 +190,14 @@ def detect_godot_version(project_dir: Path) -> str:
 
     ----
 
-    Args:
-        project_dir: 项目根目录.
+    Parameters
+    ----
+    project_dir : Path
+        项目根目录.
 
-    Returns:
+    Returns
+    ----
+    str
         形如 "4.7" 或 "3.5" 的版本字符串, 未找到时为空字符串.
     """
     project_file = project_dir / "project.godot"
@@ -187,10 +211,14 @@ def detect_version_constraint(project_dir: Path) -> str:
 
     ----
 
-    Args:
-        project_dir: 项目根目录.
+    Parameters
+    ----
+    project_dir : Path
+        项目根目录.
 
-    Returns:
+    Returns
+    ----
+    str
         形如 ">=4.2.0" 的约束字符串, 未找到时返回 ">=4.0".
     """
     project_file = project_dir / "project.godot"
@@ -206,10 +234,14 @@ def detect_godot_binary(path: Path) -> Path | None:
 
     ----
 
-    Args:
-        path: 疑似 Godot 可执行文件或 .app 的路径.
+    Parameters
+    ----
+    path : Path
+        疑似 Godot 可执行文件或 .app 的路径.
 
-    Returns:
+    Returns
+    ----
+    pathlib.Path | None
         Godot 二进制路径, 无效时返回 None.
     """
     if not path.exists():
@@ -239,10 +271,14 @@ def get_godot_version(binary: Path) -> str:
 
     ----
 
-    Args:
-        binary: Godot 可执行文件路径.
+    Parameters
+    ----
+    binary : Path
+        Godot 可执行文件路径.
 
-    Returns:
+    Returns
+    ----
+    str
         形如 '4.7-stable' 的版本字符串, 失败时为空字符串.
     """
     try:
@@ -269,18 +305,21 @@ def _parse_version_string(version_str: str) -> str:
 
     ----
 
-    Note:
-        - '4.7.0.stable.official.h' -> '4.7-stable'
-        - '3.6.2.stable.official.h' -> '3.6.2-stable'
-        - '4.7.0.rc1.official.h' -> '4.7-rc1'
-
+    Parameters
     ----
+    version_str : str
+        原始版本字符串.
 
-    Args:
-        version_str: 原始版本字符串.
-
-    Returns:
+    Returns
+    ----
+    str
         简短格式的版本字符串.
+
+    Examples
+    ----
+    '4.7.0.stable.official.h' -> '4.7-stable'
+    '3.6.2.stable.official.h' -> '3.6.2-stable'
+    '4.7.0.rc1.official.h' -> '4.7-rc1'
     """
     parts = version_str.split(".")
     if len(parts) < 3:

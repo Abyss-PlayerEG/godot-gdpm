@@ -1,11 +1,13 @@
 """
-gdpm list 命令. 列出项目中已安装的插件及其版本与来源, 支持表格和 JSON
-两种输出.
+gdpm list 命令
+
+- 列出项目中已安装的插件及其版本与来源, 支持表格和 JSON 两种输出.
 
 ----
 
-Note:
-    - list_cmd: 命令入口, 扫描 addons 并渲染表格或 JSON.
+Notes
+----
+- list_cmd: 命令入口, 扫描 addons 并渲染表格或 JSON.
 """
 
 from __future__ import annotations

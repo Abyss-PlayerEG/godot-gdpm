@@ -1,14 +1,17 @@
 """
-基于文件系统的缓存实现.
+基于文件系统的缓存实现
+
+- 将 zip 文件按发布者首字母分片存放.
 
 ----
 
-Note:
-    - 缓存目录结构:
-        <cache_dir>/downloads/<letter>/<publisher>_<slug>@<version>
-    - letter: 发布者首字母小写, 用于目录分片.
-    - 键中的斜杠会替换为下划线.
-    - FileCache: 满足 CacheProtocol 的文件缓存实现.
+Notes
+----
+- 缓存目录结构:
+    <cache_dir>/downloads/<letter>/<publisher>_<slug>@<version>
+- letter: 发布者首字母小写, 用于目录分片.
+- 键中的斜杠会替换为下划线.
+- FileCache: 满足 CacheProtocol 的文件缓存实现.
 """
 
 from __future__ import annotations
@@ -22,22 +25,30 @@ if TYPE_CHECKING:
 
 class FileCache:
     """
-    本地文件缓存, 将 zip 文件按发布者首字母分片存放, 满足 CacheProtocol.
+    本地文件缓存
+
+    将 zip 文件按发布者首字母分片存放, 满足 CacheProtocol.
 
     ----
 
-    Attributes:
-        path: downloads 分片根目录.
+    Attributes
+    ----
+    path : Path
+        downloads 分片根目录.
     """
 
     def __init__(self, cache_dir: Path) -> None:
         """
         初始化缓存目录.
 
+        自动创建 downloads 子目录.
+
         ----
 
-        Args:
-            cache_dir: 缓存根目录, 自动创建 downloads 子目录.
+        Parameters
+        ----
+        cache_dir : Path
+            缓存根目录.
         """
         self._dir = cache_dir
         self._downloads = cache_dir / "downloads"
@@ -52,12 +63,18 @@ class FileCache:
         """
         获取缓存文件.
 
+        缓存键形如 "publisher/slug@version".
+
         ----
 
-        Args:
-            key: 缓存键, 如 "publisher/slug@version".
+        Parameters
+        ----
+        key : str
+            缓存键.
 
-        Returns:
+        Returns
+        ----
+        Path | None
             缓存文件路径, 不存在则返回 None.
         """
         path = self._key_path(key)
@@ -69,13 +86,20 @@ class FileCache:
         """
         写入缓存.
 
+        复制源文件到缓存中的目标路径.
+
         ----
 
-        Args:
-            key: 缓存键.
-            source: 待复制的源文件.
+        Parameters
+        ----
+        key : str
+            缓存键.
+        source : Path
+            待复制的源文件.
 
-        Returns:
+        Returns
+        ----
+        Path
             缓存中的目标路径.
         """
         dest = self._key_path(key)
@@ -87,12 +111,18 @@ class FileCache:
         """
         判断缓存是否存在.
 
+        按缓存键检查缓存文件是否存在.
+
         ----
 
-        Args:
-            key: 缓存键.
+        Parameters
+        ----
+        key : str
+            缓存键.
 
-        Returns:
+        Returns
+        ----
+        bool
             存在则为 True.
         """
         return self._key_path(key).exists()
@@ -108,7 +138,13 @@ class FileCache:
         """
         统计缓存占用的字节数.
 
-        Returns:
+        累加缓存目录下所有文件的大小.
+
+        ----
+
+        Returns
+        ----
+        int
             缓存目录下所有文件的大小之和.
         """
         if not self._dir.exists():
@@ -123,12 +159,18 @@ class FileCache:
         """
         根据键计算分片目录.
 
+        按缓存键的发布者首字母定位分片目录.
+
         ----
 
-        Args:
-            key: 缓存键.
+        Parameters
+        ----
+        key : str
+            缓存键.
 
-        Returns:
+        Returns
+        ----
+        Path
             发布者首字母对应的分片目录.
         """
         # 取发布者部分作为分片依据, 无发布者时使用 "x".
@@ -140,12 +182,18 @@ class FileCache:
         """
         将缓存键映射为文件路径.
 
+        键中的斜杠会替换为下划线.
+
         ----
 
-        Args:
-            key: 缓存键.
+        Parameters
+        ----
+        key : str
+            缓存键.
 
-        Returns:
+        Returns
+        ----
+        Path
             分片目录下的安全文件路径.
         """
         # 替换斜杠, 防止键被解析为子目录.

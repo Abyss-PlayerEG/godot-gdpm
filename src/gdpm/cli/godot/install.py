@@ -1,11 +1,14 @@
 """
-gdpm godot install/uninstall 命令, 安装与卸载 Godot 引擎.
+gdpm godot install/uninstall 命令
+
+- 安装与卸载 Godot 引擎.
 
 ----
 
-Note:
-    - godot_install: 下载, 校验并解压 Godot 引擎.
-    - godot_uninstall: 删除已安装的 Godot 引擎.
+Notes
+----
+- godot_install: 下载, 校验并解压 Godot 引擎.
+- godot_uninstall: 删除已安装的 Godot 引擎.
 """
 
 from __future__ import annotations

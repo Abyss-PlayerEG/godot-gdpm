@@ -1,29 +1,31 @@
 """
-全局配置管理, 读写 gdpm 全局配置文件 config.toml, 管理跨项目共享的默认设置.
+全局配置管理
+
+- 读写 gdpm 全局配置文件 config.toml, 管理跨项目共享的默认设置.
 
 ----
 
-example:
-    配置文件结构:
-
-        [defaults]
-        godot_path = "godot"
-        addons_dir = "addons"
-        parallel_downloads = 4
-
-        [store]
-        base_url = "https://store.godotengine.org/api/v1"
-
-        [cache]
-        dir = "~/.gdpm/cache"
-
+Examples
 ----
+配置文件结构:
 
-Note:
-    - GlobalConfig: 全局配置数据类.
-    - get_config_path: 获取配置文件路径.
-    - read_global_config: 读取全局配置.
-    - write_global_config: 写入全局配置.
+    [defaults]
+    godot_path = "godot"
+    addons_dir = "addons"
+    parallel_downloads = 4
+
+    [store]
+    base_url = "https://store.godotengine.org/api/v1"
+
+    [cache]
+    dir = "~/.gdpm/cache"
+
+Notes
+----
+- GlobalConfig: 全局配置数据类.
+- get_config_path: 获取配置文件路径.
+- read_global_config: 读取全局配置.
+- write_global_config: 写入全局配置.
 """
 
 from __future__ import annotations
@@ -39,16 +41,24 @@ import platformdirs
 @dataclass
 class GlobalConfig:
     """
-    全局配置数据类.
+    全局配置数据类
+
+    gdpm 跨项目共享的默认设置, 对应配置文件 config.toml.
 
     ----
 
-    Note:
-        - godot_path: Godot 可执行文件路径或命令名.
-        - addons_dir: 插件安装目录名.
-        - parallel_downloads: 并行下载数.
-        - cache_dir: 下载缓存目录.
-        - store_url: Godot Asset Store API 基础地址.
+    Attributes
+    ----
+    godot_path : str
+        Godot 可执行文件路径或命令名.
+    addons_dir : str
+        插件安装目录名.
+    parallel_downloads : int
+        并行下载数.
+    cache_dir : str
+        下载缓存目录.
+    store_url : str
+        Godot Asset Store API 基础地址.
     """
 
     godot_path: str = "godot"
@@ -59,7 +69,9 @@ class GlobalConfig:
 
     def __post_init__(self) -> None:
         """
-        初始化后处理, 若 cache_dir 为空, 回退到 ~/.gdpm/cache.
+        初始化后处理.
+
+        若 cache_dir 为空, 回退到 ~/.gdpm/cache.
         """
         if not self.cache_dir:
             self.cache_dir = str(Path.home() / ".gdpm" / "cache")
@@ -72,10 +84,16 @@ def get_config_path() -> Path:
 
 def read_global_config() -> GlobalConfig:
     """
-    读取全局配置, 配置文件不存在时返回默认配置.
+    读取全局配置.
 
-    Returns:
-        GlobalConfig 实例.
+    配置文件不存在时返回默认配置.
+
+    ----
+
+    Returns
+    ----
+    GlobalConfig
+        全局配置实例.
     """
     path = get_config_path()
     if not path.exists():
@@ -99,12 +117,16 @@ def read_global_config() -> GlobalConfig:
 
 def write_global_config(config: GlobalConfig) -> None:
     """
-    写入全局配置, 按 [defaults]/[store]/[cache] 三节序列化为 TOML 并覆盖写入.
+    写入全局配置.
+
+    按 [defaults]/[store]/[cache] 三节序列化为 TOML 并覆盖写入.
 
     ----
 
-    Args:
-        config: 要持久化的全局配置.
+    Parameters
+    ----
+    config : GlobalConfig
+        要持久化的全局配置.
     """
     path = get_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)

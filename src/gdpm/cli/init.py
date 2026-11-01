@@ -1,13 +1,16 @@
 """
-gdpm init 命令: 在现有 Godot 项目中初始化 gdpm.
+gdpm init 命令
+
+- 在现有 Godot 项目中初始化 gdpm: 校验项目文件, 生成配置.
 
 ----
 
-Note:
-    - 校验 project.godot: 检查文件与配置有效性.
-    - 检测版本约束: 推断 Godot 版本约束.
-    - 生成配置: 写入 gdproject.toml 并创建 addons/ 目录.
-    - init(): 命令入口.
+Notes
+----
+- 校验 project.godot: 检查文件与配置有效性.
+- 检测版本约束: 推断 Godot 版本约束.
+- 生成配置: 写入 gdproject.toml 并创建 addons/ 目录.
+- init: 命令入口.
 """
 
 from __future__ import annotations

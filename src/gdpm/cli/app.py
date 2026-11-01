@@ -1,13 +1,16 @@
 """
-CLI 应用入口. 本模块定义 gdpm 命令行主入口和基于 Rich 的帮助渲染系统.
+CLI 应用入口
+
+- 本模块定义 gdpm 命令行主入口和基于 Rich 的帮助渲染系统.
 
 ----
 
-Note:
-    - BANNER / COMMANDS: ASCII 横幅与主帮助中的命令分类清单.
-    - GdpmCommand / GdpmGroup: 自定义 click 命令与命令组类, 渲染 Rich 帮助.
-    - print_info / print_version / print_completion: 全局选项的回调.
-    - main: 根命令组, 在模块尾部挂载全部子命令.
+Notes
+----
+- BANNER / COMMANDS: ASCII 横幅与主帮助中的命令分类清单.
+- GdpmCommand / GdpmGroup: 自定义 click 命令与命令组类, 渲染 Rich 帮助.
+- print_info / print_version / print_completion: 全局选项的回调.
+- main: 根命令组, 在模块尾部挂载全部子命令.
 """
 
 from __future__ import annotations
@@ -62,8 +65,9 @@ COMMANDS = {
 
 class GdpmCommand(click.Command):
     """
-    使用 Rich 渲染帮助的自定义命令类. 在 click 标准帮助之外渲染: 标题行,
-    Usage 行, Options 表格和 Examples 面板.
+    使用 Rich 渲染帮助的自定义命令类
+
+    在 click 标准帮助之外渲染: 标题行, Usage 行, Options 表格和 Examples 面板.
     """
 
     def __init__(
@@ -77,23 +81,32 @@ class GdpmCommand(click.Command):
 
         ----
 
-        Args:
-            *args: 透传给 click.Command.
-            examples: (命令, 说明) 示例对, 展示在 Examples 面板.
-            **kwargs: 透传给 click.Command.
+        Parameters
+        ----
+        *args : Any
+            透传给 click.Command.
+        examples : list[tuple[str, str]] | None, optional
+            (命令, 说明) 示例对, 展示在 Examples 面板.
+        **kwargs : Any
+            透传给 click.Command.
         """
         super().__init__(*args, **kwargs)
         self.examples: list[tuple[str, str]] = examples or []
 
     def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
         """
-        渲染 Rich 风格的命令帮助. 依次输出标题, 用法行, 选项表格和示例面板.
+        渲染 Rich 风格的命令帮助.
+
+        依次输出标题, 用法行, 选项表格和示例面板.
 
         ----
 
-        Args:
-            ctx: click 上下文, 提供命令名等信息.
-            formatter: click 帮助格式化器, 本实现未使用.
+        Parameters
+        ----
+        ctx : click.Context
+            click 上下文, 提供命令名等信息.
+        formatter : click.HelpFormatter
+            click 帮助格式化器, 本实现未使用.
         """
         console.print()
         console.print(
@@ -173,8 +186,10 @@ class GdpmCommand(click.Command):
 
 class GdpmGroup(click.Group):
     """
-    使用 Rich 渲染帮助的自定义命令组类. 根据上下文区分主帮助 (gdpm) 与
-    子命令组帮助 (如 gdpm cache), 分别交给不同布局的渲染方法处理.
+    使用 Rich 渲染帮助的自定义命令组类
+
+    根据上下文区分主帮助 (gdpm) 与子命令组帮助 (如 gdpm cache),
+    分别交给不同布局的渲染方法处理.
     """
 
     def __init__(
@@ -188,24 +203,32 @@ class GdpmGroup(click.Group):
 
         ----
 
-        Args:
-            *args: 透传给 click.Group.
-            examples: (命令, 说明) 示例对, 展示在 Examples 面板.
-            **kwargs: 透传给 click.Group.
+        Parameters
+        ----
+        *args : Any
+            透传给 click.Group.
+        examples : list[tuple[str, str]] | None, optional
+            (命令, 说明) 示例对, 展示在 Examples 面板.
+        **kwargs : Any
+            透传给 click.Group.
         """
         super().__init__(*args, **kwargs)
         self.examples: list[tuple[str, str]] = examples or []
 
     def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
         """
-        按上下文分发帮助渲染. 主命令 (gdpm) 渲染总览帮助, 其余命令组渲染
-        子命令帮助.
+        按上下文分发帮助渲染.
+
+        主命令 (gdpm) 渲染总览帮助, 其余命令组渲染子命令帮助.
 
         ----
 
-        Args:
-            ctx: click 上下文.
-            formatter: click 帮助格式化器, 本实现未使用.
+        Parameters
+        ----
+        ctx : click.Context
+            click 上下文.
+        formatter : click.HelpFormatter
+            click 帮助格式化器, 本实现未使用.
         """
         terminal_width = console.width
         # 面板宽度留出边距, 并限制在 80 列内
@@ -218,14 +241,18 @@ class GdpmGroup(click.Group):
 
     def _format_main_help(self, ctx: click.Context, panel_width: int) -> None:
         """
-        渲染主帮助: 命令总览, 用法与公共选项. 显示按类别分组的命令清单,
-        Usage/Help 提示行和公共选项面板.
+        渲染主帮助: 命令总览, 用法与公共选项.
+
+        显示按类别分组的命令清单, Usage/Help 提示行和公共选项面板.
 
         ----
 
-        Args:
-            ctx: click 上下文.
-            panel_width: 面板宽度 (字符).
+        Parameters
+        ----
+        ctx : click.Context
+            click 上下文.
+        panel_width : int
+            面板宽度 (字符).
         """
         console.print()
 
@@ -285,13 +312,18 @@ class GdpmGroup(click.Group):
 
     def _format_group_help(self, ctx: click.Context, panel_width: int) -> None:
         """
-        渲染子命令组帮助. 显示组标题, 用法行, 子命令表格以及可选的示例面板.
+        渲染子命令组帮助.
+
+        显示组标题, 用法行, 子命令表格以及可选的示例面板.
 
         ----
 
-        Args:
-            ctx: click 上下文.
-            panel_width: 面板宽度 (字符).
+        Parameters
+        ----
+        ctx : click.Context
+            click 上下文.
+        panel_width : int
+            面板宽度 (字符).
         """
         console.print()
         console.print(
@@ -350,7 +382,11 @@ def _version_text() -> Text:
     """
     构建含发布标签与平台信息的版本文本.
 
-    Returns:
+    ----
+
+    Returns
+    ----
+    Text
         富文本版本行: 基础版本, 发布标签, 安装方式与平台.
     """
     import re
@@ -377,10 +413,14 @@ def print_completion(ctx: click.Context, _param: click.Parameter, value: str) ->
 
     ----
 
-    Args:
-        ctx: click 上下文.
-        _param: 触发回调的参数, 未使用.
-        value: 目标 shell (zsh/bash/fish).
+    Parameters
+    ----
+    ctx : click.Context
+        click 上下文.
+    _param : click.Parameter
+        触发回调的参数, 未使用.
+    value : str
+        目标 shell (zsh/bash/fish).
     """
     if not value or ctx.resilient_parsing:
         return
@@ -405,15 +445,20 @@ def print_completion(ctx: click.Context, _param: click.Parameter, value: str) ->
 
 def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
     """
-    打印项目信息横幅与版本. 显示 ASCII 横幅, 版本, 仓库地址和贡献者列表,
-    随后退出.
+    打印项目信息横幅与版本.
+
+    显示 ASCII 横幅, 版本, 仓库地址和贡献者列表, 随后退出.
 
     ----
 
-    Args:
-        ctx: click 上下文.
-        _param: 触发回调的参数, 未使用.
-        value: 是否指定了 -i/--info.
+    Parameters
+    ----
+    ctx : click.Context
+        click 上下文.
+    _param : click.Parameter
+        触发回调的参数, 未使用.
+    value : bool
+        是否指定了 -i/--info.
     """
     if not value:
         return
@@ -480,10 +525,14 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
 
     ----
 
-    Args:
-        ctx: click 上下文.
-        _param: 触发回调的参数, 未使用.
-        value: 是否指定了 -V/--version.
+    Parameters
+    ----
+    ctx : click.Context
+        click 上下文.
+    _param : click.Parameter
+        触发回调的参数, 未使用.
+    value : bool
+        是否指定了 -V/--version.
     """
     if not value:
         return

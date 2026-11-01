@@ -1,11 +1,14 @@
 """
-插件安装管理, 负责从缓存或 Store 下载插件并安装到 addons 目录.
+插件安装管理
+
+- 负责从缓存或 Store 下载插件并安装到 addons 目录.
 
 ----
 
-Note:
-    - PluginManager: 插件安装管理器.
-    - TAG_FILENAME: 插件标记文件名.
+Notes
+----
+- PluginManager: 插件安装管理器.
+- TAG_FILENAME: 插件标记文件名.
 """
 
 from __future__ import annotations
@@ -33,17 +36,26 @@ TAG_FILENAME = "tag.gdpm"
 
 class PluginManager:
     """
-    插件安装管理器, 管理插件的下载, 解压安装, 标记与卸载, 并维护下载缓存索引.
+    插件安装管理器.
+
+    管理插件的下载, 解压安装, 标记与卸载, 并维护下载缓存索引.
 
     ----
 
-    Attributes:
-        _addons: addons 目录路径.
-        _project_root: 项目根目录.
-        _cache: 文件缓存.
-        _index: 缓存索引.
-        _store: Asset Store 客户端.
-        _owns_store: 客户端是否由本对象创建.
+    Attributes
+    ----
+    _addons : Path
+        addons 目录路径.
+    _project_root : Path
+        项目根目录.
+    _cache : FileCache
+        文件缓存.
+    _index : CacheIndex
+        缓存索引.
+    _store : StoreClient
+        Asset Store 客户端.
+    _owns_store : bool
+        客户端是否由本对象创建.
     """
 
     def __init__(
@@ -57,10 +69,14 @@ class PluginManager:
 
         ----
 
-        Args:
-            addons_dir: addons 目录路径.
-            cache: 文件缓存实例.
-            store: Store 客户端, 为空时自动创建.
+        Parameters
+        ----
+        addons_dir : Path
+            addons 目录路径.
+        cache : FileCache
+            文件缓存实例.
+        store : StoreClient, optional
+            Store 客户端, 为空时自动创建.
         """
         self._addons = addons_dir
         self._project_root = addons_dir.parent
@@ -70,9 +86,7 @@ class PluginManager:
         self._owns_store = store is None
 
     async def close(self) -> None:
-        """
-        关闭内部创建的 Store 客户端, 仅在客户端由本对象创建时才执行关闭.
-        """
+        """关闭内部创建的 Store 客户端, 仅在客户端由本对象创建时才执行关闭."""
         if self._owns_store:
             await self._store.close()
 
@@ -89,18 +103,28 @@ class PluginManager:
 
         ----
 
-        Args:
-            publisher: 发布者 slug.
-            slug: 插件 slug.
-            version: 版本号, 为空时取最新版本.
-            on_progress: 进度回调.
-            use_cache: 是否使用本地缓存.
+        Parameters
+        ----
+        publisher : str
+            发布者 slug.
+        slug : str
+            插件 slug.
+        version : str, optional
+            版本号, 为空时取最新版本.
+        on_progress : ProgressCallback, optional
+            进度回调.
+        use_cache : bool, optional
+            是否使用本地缓存.
 
-        Returns:
+        Returns
+        ----
+        tuple[pathlib.Path, str]
             (压缩包路径, 版本号) 元组.
 
-        Raises:
-            ValueError: 找不到发布版本或指定版本.
+        Raises
+        ----
+        ValueError
+            找不到发布版本或指定版本.
         """
         # 未指定版本时取 API 最新版本
         if not version:
@@ -165,10 +189,14 @@ class PluginManager:
 
         ----
 
-        Args:
-            zip_path: 压缩包路径.
+        Parameters
+        ----
+        zip_path : Path
+            压缩包路径.
 
-        Returns:
+        Returns
+        ----
+        ZipAnalysis
             压缩包结构分析结果.
         """
         return analyze_zip(zip_path)
@@ -181,11 +209,16 @@ class PluginManager:
 
         ----
 
-        Args:
-            zip_path: 压缩包路径.
-            dest: 解压目标目录.
-            slug: 插件 slug.
-            publisher: 发布者 slug.
+        Parameters
+        ----
+        zip_path : Path
+            压缩包路径.
+        dest : Path
+            解压目标目录.
+        slug : str
+            插件 slug.
+        publisher : str, optional
+            发布者 slug.
         """
         dest.mkdir(parents=True, exist_ok=True)
         extract_full_zip(zip_path, dest)
@@ -207,17 +240,26 @@ class PluginManager:
 
         ----
 
-        Args:
-            zip_path: 压缩包路径.
-            slug: 插件 slug.
-            publisher: 发布者 slug.
-            dest_path: 自定义安装路径.
+        Parameters
+        ----
+        zip_path : Path
+            压缩包路径.
+        slug : str
+            插件 slug.
+        publisher : str, optional
+            发布者 slug.
+        dest_path : str, optional
+            自定义安装路径.
 
-        Returns:
+        Returns
+        ----
+        dict[str, Any]
             包含安装目标与 addon 目录的字典.
 
-        Raises:
-            ValueError: 解压失败或不是合法插件包.
+        Raises
+        ----
+        ValueError
+            解压失败或不是合法插件包.
         """
         analysis = analyze_zip(zip_path)
         source = f"store+{publisher}/{slug}" if publisher else f"store+{slug}"
@@ -266,10 +308,14 @@ class PluginManager:
 
         ----
 
-        Args:
-            dest: 插件目录.
-            slug: 插件 slug.
-            publisher: 发布者 slug.
+        Parameters
+        ----
+        dest : Path
+            插件目录.
+        slug : str
+            插件 slug.
+        publisher : str, optional
+            发布者 slug.
         """
         source = f"store+{publisher}/{slug}" if publisher else f"store+{slug}"
         tag_path = dest / TAG_FILENAME
@@ -281,8 +327,10 @@ class PluginManager:
 
         ----
 
-        Args:
-            slug: 插件 slug.
+        Parameters
+        ----
+        slug : str
+            插件 slug.
         """
         if not self._addons.exists():
             return
@@ -302,10 +350,14 @@ class PluginManager:
 
         ----
 
-        Args:
-            slug: 插件 slug.
+        Parameters
+        ----
+        slug : str
+            插件 slug.
 
-        Returns:
+        Returns
+        ----
+        list[str]
             addon 目录名列表.
         """
         if not self._addons.exists():
@@ -328,10 +380,14 @@ class PluginManager:
 
         ----
 
-        Args:
-            slug: 插件 slug.
+        Parameters
+        ----
+        slug : str
+            插件 slug.
 
-        Returns:
+        Returns
+        ----
+        bool
             已安装返回 True.
         """
         return len(self.find_addon_dirs(slug)) > 0

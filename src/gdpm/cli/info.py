@@ -1,11 +1,13 @@
 """
-gdpm info 命令. 查询并展示 Godot Asset Store 插件的详细信息, 包括描述,
-元数据和版本历史.
+gdpm info 命令
+
+- 查询并展示 Godot Asset Store 插件的详细信息, 包括描述, 元数据和版本历史.
 
 ----
 
-Note:
-    - info: 命令入口, 解析 publisher/slug 并输出详情面板.
+Notes
+----
+- info: 命令入口, 解析 publisher/slug 并输出详情面板.
 """
 
 from __future__ import annotations

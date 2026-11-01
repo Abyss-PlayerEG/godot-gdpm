@@ -1,11 +1,14 @@
 """
-版本与版本约束模型. 定义插件版本解析与约束匹配的核心数据结构.
+版本与版本约束模型
+
+- 定义插件版本解析与约束匹配的核心数据结构.
 
 ----
 
-Note:
-    - Version: 可比较的语义化版本, 内部基于 packaging.version 解析.
-    - VersionConstraint: 版本约束表达式, 用于判断版本是否匹配.
+Notes
+----
+- Version: 可比较的语义化版本, 内部基于 packaging.version 解析.
+- VersionConstraint: 版本约束表达式, 用于判断版本是否匹配.
 """
 
 from __future__ import annotations
@@ -20,23 +23,26 @@ from gdpm.utils.version import normalize_version, version_matches
 @dataclass(frozen=True)
 class Version:
     """
-    可比较的插件版本. 冻结数据类, 构造时将原始版本字符串规范化并解析为
+    可比较的插件版本.
+
+    冻结数据类, 构造时将原始版本字符串规范化并解析为
     packaging.version.Version.
 
     ----
 
-    Note:
-        - version: 原始版本字符串.
-        - _parsed: 规范化后的解析结果, 不参与构造与 repr.
+    Attributes
+    ----
+    version : str
+        原始版本字符串.
+    _parsed : PkgVersion
+        规范化后的解析结果, 不参与构造与 repr.
     """
 
     version: str
     _parsed: PkgVersion = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        """
-        规范化版本字符串并缓存解析结果.
-        """
+        """规范化版本字符串并缓存解析结果."""
         normalized = normalize_version(self.version)
         object.__setattr__(self, "_parsed", PkgVersion(normalized))
 
@@ -61,33 +67,25 @@ class Version:
         return self._parsed.is_prerelease
 
     def __lt__(self, other: object) -> bool:
-        """
-        判断本版本是否小于另一版本.
-        """
+        """判断本版本是否小于另一版本."""
         if not isinstance(other, Version):
             return NotImplemented
         return self._parsed < other._parsed
 
     def __le__(self, other: object) -> bool:
-        """
-        判断本版本是否小于或等于另一版本.
-        """
+        """判断本版本是否小于或等于另一版本."""
         if not isinstance(other, Version):
             return NotImplemented
         return self._parsed <= other._parsed
 
     def __gt__(self, other: object) -> bool:
-        """
-        判断本版本是否大于另一版本.
-        """
+        """判断本版本是否大于另一版本."""
         if not isinstance(other, Version):
             return NotImplemented
         return self._parsed > other._parsed
 
     def __ge__(self, other: object) -> bool:
-        """
-        判断本版本是否大于或等于另一版本.
-        """
+        """判断本版本是否大于或等于另一版本."""
         if not isinstance(other, Version):
             return NotImplemented
         return self._parsed >= other._parsed
@@ -99,9 +97,7 @@ class Version:
         return self._parsed == other._parsed
 
     def __hash__(self) -> int:
-        """
-        基于解析后的版本计算哈希.
-        """
+        """基于解析后的版本计算哈希."""
         return hash(self._parsed)
 
     def __str__(self) -> str:
@@ -116,8 +112,10 @@ class VersionConstraint:
 
     ----
 
-    Note:
-        - constraint: 约束表达式字符串 (如 ">=1.0.0,<2.0.0").
+    Attributes
+    ----
+    constraint : str
+        约束表达式字符串 (如 ">=1.0.0,<2.0.0").
     """
 
     constraint: str
@@ -128,11 +126,15 @@ class VersionConstraint:
 
         ----
 
-        Args:
-            version: 待检查的版本.
+        Parameters
+        ----
+        version : Version
+            待检查的版本.
 
-        Returns:
-            bool: 满足约束返回 True, 否则返回 False.
+        Returns
+        ----
+        bool
+            满足约束返回 True, 否则返回 False.
         """
         return version_matches(version.version, self.constraint)
 

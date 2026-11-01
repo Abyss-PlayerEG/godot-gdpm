@@ -1,13 +1,16 @@
 """
-版本规范化与解析工具, 提供宽松的版本解析, 兼容 Godot Asset Store 中
-常见的非标准格式, 如 "4.6.2-stable", "V1.1".
+版本规范化与解析工具
+
+- 提供宽松的版本解析, 兼容 Godot Asset Store 中常见的非标准格式,
+  如 "4.6.2-stable", "V1.1".
 
 ----
 
-Note:
-    - normalize_version / normalize_constraint: 版本与约束规范化.
-    - parse_version / parse_specifier_set: 版本与约束解析.
-    - version_matches / is_compatible: 版本匹配与兼容性检查.
+Notes
+----
+- normalize_version / normalize_constraint: 版本与约束规范化.
+- parse_version / parse_specifier_set: 版本与约束解析.
+- version_matches / is_compatible: 版本匹配与兼容性检查.
 """
 
 from __future__ import annotations
@@ -22,23 +25,27 @@ def normalize_version(version: str) -> str:
     """
     将版本字符串规范化为 PEP 440 兼容格式.
 
-    ----
-
-    Note:
-        - 处理常见的非标准格式:
-        - "v1.0.0" -> "1.0.0"
-        - "V2.0" -> "2.0"
-        - "1.0.0-stable" -> "1.0.0.stable"
-        - "1.0.0-beta1" -> "1.0.0.beta1"
-        - "1.0.0-rc2" -> "1.0.0.rc2"
+    处理常见的非标准格式.
 
     ----
 
-    Args:
-        version: 原始版本字符串.
+    Parameters
+    ----
+    version : str
+        原始版本字符串.
 
-    Returns:
+    Returns
+    ----
+    str
         规范化后的版本字符串.
+
+    Examples
+    ----
+    "v1.0.0" -> "1.0.0"
+    "V2.0" -> "2.0"
+    "1.0.0-stable" -> "1.0.0.stable"
+    "1.0.0-beta1" -> "1.0.0.beta1"
+    "1.0.0-rc2" -> "1.0.0.rc2"
     """
     if not version:
         return "0.0.0"
@@ -71,22 +78,26 @@ def normalize_constraint(constraint: str) -> str:
     """
     规范化版本约束字符串.
 
-    ----
-
-    Note:
-        - 处理常见约束形式:
-        - ">=v1.0.0" -> ">=1.0.0"
-        - "^1.0.0" -> ">=1.0.0,<2.0.0"
-        - "~1.0.0" -> ">=1.0.0,<1.1.0"
-        - "v1.0.0" -> "==1.0.0"
+    处理常见约束形式.
 
     ----
 
-    Args:
-        constraint: 原始约束字符串.
+    Parameters
+    ----
+    constraint : str
+        原始约束字符串.
 
-    Returns:
+    Returns
+    ----
+    str
         规范化后的约束字符串.
+
+    Examples
+    ----
+    ">=v1.0.0" -> ">=1.0.0"
+    "^1.0.0" -> ">=1.0.0,<2.0.0"
+    "~1.0.0" -> ">=1.0.0,<1.1.0"
+    "v1.0.0" -> "==1.0.0"
     """
     c = constraint.strip()
 
@@ -126,14 +137,20 @@ def parse_version(version: str) -> Version:
 
     ----
 
-    Args:
-        version: 原始版本字符串.
+    Parameters
+    ----
+    version : str
+        原始版本字符串.
 
-    Returns:
+    Returns
+    ----
+    packaging.version.Version
         解析后的版本对象.
 
-    Raises:
-        InvalidVersion: 规范化后仍不是合法版本.
+    Raises
+    ----
+    packaging.version.InvalidVersion
+        规范化后仍不是合法版本.
     """
     normalized = normalize_version(version)
     return Version(normalized)
@@ -145,14 +162,20 @@ def parse_specifier_set(constraint: str) -> SpecifierSet:
 
     ----
 
-    Args:
-        constraint: 原始约束字符串.
+    Parameters
+    ----
+    constraint : str
+        原始约束字符串.
 
-    Returns:
+    Returns
+    ----
+    packaging.specifiers.SpecifierSet
         解析后的约束集合.
 
-    Raises:
-        InvalidSpecifier: 规范化后仍不是合法约束.
+    Raises
+    ----
+    packaging.specifiers.InvalidSpecifier
+        规范化后仍不是合法约束.
     """
     normalized = normalize_constraint(constraint)
     return SpecifierSet(normalized)
@@ -164,11 +187,16 @@ def version_matches(version: str, constraint: str) -> bool:
 
     ----
 
-    Args:
-        version: 版本字符串.
-        constraint: 约束字符串.
+    Parameters
+    ----
+    version : str
+        版本字符串.
+    constraint : str
+        约束字符串.
 
-    Returns:
+    Returns
+    ----
+    bool
         满足约束返回 True.
     """
     try:
@@ -194,12 +222,18 @@ def is_compatible(
 
     ----
 
-    Args:
-        project_godot: 项目 Godot 版本约束.
-        min_godot: 插件要求的最低版本.
-        max_godot: 插件支持的最高版本.
+    Parameters
+    ----
+    project_godot : str
+        项目 Godot 版本约束.
+    min_godot : str
+        插件要求的最低版本.
+    max_godot : str
+        插件支持的最高版本.
 
-    Returns:
+    Returns
+    ----
+    tuple[bool, str]
         (是否兼容, 说明信息) 元组.
     """
     if not project_godot or project_godot == "*":

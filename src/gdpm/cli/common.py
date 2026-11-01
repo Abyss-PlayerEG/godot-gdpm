@@ -1,12 +1,15 @@
 """
-CLI 共享工具. 提供命令实现共用的控制台实例, 文件名常量和项目根目录定位工具.
+CLI 共享工具
+
+- 提供命令实现共用的控制台实例, 文件名常量和项目根目录定位工具.
 
 ----
 
-Note:
-    - GdpmConsole / console: 自动补空行的控制台及其实例.
-    - CONFIG_FILENAME / LOCK_FILENAME / TEMPLATE_TAGS: 通用常量.
-    - is_template / find_project_root / require_project: 标签与项目工具.
+Notes
+----
+- GdpmConsole / console: 自动补空行的控制台及其实例.
+- CONFIG_FILENAME / LOCK_FILENAME / TEMPLATE_TAGS: 通用常量.
+- is_template / find_project_root / require_project: 标签与项目工具.
 """
 
 from __future__ import annotations
@@ -18,8 +21,10 @@ from rich.console import Console
 
 class GdpmConsole(Console):
     """
-    在首次输出前和每次输出后补空行的控制台. 首次输出前打印一个空行,
-    每次带内容的输出后再打印一个空行, 使命令输出与相邻内容保持视觉间隔.
+    在首次输出前和每次输出后补空行的控制台
+
+    首次输出前打印一个空行, 每次带内容的输出后再打印一个空行,
+    使命令输出与相邻内容保持视觉间隔.
     """
 
     _first_print: bool = True
@@ -30,9 +35,12 @@ class GdpmConsole(Console):
 
         ----
 
-        Args:
-            *args: 透传给 rich.Console.print.
-            **kwargs: 透传给 rich.Console.print.
+        Parameters
+        ----
+        *args : object
+            透传给 rich.Console.print.
+        **kwargs : object
+            透传给 rich.Console.print.
         """
         if not args:
             # 空行调用直接透传, 不做额外包装
@@ -71,10 +79,14 @@ def is_template(tags: list[str]) -> bool:
 
     ----
 
-    Args:
-        tags: 插件标签列表.
+    Parameters
+    ----
+    tags : list[str]
+        插件标签列表.
 
-    Returns:
+    Returns
+    ----
+    bool
         任一标签命中 TEMPLATE_TAGS 则为 True.
     """
     # 归一化: 转小写并去除空格后比对
@@ -86,7 +98,11 @@ def find_project_root() -> Path:
     """
     从当前目录向上查找项目根目录.
 
-    Returns:
+    ----
+
+    Returns
+    ----
+    Path
         含 gdproject.toml 的最近父目录; 找不到则返回当前目录.
     """
     current = Path.cwd()
@@ -100,11 +116,17 @@ def require_project() -> Path:
     """
     要求当前位于 gdpm 项目内并返回根目录.
 
-    Returns:
+    ----
+
+    Returns
+    ----
+    Path
         项目根目录路径.
 
-    Raises:
-        SystemExit: 向上未找到 gdproject.toml 时以退出码 1 终止.
+    Raises
+    ----
+    SystemExit
+        向上未找到 gdproject.toml 时以退出码 1 终止.
     """
     root = find_project_root()
     if not (root / CONFIG_FILENAME).exists():

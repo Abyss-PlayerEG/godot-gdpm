@@ -1,14 +1,16 @@
 """
-本地插件管理工具, 处理未发布到 Godot Asset Store 的本地插件的扫描,
-打包, 解包与基于哈希的变更检测.
+本地插件管理工具
+
+- 处理未发布到 Godot Asset Store 的本地插件的扫描, 打包, 解包与基于哈希的变更检测.
 
 ----
 
-Note:
-    - scan_*: 扫描本地插件.
-    - pack_plugin / unpack_plugin: 打包与解包插件.
-    - compute_dir_hash / load_hashes / save_hashes: 哈希变更检测.
-    - sync_local_plugins: 同步本地插件到 addons/.
+Notes
+----
+- scan_*: 扫描本地插件.
+- pack_plugin / unpack_plugin: 打包与解包插件.
+- compute_dir_hash / load_hashes / save_hashes: 哈希变更检测.
+- sync_local_plugins: 同步本地插件到 addons/.
 """
 
 from __future__ import annotations
@@ -34,10 +36,14 @@ def scan_local_plugins(addons_dir: Path) -> list[Path]:
 
     ----
 
-    Args:
-        addons_dir: addons 目录路径.
+    Parameters
+    ----
+    addons_dir : Path
+        addons 目录路径.
 
-    Returns:
+    Returns
+    ----
+    list[pathlib.Path]
         本地插件目录列表.
     """
     if not addons_dir.exists():
@@ -61,10 +67,14 @@ def scan_untagged_or_local_plugins(addons_dir: Path) -> list[Path]:
 
     ----
 
-    Args:
-        addons_dir: addons 目录路径.
+    Parameters
+    ----
+    addons_dir : Path
+        addons 目录路径.
 
-    Returns:
+    Returns
+    ----
+    list[pathlib.Path]
         未打标记或本地插件的目录列表.
     """
     if not addons_dir.exists():
@@ -92,9 +102,12 @@ def tag_plugin(addons_dir: Path, plugin_dir_name: str) -> None:
 
     ----
 
-    Args:
-        addons_dir: addons 目录路径.
-        plugin_dir_name: 插件目录名.
+    Parameters
+    ----
+    addons_dir : Path
+        addons 目录路径.
+    plugin_dir_name : str
+        插件目录名.
     """
     tag_path = addons_dir / plugin_dir_name / TAG_FILENAME
     tag_path.write_text(
@@ -109,10 +122,14 @@ def compute_dir_hash(dir_path: Path) -> str:
 
     ----
 
-    Args:
-        dir_path: 插件目录路径.
+    Parameters
+    ----
+    dir_path : Path
+        插件目录路径.
 
-    Returns:
+    Returns
+    ----
+    str
         十六进制哈希字符串.
     """
     h = hashlib.sha256()
@@ -130,10 +147,14 @@ def load_hashes(project_root: Path) -> dict[str, str]:
 
     ----
 
-    Args:
-        project_root: 项目根目录.
+    Parameters
+    ----
+    project_root : Path
+        项目根目录.
 
-    Returns:
+    Returns
+    ----
+    dict[str, str]
         插件名到哈希的映射, 文件缺失或损坏时返回空字典.
     """
     hashes_path = project_root / LOCAL_DIR_NAME / HASHES_FILE
@@ -153,9 +174,12 @@ def save_hashes(project_root: Path, hashes: dict[str, str]) -> None:
 
     ----
 
-    Args:
-        project_root: 项目根目录.
-        hashes: 插件名到哈希的映射.
+    Parameters
+    ----
+    project_root : Path
+        项目根目录.
+    hashes : dict[str, str]
+        插件名到哈希的映射.
     """
     local_dir = project_root / LOCAL_DIR_NAME
     local_dir.mkdir(parents=True, exist_ok=True)
@@ -175,11 +199,16 @@ def find_matching_hash(
 
     ----
 
-    Args:
-        hashes: 插件名到哈希的映射.
-        content_hash: 待匹配的哈希.
+    Parameters
+    ----
+    hashes : dict[str, str]
+        插件名到哈希的映射.
+    content_hash : str
+        待匹配的哈希.
 
-    Returns:
+    Returns
+    ----
+    str | None
         匹配的插件名, 无匹配时返回 None.
     """
     for name, h in hashes.items():
@@ -194,12 +223,18 @@ def pack_plugin(addons_dir: Path, plugin_dir_name: str, dest_dir: Path) -> Path:
 
     ----
 
-    Args:
-        addons_dir: addons 目录路径.
-        plugin_dir_name: 插件目录名.
-        dest_dir: 输出目录.
+    Parameters
+    ----
+    addons_dir : Path
+        addons 目录路径.
+    plugin_dir_name : str
+        插件目录名.
+    dest_dir : Path
+        输出目录.
 
-    Returns:
+    Returns
+    ----
+    pathlib.Path
         生成的 zip 文件路径.
     """
     source = addons_dir / plugin_dir_name
@@ -221,11 +256,16 @@ def unpack_plugin(zip_path: Path, addons_dir: Path) -> str:
 
     ----
 
-    Args:
-        zip_path: 插件 zip 文件路径.
-        addons_dir: addons 目录路径.
+    Parameters
+    ----
+    zip_path : Path
+        插件 zip 文件路径.
+    addons_dir : Path
+        addons 目录路径.
 
-    Returns:
+    Returns
+    ----
+    str
         解包得到的插件目录名.
     """
     dir_name = zip_path.stem
@@ -245,11 +285,16 @@ def sync_local_plugins(project_root: Path, addons_dir: Path) -> list[str]:
 
     ----
 
-    Args:
-        project_root: 项目根目录.
-        addons_dir: addons 目录路径.
+    Parameters
+    ----
+    project_root : Path
+        项目根目录.
+    addons_dir : Path
+        addons 目录路径.
 
-    Returns:
+    Returns
+    ----
+    list[str]
         已同步的插件名列表.
     """
     local_dir = project_root / LOCAL_DIR_NAME
@@ -270,10 +315,14 @@ def get_local_plugin_names(project_root: Path) -> list[str]:
 
     ----
 
-    Args:
-        project_root: 项目根目录.
+    Parameters
+    ----
+    project_root : Path
+        项目根目录.
 
-    Returns:
+    Returns
+    ----
+    list[str]
         本地插件名列表.
     """
     local_dir = project_root / LOCAL_DIR_NAME

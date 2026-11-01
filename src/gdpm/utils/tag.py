@@ -1,12 +1,15 @@
 """
-标记文件工具, 读取和解析插件目录中的 tag.gdpm 标记文件.
+标记文件工具
+
+- 读取和解析插件目录中的 tag.gdpm 标记文件.
 
 ----
 
-Note:
-    - PluginTag: 插件标记信息.
-    - read_plugin_tag: 读取单个标记.
-    - scan_addons: 扫描带标记的插件.
+Notes
+----
+- PluginTag: 插件标记信息.
+- read_plugin_tag: 读取单个标记.
+- scan_addons: 扫描带标记的插件.
 """
 
 from __future__ import annotations
@@ -27,10 +30,14 @@ class PluginTag:
 
     ----
 
-    Attributes:
-        slug: 插件 slug.
-        source: 标记文件的完整来源标识.
-        is_local: 是否为本地插件.
+    Attributes
+    ----
+    slug : str
+        插件 slug.
+    source : str
+        标记文件的完整来源标识.
+    is_local : bool
+        是否为本地插件.
     """
 
     slug: str
@@ -44,10 +51,14 @@ def read_plugin_tag(addon_dir: Path) -> PluginTag | None:
 
     ----
 
-    Args:
-        addon_dir: addon 目录路径.
+    Parameters
+    ----
+    addon_dir : Path
+        addon 目录路径.
 
-    Returns:
+    Returns
+    ----
+    PluginTag | None
         插件标记信息; 标记文件不存在或为空时返回 None.
     """
     tag_path = addon_dir / TAG_FILENAME
@@ -71,10 +82,14 @@ def scan_addons(addons_dir: Path) -> list[tuple[Path, PluginTag]]:
 
     ----
 
-    Args:
-        addons_dir: addons 目录路径.
+    Parameters
+    ----
+    addons_dir : Path
+        addons 目录路径.
 
-    Returns:
+    Returns
+    ----
+    list[tuple[pathlib.Path, PluginTag]]
         (目录路径, 标记) 元组的列表.
     """
     if not addons_dir.exists():

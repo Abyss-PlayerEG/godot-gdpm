@@ -1,12 +1,15 @@
 """
-Asset Store API 响应解析器, 将 API 返回的原始 JSON 转换为内部数据模型.
+Asset Store API 响应解析器
+
+- 将 API 返回的原始 JSON 转换为内部数据模型.
 
 ----
 
-Note:
-    - parse_search_hit: 搜索命中项转 Plugin.
-    - parse_asset_detail: 资产详情转 PluginDetail.
-    - parse_release: 发布记录规范化为字符串字典.
+Notes
+----
+- parse_search_hit: 搜索命中项转 Plugin.
+- parse_asset_detail: 资产详情转 PluginDetail.
+- parse_release: 发布记录规范化为字符串字典.
 """
 
 from __future__ import annotations
@@ -20,12 +23,18 @@ def parse_search_hit(hit: dict[str, Any]) -> Plugin:
     """
     将搜索命中项解析为 Plugin.
 
+    命中项可能直接是资产, 也可能嵌套在 asset 字段中.
+
     ----
 
-    Args:
-        hit: API 返回的搜索命中项.
+    Parameters
+    ----
+    hit : dict[str, Any]
+        API 返回的搜索命中项.
 
-    Returns:
+    Returns
+    ----
+    Plugin
         解析后的插件模型.
     """
     # 命中项可能直接是资产或嵌套在 asset 字段.
@@ -53,14 +62,20 @@ def parse_search_hit(hit: dict[str, Any]) -> Plugin:
 
 def parse_asset_detail(data: dict[str, Any]) -> PluginDetail:
     """
-    将资产详情解析为 PluginDetail, 版本相关字段留空, 由调用方按需补充.
+    将资产详情解析为 PluginDetail.
+
+    版本相关字段留空, 由调用方按需补充.
 
     ----
 
-    Args:
-        data: API 返回的资产详情.
+    Parameters
+    ----
+    data : dict[str, Any]
+        API 返回的资产详情.
 
-    Returns:
+    Returns
+    ----
+    PluginDetail
         解析后的插件详情模型.
     """
     publisher_data = data.get("publisher", {})
@@ -93,12 +108,18 @@ def parse_release(data: dict[str, Any]) -> dict[str, str]:
     """
     将发布记录规范化为字符串字典.
 
+    字段值统一转为字符串.
+
     ----
 
-    Args:
-        data: API 返回的发布记录.
+    Parameters
+    ----
+    data : dict[str, Any]
+        API 返回的发布记录.
 
-    Returns:
+    Returns
+    ----
+    dict[str, str]
         含 id, version, stable, created, 版本范围和下载地址的字典.
     """
     return {
