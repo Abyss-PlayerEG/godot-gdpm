@@ -135,7 +135,7 @@ def godot_remove(name_or_id: str) -> None:
         ("gdpm godot list -id", "List available engine IDs"),
     ],
 )
-@click.argument("id")
+@click.argument("engine_id", metavar="ID")
 def godot_use(engine_id: str) -> None:
     """为当前项目设置 Godot 引擎."""
     if "@" not in engine_id:

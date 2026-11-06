@@ -121,7 +121,8 @@ class GdpmCommand(click.Command):
             if param.name == "help":
                 continue
             if param.required:
-                usage_parts.append(f"<{param.name}>")
+                # metavar 优先 (如 use 的 <ID>), 缺省回退参数名
+                usage_parts.append(f"<{param.metavar or param.name}>")
             elif isinstance(param, click.Option) and param.is_flag:
                 usage_parts.append(f"[--{param.name}]")
             else:
