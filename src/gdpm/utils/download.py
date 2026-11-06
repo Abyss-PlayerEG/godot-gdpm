@@ -17,11 +17,15 @@ Notes
   下载 (gdpm godot install), 以及任何需要进度显示的 HTTP 文件下载.
 - 仅支持 http/https 直链下载.
 - 超时默认 300 秒, 可通过 timeout 参数调整.
+- download_file: 单流顺序下载, 行为保持不变.
+- download_file_chunked: 固定 4 片并行下载, 服务器不支持 Range 时回退单流.
 """
 
 from __future__ import annotations
 
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import httpx
@@ -37,6 +41,8 @@ from rich.progress import (
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
+
+CHUNK_COUNT = 4  # 固定切片数
 
 
 def download_file(
@@ -105,6 +111,142 @@ def download_file(
                     elapsed = time.monotonic() - start_time
                     speed = downloaded / elapsed if elapsed > 0 else 0
                     on_progress(downloaded, total, speed)
+
+    return file_path
+
+
+def download_file_chunked(
+    url: str,
+    dest: Path,
+    *,
+    filename: str = "",
+    on_progress: Callable[[int, int, float], None] | None = None,
+    timeout: float = 300,
+) -> Path:
+    """
+    分片并行下载文件, 固定切为 4 片.
+
+    先用 HEAD 探测文件大小与 Range 支持, 将字节范围均分给 4 个工作
+    线程同时下载, 各线程独立句柄按偏移直接写入目标文件, 无需合并.
+    服务器不支持 Range 或探测失败时回退为 download_file 单流下载.
+
+    ----
+
+    Parameters
+    ----
+    url : str
+        下载地址 (http/https 直链).
+    dest : Path
+        目标目录, 不存在时自动创建.
+    filename : str, optional
+        保存文件名, 为空时从 URL 路径推断.
+    on_progress : Callable[[int, int, float], None], optional
+        进度回调, 依次传入 (已下载字节数, 总字节数, 速度 B/s).
+    timeout : float, optional
+        请求超时秒数, 默认 300.
+
+    Returns
+    ----
+    pathlib.Path
+        下载完成的文件路径.
+
+    Raises
+    ----
+    OSError
+        下载结果与预期大小不一致, 且单流回退也失败.
+
+    Notes
+    ----
+    - 切片数由模块常量 CHUNK_COUNT 固定为 4, 暂不开放参数.
+    - 文件过小 (不足 4 字节) 或不支持 Range 时直接回退单流.
+    - 任一切片失败时清理半成品并回退单流下载.
+
+    Examples
+    ----
+    >>> download_file_chunked("https://example.com/a.zip", Path("/tmp"))
+        PosixPath('/tmp/a.zip')
+    """
+    dest.mkdir(parents=True, exist_ok=True)
+
+    if not filename:
+        filename = url.split("/")[-1].split("?")[0]
+
+    file_path = dest / filename
+
+    # HEAD 探测: 大小与 Range 支持, 不满足则回退单流
+    total = 0
+    supports_range = False
+    try:
+        with httpx.stream(
+            "HEAD", url, follow_redirects=True, verify=False, timeout=timeout
+        ) as resp:
+            if resp.status_code < 400:
+                total = int(resp.headers.get("content-length", 0))
+                supports_range = (
+                    resp.headers.get("accept-ranges", "").lower() == "bytes"
+                )
+    except Exception:
+        pass
+
+    if total < CHUNK_COUNT or not supports_range:
+        return download_file(
+            url, dest, filename=filename, on_progress=on_progress, timeout=timeout
+        )
+
+    # 均分为 4 段闭区间 [start, end]
+    bounds = [
+        (i * total // CHUNK_COUNT, ((i + 1) * total // CHUNK_COUNT) - 1)
+        for i in range(CHUNK_COUNT)
+    ]
+
+    # 预分配目标文件, 各切片线程用独立句柄按偏移写入
+    with open(file_path, "wb") as f:
+        f.truncate(total)
+
+    lock = threading.Lock()
+    downloaded = 0
+    start_time = time.monotonic()
+
+    def fetch(start: int, end: int) -> None:
+        nonlocal downloaded
+        headers = {"Range": f"bytes={start}-{end}"}
+        with httpx.stream(
+            "GET",
+            url,
+            headers=headers,
+            follow_redirects=True,
+            verify=False,
+            timeout=timeout,
+        ) as resp:
+            # 必须是 206, 收到 200 说明服务器忽略了 Range
+            if resp.status_code != 206:
+                raise OSError(f"range request failed: HTTP {resp.status_code}")
+            with open(file_path, "r+b") as f:
+                f.seek(start)
+                for chunk in resp.iter_bytes(8192):
+                    f.write(chunk)
+                    with lock:
+                        downloaded += len(chunk)
+                        if on_progress:
+                            elapsed = time.monotonic() - start_time
+                            speed = downloaded / elapsed if elapsed > 0 else 0
+                            on_progress(downloaded, total, speed)
+
+    try:
+        with ThreadPoolExecutor(max_workers=CHUNK_COUNT) as pool:
+            for future in [pool.submit(fetch, s, e) for s, e in bounds]:
+                future.result()
+    except Exception:
+        # 任一切片失败: 清理半成品, 回退单流下载
+        file_path.unlink(missing_ok=True)
+        return download_file(
+            url, dest, filename=filename, on_progress=on_progress, timeout=timeout
+        )
+
+    actual = file_path.stat().st_size
+    if actual != total:
+        file_path.unlink(missing_ok=True)
+        raise OSError(f"incomplete download: {actual}/{total} bytes")
 
     return file_path
 
