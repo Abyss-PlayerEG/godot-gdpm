@@ -21,6 +21,7 @@
 ## 待开发
 
 - [ ] [引擎查找与创建命令修复](todo/引擎查找与创建命令修复.md) — find_engine_binary 兼容性 + create 命令平台/逻辑 bug（P0/P1）
+- [ ] [GitHub API → 官方 API 迁移](todo/官方API迁移.md) — versions.json / downloads.godotengine.org / godot-builds 三件套替换（含 P0-2 修复）
 - [ ] 官方主页 — Vue + Vite 产品宣传页（动画、特性展示、安装指南）
 - [ ] [下载优化](todo/下载优化.md)
 - [ ] [其他待开发功能](todo/其他待开发功能.md)
