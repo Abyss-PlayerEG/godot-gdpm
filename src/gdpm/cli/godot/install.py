@@ -7,13 +7,12 @@ gdpm godot install/uninstall 命令
 
 Notes
 ----
-- godot_install: 下载, 校验并解压 Godot 引擎.
+- godot_install: 分片下载, 校验并解压 Godot 引擎.
 - godot_uninstall: 删除已安装的 Godot 引擎.
 """
 
 from __future__ import annotations
 
-import hashlib
 import shutil
 import zipfile
 
@@ -36,6 +35,8 @@ from gdpm.cli.godot.common import (
     get_engines_dir,
     normalize_version,
 )
+from gdpm.utils.checksum import sha256_file
+from gdpm.utils.download import download_file_chunked
 from gdpm.utils.install import get_godot_ext, get_godot_platform
 
 
@@ -98,28 +99,26 @@ def godot_install(version: str, csharp: bool) -> None:
                 "download", name=f"Godot {tag}{suffix}", total=None
             )
 
-            with httpx.stream("GET", url, follow_redirects=True, verify=False) as resp:
-                if resp.status_code == 404:
-                    console.print(
-                        f"[red]Error:[/red] Version [cyan]{tag}[/cyan] not found.\n"
-                        "  Use [bold]gdpm godot list -r[/bold] "
-                        "to see available versions."
-                    )
-                    return
-                resp.raise_for_status()
+            last_downloaded = 0
 
-                total = int(resp.headers.get("content-length", 0))
-                progress.update(task_id, total=total)
+            def on_progress(done: int, total_bytes: int, _speed: float) -> None:
+                nonlocal last_downloaded
+                # 首次回调设置总量, 之后按增量推进进度条
+                if total_bytes and progress.tasks[int(task_id)].total is None:
+                    progress.update(task_id, total=total_bytes)
+                progress.update(task_id, advance=done - last_downloaded)
+                last_downloaded = done
 
-                sha256 = hashlib.sha256()
-                with open(zip_path, "wb") as f:
-                    for chunk in resp.iter_bytes(8192):
-                        f.write(chunk)
-                        sha256.update(chunk)
-                        progress.update(task_id, advance=len(chunk))
+            # 4 片并行下载, 服务器不支持 Range 时自动回退单流
+            download_file_chunked(
+                url,
+                engines_dir,
+                filename=filename,
+                on_progress=on_progress,
+            )
 
         if expected_hash:
-            actual_hash = sha256.hexdigest()
+            actual_hash = sha256_file(zip_path)
             # 校验失败时删除下载文件
             if actual_hash != expected_hash:
                 zip_path.unlink()
@@ -131,6 +130,19 @@ def godot_install(version: str, csharp: bool) -> None:
                 return
             console.print("[dim]  Hash verified ✓[/dim]")
 
+    except httpx.HTTPStatusError as e:
+        # 保留 404 的友好提示 (版本不存在)
+        if e.response.status_code == 404:
+            console.print(
+                f"[red]Error:[/red] Version [cyan]{tag}[/cyan] not found.\n"
+                "  Use [bold]gdpm godot list -r[/bold] "
+                "to see available versions."
+            )
+        else:
+            console.print(f"[red]Error:[/red] Download failed: {e}")
+        if zip_path.exists():
+            zip_path.unlink()
+        return
     except Exception as e:
         console.print(f"[red]Error:[/red] Download failed: {e}")
         if zip_path.exists():
