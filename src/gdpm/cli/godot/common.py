@@ -233,12 +233,13 @@ def find_engine_binary(directory: Path) -> str | None:
         return None
 
     if system == "Darwin":
-        # macOS: 优先查找 .app 包内的二进制
+        # macOS: 优先查找 .app 包内的二进制 (兼容 mono 变体 Godot_mono.app)
         for d in search_dirs:
             for app in sorted(d.glob("*.app")):
-                binary = app / "Contents" / "MacOS" / "Godot"
-                if binary.exists():
-                    return str(binary)
+                for stem in ("Godot", app.stem):
+                    binary = app / "Contents" / "MacOS" / stem
+                    if binary.exists():
+                        return str(binary)
 
     if system == "Windows":
         # Windows: 收集所有 .exe, 优先非 console 版

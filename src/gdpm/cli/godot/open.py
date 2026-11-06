@@ -75,11 +75,13 @@ def godot_open(run: bool) -> None:
         return
 
     binary_path = Path(binary)
-    # .app 包时深入 Contents/MacOS 取真实二进制
+    # .app 包时深入 Contents/MacOS 取真实二进制 (兼容 mono 变体 Godot_mono)
     if binary_path.suffix == ".app":
-        macos_binary = binary_path / "Contents" / "MacOS" / "Godot"
-        if macos_binary.exists():
-            binary = str(macos_binary)
+        for stem in ("Godot", binary_path.stem):
+            macos_binary = binary_path / "Contents" / "MacOS" / stem
+            if macos_binary.exists():
+                binary = str(macos_binary)
+                break
 
     args = [binary]
     # --run 仅指定项目目录, 编辑器模式追加 -e

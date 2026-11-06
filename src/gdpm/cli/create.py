@@ -20,6 +20,7 @@ Notes
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 
@@ -28,9 +29,67 @@ import questionary
 
 from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import console
-from gdpm.cli.godot.common import get_engines_dir, normalize_version
-from gdpm.config.local_engines import get_default_engine, get_local_engine
+from gdpm.cli.godot.common import (
+    get_engines_dir,
+    normalize_version,
+    resolve_engine_path,
+)
+from gdpm.config.local_engines import get_default_engine
 from gdpm.config.project import ProjectConfig, write_project_config
+
+
+def _engine_sort_key(item: str) -> tuple[int, tuple[int, ...]]:
+    """
+    生成引擎 ID 排序键.
+
+    stable 版本优先, 同组内按数值版本降序 (4.10 优先于 4.7).
+
+    ----
+
+    Parameters
+    ----
+    item : str
+        形如 name@version 的引擎 ID.
+
+    Returns
+    ----
+    tuple[int, tuple[int, ...]]
+        (是否非 stable, 反转的版本号分量) 二元组.
+    """
+    ver = item.split("@", 1)[1]
+    flag = 0 if "stable" in ver else 1
+    core = ver.split("-")[0]
+    try:
+        nums = [int(p) for p in core.split(".")]
+    except ValueError:
+        nums = []
+    # 数值取反实现降序, 固定宽度补齐后按字典序比较
+    inverted = tuple(9999 - (nums[i] if i < len(nums) else 0) for i in range(4))
+    return (flag, inverted)
+
+
+def _engine_matches(engine_id: str, version: str) -> bool:
+    """
+    判断引擎 ID 版本是否与目标版本一致.
+
+    双方规范化后精确比较, 避免子串误匹配 (如 4.7 命中 4.7.1).
+
+    ----
+
+    Parameters
+    ----
+    engine_id : str
+        形如 name@version 的引擎 ID.
+    version : str
+        目标版本字符串.
+
+    Returns
+    ----
+    bool
+        版本一致时为 True.
+    """
+    ver = engine_id.split("@", 1)[1]
+    return normalize_version(ver) == normalize_version(version)
 
 
 def _get_installed_engines() -> list[str]:
@@ -60,30 +119,8 @@ def _get_installed_engines() -> list[str]:
         if engine.version:
             engines.append(f"{name}@{engine.version}")
 
-    # 排序: stable 优先, 再按版本降序
-    def sort_key(item: str) -> tuple[int, str]:
-        """
-        生成排序键.
-
-        stable 版本优先, 其余按版本字符串降序.
-
-        ----
-
-        Parameters
-        ----
-        item : str
-            形如 name@version 的引擎 ID.
-
-        Returns
-        ----
-        tuple[int, str]
-            (是否非 stable, 版本字符串) 二元组.
-        """
-        ver = item.split("@", 1)[1]
-        is_stable = 0 if "stable" in ver else 1
-        return (is_stable, ver)
-
-    engines.sort(key=sort_key, reverse=True)
+    # 排序: stable 优先, 再按数值版本降序
+    engines.sort(key=_engine_sort_key)
     return engines
 
 
@@ -139,12 +176,14 @@ def _get_godot_version_tag(version: str) -> str:
         '4.7'
     >>> _get_godot_version_tag("3.6.2-stable")
         '3.6'
+    >>> _get_godot_version_tag("4.7-rc1")
+        '4.7'
     """
-    ver = version.replace("-stable", "").replace("-rc", "").replace("-beta", "")
-    parts = ver.split(".")
+    core = version.split("-")[0]
+    parts = core.split(".")
     if len(parts) >= 2:
         return f"{parts[0]}.{parts[1]}"
-    return ver
+    return core
 
 
 @click.command(
@@ -215,9 +254,8 @@ def create(name: str | None, open_editor: bool, yes: bool) -> None:
         if not godot_ver:
             return
 
-    # 规范化版本号
-    for suffix in ("-stable", "-csharp", "-mono"):
-        godot_ver = godot_ver.replace(suffix, "")
+    # 规范化版本号 (剥 -csharp/-mono, 统一通道后缀, 不再手写 replace 链)
+    godot_ver = normalize_version(godot_ver)
     version_tag = _get_godot_version_tag(godot_ver)
 
     # 创建项目目录
@@ -237,11 +275,15 @@ config_version=5
 [application]
 
 config/name="{name}"
-config/features=PackedStringArray("{version_tag}")
+config/features=PackedStringArray("{version_tag}", "Forward Plus")
 """,
             encoding="utf-8",
         )
     else:
+        # Godot 3: config/version 需要 x.y.z, 补齐缺失的 patch 位
+        core_version = godot_ver.split("-")[0]
+        if core_version.count(".") == 1:
+            core_version = f"{core_version}.0"
         project_godot.write_text(
             f"""; Engine configuration file.
 ; It's best edited using the editor UI and not directly.
@@ -251,7 +293,7 @@ config_version=4
 [application]
 
 config/name="{name}"
-config/version="{version_tag}.0"
+config/version="{core_version}"
 """,
             encoding="utf-8",
         )
@@ -279,10 +321,13 @@ config/version="{version_tag}.0"
     )
 
     # 可选: 为该项目设置引擎
-    # 按所选版本过滤引擎
-    matching_engines = [e for e in engines if godot_ver in e]
+    # 规范化后精确匹配版本, 避免子串误命中
+    matching_engines = [e for e in engines if _engine_matches(e, godot_ver)]
 
-    if matching_engines and not yes:
+    if matching_engines and yes:
+        # -y 静默模式: 按选中版本自动设置引擎, 与 --open 行为对齐
+        _set_project_engine(target_dir, matching_engines[0])
+    elif matching_engines:
         set_engine = questionary.confirm(
             "Set Godot engine for this project?",
             default=True,
@@ -304,12 +349,14 @@ config/version="{version_tag}.0"
 
     # 打开 Godot 编辑器
     if open_editor:
-        _open_godot(target_dir, godot_ver)
+        _open_godot(target_dir)
 
 
 def _set_project_engine(project_dir: Path, engine_id: str) -> None:
     """
     为项目设置 Godot 引擎.
+
+    通过 resolve_engine_path 统一解析 (三平台 + csharp 目录 + mono 变体).
 
     ----
 
@@ -320,35 +367,10 @@ def _set_project_engine(project_dir: Path, engine_id: str) -> None:
     engine_id : str
         引擎 ID, 如 gdpm-godot@4.7-stable.
     """
-    import json
-
-    from gdpm.cli.godot.common import get_engines_dir, normalize_version
-
     name, version = engine_id.split("@", 1)
 
     # 查找引擎可执行文件
-    binary = ""
-    if name == "gdpm-godot":
-        engines_dir = get_engines_dir()
-        tag = normalize_version(version)
-        ver_dir = engines_dir / tag
-        if ver_dir.exists():
-            for app in ver_dir.glob("*.app"):
-                b = app / "Contents" / "MacOS" / "Godot"
-                if b.exists():
-                    binary = str(b)
-                    break
-            if not binary:
-                for f in ver_dir.iterdir():
-                    if f.is_file() and not f.suffix:
-                        binary = str(f)
-                        break
-    else:
-        from gdpm.config.local_engines import get_local_engine
-
-        engine = get_local_engine(name)
-        if engine:
-            binary = engine.path
+    binary = resolve_engine_path(name, version)
 
     if not binary:
         console.print("  [dim]Skipping engine setup: engine not found[/dim]")
@@ -364,9 +386,11 @@ def _set_project_engine(project_dir: Path, engine_id: str) -> None:
     console.print(f"  [dim]Engine:[/dim] [cyan]{name}@{version}[/cyan]")
 
 
-def _open_godot(project_dir: Path, version: str) -> None:
+def _open_godot(project_dir: Path) -> None:
     """
     为项目打开 Godot 编辑器.
+
+    优先读取项目 .engines-conf.json (刚设置的钉子), 缺失时回退默认引擎.
 
     ----
 
@@ -374,46 +398,44 @@ def _open_godot(project_dir: Path, version: str) -> None:
     ----
     project_dir : Path
         项目根目录.
-    version : str
-        Godot 版本.
     """
     binary = ""
 
-    # 优先使用默认引擎
-    default = get_default_engine()
-    if default:
-        name, ver = default.split("@", 1)
-        if name == "gdpm-godot":
-            engines_dir = get_engines_dir()
-            tag = normalize_version(ver)
-            ver_dir = engines_dir / tag
-            if ver_dir.exists():
-                for app in ver_dir.glob("*.app"):
-                    b = app / "Contents" / "MacOS" / "Godot"
-                    if b.exists():
-                        binary = str(b)
-                        break
-                if not binary:
-                    for f in ver_dir.iterdir():
-                        if f.is_file() and not f.suffix:
-                            binary = str(f)
-                            break
-        else:
-            engine = get_local_engine(name)
-            if engine:
-                binary = engine.path
+    # 优先使用项目钉子 (用户刚选择并写入的引擎)
+    conf_path = project_dir / ".engines-conf.json"
+    if conf_path.exists():
+        try:
+            conf = json.loads(conf_path.read_text(encoding="utf-8"))
+            godot = conf.get("godot", {})
+            binary = godot.get("path", "")
+        except json.JSONDecodeError, TypeError:
+            pass
+
+    # 回退: 全局默认引擎, 统一经 resolve_engine_path 解析
+    if not binary:
+        default = get_default_engine()
+        if default:
+            name, ver = default.split("@", 1)
+            binary = resolve_engine_path(name, ver)
 
     if not binary:
         console.print("[dim]  Skipping open: no Godot engine configured[/dim]")
         return
 
     try:
-        with subprocess.Popen(
+        proc = subprocess.Popen(
             [binary, "-e", "--path", str(project_dir)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-        ):
-            pass
+        )
+        # 短暂等待以捕获启动失败, 不阻塞等待编辑器退出
+        try:
+            ret: int | None = proc.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            ret = None
+        if ret is not None and ret != 0:
+            console.print(f"  [yellow]Warning:[/yellow] Godot exited with code {ret}")
+            return
         console.print("  Opening [cyan]Godot[/cyan]...")
     except Exception as e:
         console.print(f"  [yellow]Warning:[/yellow] Failed to open Godot: {e}")

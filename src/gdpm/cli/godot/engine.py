@@ -52,6 +52,7 @@ def godot_add(path: str, name: str) -> None:
         console.print(
             "[red]Error:[/red] Not a valid Godot application.\n"
             "  macOS: provide path to .app bundle\n"
+            "  Windows: provide path to .exe\n"
             "  Linux: provide path to executable"
         )
         return
