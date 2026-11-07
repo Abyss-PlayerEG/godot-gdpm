@@ -19,7 +19,7 @@ import asyncio
 
 import click
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console, is_template
 from gdpm.cli.display import format_plugin_meta, format_version_info
 from gdpm.config.project import read_project_config
@@ -28,6 +28,7 @@ from gdpm.store.client import StoreClient
 
 @click.command(
     cls=GdpmCommand,
+    category="dependencies",
     examples=[
         ("gdpm search mcp", "Search for MCP plugins"),
         ("gdpm search ai --limit 5", "Show top 5 results"),

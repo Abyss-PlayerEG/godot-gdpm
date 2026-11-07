@@ -19,16 +19,22 @@ from __future__ import annotations
 
 import click
 
-from gdpm.cli.app import GdpmGroup
-from gdpm.cli.godot.engine import godot_add, godot_default, godot_remove, godot_use
-from gdpm.cli.godot.info import godot_info
-from gdpm.cli.godot.install import godot_install, godot_uninstall
-from gdpm.cli.godot.list import godot_list
-from gdpm.cli.godot.open import godot_open
+from gdpm.cli.base import GdpmGroup
+from gdpm.cli.commands.godot.engine import (
+    godot_add,
+    godot_default,
+    godot_remove,
+    godot_use,
+)
+from gdpm.cli.commands.godot.info import godot_info
+from gdpm.cli.commands.godot.install import godot_install, godot_uninstall
+from gdpm.cli.commands.godot.list import godot_list
+from gdpm.cli.commands.godot.open import godot_open
 
 
 @click.group(
     cls=GdpmGroup,
+    category="engine",
     examples=[
         ("gdpm godot list", "List installed Godot versions"),
         ("gdpm godot list --remote", "List available versions"),

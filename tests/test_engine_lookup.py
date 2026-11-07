@@ -10,7 +10,7 @@ import os
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
-from gdpm.cli.godot.common import find_engine_binary
+from gdpm.cli.commands.godot.common import find_engine_binary
 
 if TYPE_CHECKING:
     from pathlib import Path

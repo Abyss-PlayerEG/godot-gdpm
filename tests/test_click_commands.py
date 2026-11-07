@@ -12,7 +12,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from gdpm.cli.godot import engine as engine_mod
+from gdpm.cli.commands.godot import engine as engine_mod
 
 CLI_ROOT = Path(__file__).resolve().parent.parent / "src" / "gdpm" / "cli"
 

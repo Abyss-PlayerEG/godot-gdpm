@@ -29,13 +29,13 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-from gdpm.cli.app import GdpmCommand
-from gdpm.cli.common import console
-from gdpm.cli.godot.common import (
+from gdpm.cli.base import GdpmCommand
+from gdpm.cli.commands.godot.common import (
     build_download_url,
     get_engines_dir,
     normalize_version,
 )
+from gdpm.cli.common import console
 from gdpm.config.global_config import read_global_config
 from gdpm.utils.download import CHUNK_COUNT, download_file_chunked
 from gdpm.utils.install import get_godot_ext, get_godot_platform
@@ -220,7 +220,7 @@ def godot_install(version: str, csharp: bool) -> None:
     console.print("Extracting...")
 
     try:
-        from gdpm.cli.godot.common import prepare_engine_dir
+        from gdpm.cli.commands.godot.common import prepare_engine_dir
 
         # 解压到版本目录并修复执行权限
         ver_dir.mkdir(parents=True, exist_ok=True)

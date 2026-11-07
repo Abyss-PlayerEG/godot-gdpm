@@ -13,7 +13,7 @@ import time
 from rich.console import Console
 from rich.progress import Progress, TextColumn
 
-from gdpm.cli.godot.install import (
+from gdpm.cli.commands.godot.install import (
     CHUNK_COUNT,
     _create_download_tasks,
     _make_slice_handler,
@@ -49,7 +49,7 @@ def test_slice_tasks_render_without_keyerror() -> None:
 
 def test_slice_count_follows_constant(monkeypatch) -> None:
     """CHUNK_COUNT 改为 8: 分片任务数量与标签自动跟随."""
-    monkeypatch.setattr("gdpm.cli.godot.install.CHUNK_COUNT", 8)
+    monkeypatch.setattr("gdpm.cli.commands.godot.install.CHUNK_COUNT", 8)
     buf = io.StringIO()
     console = Console(file=buf, force_terminal=False, width=80)
     with Progress(

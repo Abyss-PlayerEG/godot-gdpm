@@ -32,7 +32,7 @@ from pathlib import Path
 import click
 
 from gdpm.cache.file_cache import FileCache
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console, require_project
 from gdpm.cli.options import yes_option
 from gdpm.config.project import read_project_config, write_project_config
@@ -47,6 +47,7 @@ from gdpm.utils.local import LOCAL_DIR_NAME, tag_plugin
 
 @click.command(
     cls=GdpmCommand,
+    category="dependencies",
     examples=[
         ("gdpm import plugins.zip", "Import from zip archive"),
         ("gdpm import ./backup/", "Import from directory"),

@@ -32,7 +32,7 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console
 from gdpm.cli.context import get_project_context, get_services
 from gdpm.cli.options import yes_option
@@ -48,6 +48,7 @@ if TYPE_CHECKING:
 
 @click.command(
     cls=GdpmCommand,
+    category="project",
     examples=[
         ("gdpm sync", "Sync all plugins"),
         ("gdpm sync --check", "Preview changes without applying"),

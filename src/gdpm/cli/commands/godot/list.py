@@ -19,14 +19,14 @@ from rich import box
 from rich.panel import Panel
 from rich.table import Table
 
-from gdpm.cli.app import GdpmCommand
-from gdpm.cli.common import console
-from gdpm.cli.godot.common import (
+from gdpm.cli.base import GdpmCommand
+from gdpm.cli.commands.godot.common import (
     RemoteRelease,
     _flavor_channel,
     fetch_remote_versions,
     get_engines_dir,
 )
+from gdpm.cli.common import console
 
 REMOTE_PAGE_SIZE = 30  # 远程列表每页条数
 

@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from gdpm.cli.godot.list import (
+from gdpm.cli.commands.godot.list import (
     _filter_local_rows,
     _local_channel,
     _sort_local_rows,

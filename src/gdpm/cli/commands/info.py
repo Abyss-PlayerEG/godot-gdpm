@@ -17,13 +17,14 @@ import asyncio
 import click
 from rich.panel import Panel
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console, is_template
 from gdpm.store.client import StoreClient
 
 
 @click.command(
     cls=GdpmCommand,
+    category="dependencies",
     examples=[
         ("gdpm info limbo-ai", "Show plugin details"),
         ("gdpm info rsubtil/controller-icons", "Show with publisher/slug"),

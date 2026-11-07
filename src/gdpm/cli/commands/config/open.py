@@ -1,7 +1,7 @@
 """
 gdpm config open 命令
 
-- 打开配置文件所在目录 (文件可能不存在, 稀疏存储下无定制项即无文件).
+- 打开配置文件所在目录 (配置文件可能尚未生成, 打开其所在目录).
 
 ----
 
@@ -17,7 +17,7 @@ import subprocess
 
 import click
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console
 from gdpm.config.global_config import get_config_path
 

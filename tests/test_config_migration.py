@@ -7,7 +7,7 @@ config.toml 位置迁移测试.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import platformdirs
 
@@ -17,9 +17,6 @@ from gdpm.config.global_config import (
     read_global_config,
     write_global_config,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _patch_paths(tmp_path: Path, monkeypatch) -> tuple[Path, Path]:
@@ -71,3 +68,8 @@ def test_no_legacy_file_returns_defaults(tmp_path: Path, monkeypatch) -> None:
     config = read_global_config()
     assert config.default_engine == ""
     assert config.addons_dir == "addons"
+
+
+def test_default_cache_location_is_user_dir() -> None:
+    """缓存默认在 ~/.gdpm 专用用户目录 (npm ~/.npm / Maven ~/.m2 同风格)."""
+    assert GlobalConfig().cache_dir == str(Path.home() / ".gdpm" / "cache")

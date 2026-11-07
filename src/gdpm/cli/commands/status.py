@@ -21,7 +21,7 @@ import asyncio
 import click
 from rich.table import Table
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console
 from gdpm.cli.context import get_project_context
 from gdpm.store.client import StoreClient
@@ -31,6 +31,7 @@ from gdpm.utils.version import normalize_version
 
 @click.command(
     cls=GdpmCommand,
+    category="project",
     examples=[
         ("gdpm status", "Show status of all plugins"),
         ("gdpm status limbo-ai", "Show status of specific plugin"),

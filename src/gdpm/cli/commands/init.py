@@ -19,7 +19,7 @@ from pathlib import Path
 
 import click
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console
 from gdpm.config.project import ProjectConfig, write_project_config
 from gdpm.utils.godot import detect_version_constraint, parse_project_godot
@@ -27,6 +27,7 @@ from gdpm.utils.godot import detect_version_constraint, parse_project_godot
 
 @click.command(
     cls=GdpmCommand,
+    category="project",
     examples=[
         ("gdpm init", "Initialize with auto-detected settings"),
     ],

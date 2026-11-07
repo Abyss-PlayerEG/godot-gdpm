@@ -20,9 +20,9 @@ from pathlib import Path
 
 import click
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
+from gdpm.cli.commands.godot.common import find_engine
 from gdpm.cli.common import console, find_project_root
-from gdpm.cli.godot.common import find_engine
 
 
 @click.command(

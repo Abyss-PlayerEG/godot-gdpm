@@ -27,13 +27,13 @@ from pathlib import Path
 import click
 import questionary
 
-from gdpm.cli.app import GdpmCommand
-from gdpm.cli.common import console
-from gdpm.cli.godot.common import (
+from gdpm.cli.base import GdpmCommand
+from gdpm.cli.commands.godot.common import (
     get_engines_dir,
     normalize_version,
     resolve_engine_path,
 )
+from gdpm.cli.common import console
 from gdpm.config.global_config import get_default_engine
 from gdpm.config.project import ProjectConfig, write_project_config
 
@@ -188,6 +188,7 @@ def _get_godot_version_tag(version: str) -> str:
 
 @click.command(
     cls=GdpmCommand,
+    category="project",
     examples=[
         ("gdpm create", "Interactive create"),
         ("gdpm create my-game", "Create with name"),

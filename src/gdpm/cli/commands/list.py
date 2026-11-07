@@ -17,7 +17,7 @@ from rich import box
 from rich.panel import Panel
 from rich.table import Table
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console, require_project
 from gdpm.config.project import read_project_config
 from gdpm.lockfile.lock import find_lockfile, read_lockfile
@@ -26,6 +26,7 @@ from gdpm.utils.tag import scan_addons
 
 @click.command(
     cls=GdpmCommand,
+    category="project",
     examples=[
         ("gdpm list", "List all installed plugins"),
         ("gdpm list --json", "Output as JSON"),

@@ -20,7 +20,7 @@ import click
 from rich.console import Console
 
 from gdpm.cache.file_cache import FileCache
-from gdpm.cli.app import GdpmCommand, GdpmGroup
+from gdpm.cli.base import GdpmCommand, GdpmGroup
 from gdpm.config.global_config import read_global_config
 
 console = Console()
@@ -28,6 +28,7 @@ console = Console()
 
 @click.group(
     cls=GdpmGroup,
+    category="dependencies",
     examples=[
         ("gdpm cache info", "Show cache size and location"),
         ("gdpm cache clean", "Clean all cached files"),

@@ -2,31 +2,41 @@
 全局配置管理
 
 - 读写 gdpm 全局配置文件 config.toml, 管理跨项目共享的默认设置.
-- 配置为稀疏结构: 只落盘与默认值不同的定制项.
+- 配置为全量材料化: 所有键显式落盘, 文件即完整可编辑模板.
 
 ----
 
 Examples
 ----
-配置文件只包含非默认的定制项, 例如同时改了默认引擎与商店地址:
+配置文件写出全部键, 例如:
 
     [defaults]
-    default_engine = "steam-godot@4.7-stable"
+    godot_path = "godot"
+    addons_dir = "addons"
+    parallel_downloads = 4
+    default_engine = ""
 
     [store]
-    base_url = "https://mirror.example.com/api/v1"
+    base_url = "https://store.godotengine.org/api/v1"
 
-可配置键 (仅非默认值会写入文件):
+    [cache]
+    dir = "/home/user/.gdpm/cache"
+
+    [ui]
+    language = "en"
+
+可配置键:
     [defaults] godot_path / addons_dir / parallel_downloads / default_engine
     [store]    base_url
     [cache]    dir
+    [ui]       language
 
 Notes
 ----
 - GlobalConfig: 全局配置数据类.
 - get_config_path: 获取配置文件路径 (~/.gdpm/config.toml).
-- read_global_config: 读取全局配置.
-- write_global_config: 稀疏写入全局配置 (只写非默认字段).
+- read_global_config: 读取全局配置 (缺键回退默认, 兼容历史稀疏文件).
+- write_global_config: 全量写入全局配置 (所有键显式落盘).
 - get_default_engine: 获取全局默认引擎 ID (含旧位置自动迁移).
 - set_default_engine: 设置全局默认引擎 ID.
 - unset_default_engine: 移除全局默认引擎设置.
@@ -65,6 +75,8 @@ class GlobalConfig:
         下载缓存目录.
     store_url : str
         Godot Asset Store API 基础地址.
+    language : str
+        帮助文案语言 (en/zh), 对应 [ui] language.
     """
 
     godot_path: str = "godot"
@@ -73,6 +85,7 @@ class GlobalConfig:
     default_engine: str = ""
     cache_dir: str = ""
     store_url: str = "https://store.godotengine.org/api/v1"
+    language: str = "en"
 
     def __post_init__(self) -> None:
         """
@@ -101,31 +114,8 @@ CONFIG_FIELDS: tuple[str, ...] = (
     "default_engine",
     "store_url",
     "cache_dir",
+    "language",
 )
-
-
-def custom_fields(config: GlobalConfig) -> list[tuple[str, object]]:
-    """
-    列出与默认值不同的字段 (定制项).
-
-    ----
-
-    Parameters
-    ----
-    config : GlobalConfig
-        待检查的配置实例.
-
-    Returns
-    ----
-    list[tuple[str, object]]
-        (字段名, 当前值) 列表, 全为默认值时为空.
-    """
-    base = GlobalConfig()
-    return [
-        (name, getattr(config, name))
-        for name in CONFIG_FIELDS
-        if getattr(config, name) != getattr(base, name)
-    ]
 
 
 def _migrate_legacy_config() -> None:
@@ -174,6 +164,7 @@ def read_global_config() -> GlobalConfig:
     defaults = data.get("defaults", {})
     store = data.get("store", {})
     cache = data.get("cache", {})
+    ui = data.get("ui", {})
 
     return GlobalConfig(
         godot_path=defaults.get("godot_path", "godot"),
@@ -182,19 +173,23 @@ def read_global_config() -> GlobalConfig:
         default_engine=defaults.get("default_engine", ""),
         cache_dir=cache.get("dir", ""),
         store_url=store.get("base_url", "https://store.godotengine.org/api/v1"),
+        language=ui.get("language", "en"),
     )
 
 
 def write_global_config(config: GlobalConfig) -> None:
     """
-    稀疏写入全局配置.
+    全量写入全局配置.
 
-    只序列化与默认值不同的字段: 文件即用户的定制清单, 一次修改只产出
-    对应的配置行; 全部为默认值时不生成文件 (等价于未配置状态).
-    默认值随版本演进不会被旧文件隐式钉死.
+    所有键显式落盘, 文件永远是完整可编辑模板 (全量材料化, 2026-11 由
+    稀疏方案改为本模型): 便于查看全部可配置项与手工编辑, init 即写出
+    完整默认配置. 读取端缺键仍回退默认, 兼容历史稀疏文件.
 
-    注意: 本函数基于 GlobalConfig 字段重建文件, 手写的未知键会在
-    下次写入时丢失.
+    注意:
+    - 本函数基于 GlobalConfig 字段重建文件, 手写的未知键会在
+      下次写入时丢失.
+    - 默认值随版本演进时, 旧文件中物化的旧默认值会钉住用户配置,
+      调整默认值的版本需配迁移 (删除等于旧默认值的行).
 
     ----
 
@@ -209,37 +204,20 @@ def write_global_config(config: GlobalConfig) -> None:
         无.
     """
     path = get_config_path()
-    base = GlobalConfig()
-    sections: list[tuple[str, list[str]]] = []
-
-    defaults: list[str] = []
-    if config.godot_path != base.godot_path:
-        defaults.append(f'godot_path = "{config.godot_path}"')
-    if config.addons_dir != base.addons_dir:
-        defaults.append(f'addons_dir = "{config.addons_dir}"')
-    if config.parallel_downloads != base.parallel_downloads:
-        defaults.append(f"parallel_downloads = {config.parallel_downloads}")
-    if config.default_engine != base.default_engine:
-        defaults.append(f'default_engine = "{config.default_engine}"')
-    if defaults:
-        sections.append(("[defaults]", defaults))
-
-    store: list[str] = []
-    if config.store_url != base.store_url:
-        store.append(f'base_url = "{config.store_url}"')
-    if store:
-        sections.append(("[store]", store))
-
-    cache: list[str] = []
-    if config.cache_dir != base.cache_dir:
-        cache.append(f'dir = "{config.cache_dir}"')
-    if cache:
-        sections.append(("[cache]", cache))
-
-    if not sections:
-        # 无任何定制项: 删除配置文件, 回到"未配置"状态
-        path.unlink(missing_ok=True)
-        return
+    sections: list[tuple[str, list[str]]] = [
+        (
+            "[defaults]",
+            [
+                f'godot_path = "{config.godot_path}"',
+                f'addons_dir = "{config.addons_dir}"',
+                f"parallel_downloads = {config.parallel_downloads}",
+                f'default_engine = "{config.default_engine}"',
+            ],
+        ),
+        ("[store]", [f'base_url = "{config.store_url}"']),
+        ("[cache]", [f'dir = "{config.cache_dir}"']),
+        ("[ui]", [f'language = "{config.language}"']),
+    ]
 
     lines: list[str] = []
     for header, entries in sections:

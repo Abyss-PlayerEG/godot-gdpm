@@ -31,7 +31,7 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console, is_template
 from gdpm.cli.context import get_project_context, get_services
 from gdpm.cli.options import yes_option
@@ -44,6 +44,7 @@ from gdpm.store.utils import resolve_publisher
 
 @click.command(
     cls=GdpmCommand,
+    category="dependencies",
     examples=[
         ("gdpm add limbo-ai", "Add plugin from Godot Store"),
         ("gdpm add limofeus/limbo-ai", "Add with publisher/slug"),

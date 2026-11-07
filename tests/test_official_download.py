@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from gdpm.cli.godot.common import _official_asset, build_download_url
+from gdpm.cli.commands.godot.common import _official_asset, build_download_url
 
 
 def _with_platform(system: str, machine: str):
     return (
-        patch("gdpm.cli.godot.common.platform.system", return_value=system),
-        patch("gdpm.cli.godot.common.platform.machine", return_value=machine),
+        patch("gdpm.cli.commands.godot.common.platform.system", return_value=system),
+        patch("gdpm.cli.commands.godot.common.platform.machine", return_value=machine),
     )
 
 

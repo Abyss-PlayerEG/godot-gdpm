@@ -16,7 +16,7 @@ import asyncio
 
 import click
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console
 from gdpm.cli.context import get_project_context
 from gdpm.lockfile.lock import write_lockfile
@@ -26,6 +26,7 @@ from gdpm.store.utils import resolve_publisher
 
 @click.command(
     cls=GdpmCommand,
+    category="project",
     examples=[
         ("gdpm lock", "Generate lock file"),
         ("gdpm lock --check", "Check if lock file is up to date"),

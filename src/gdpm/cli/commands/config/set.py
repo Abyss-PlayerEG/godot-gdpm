@@ -7,15 +7,16 @@ gdpm config set 命令
 
 Notes
 ----
-- config_set: 校验键名与整数类型后写入 (稀疏存储, 仅落盘非默认值).
+- config_set: 校验键名与整数类型后全量写入 (所有键显式落盘).
 """
 
 from __future__ import annotations
 
 import click
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console
+from gdpm.cli.i18n import SUPPORTED_LANGUAGES
 from gdpm.config.global_config import (
     CONFIG_FIELDS,
     GlobalConfig,
@@ -31,6 +32,7 @@ _KEY_HELP: dict[str, str] = {
     "default_engine": "Global default engine id (empty to clear)",
     "store_url": "Asset Store API base URL",
     "cache_dir": "Download cache directory (empty to reset)",
+    "language": "Help language: en/zh (empty to reset)",
 }
 
 
@@ -39,6 +41,7 @@ _KEY_HELP: dict[str, str] = {
     cls=GdpmCommand,
     examples=[
         ("gdpm config set parallel_downloads 8", "Set parallel downloads"),
+        ("gdpm config set language zh", "Switch help language (en/zh)"),
         ('gdpm config set cache_dir ""', "Reset cache dir to default"),
     ],
 )
@@ -58,7 +61,7 @@ def config_set(key: str, value: str) -> None:
     base = GlobalConfig()
 
     if value == "":
-        # 空值 = 恢复该项为默认 (稀疏存储下即从文件移除)
+        # 空值 = 恢复该项为默认 (全量写入下保留为默认值行)
         setattr(config, key, getattr(base, key))
     elif key == "parallel_downloads":
         try:
@@ -72,6 +75,15 @@ def config_set(key: str, value: str) -> None:
             )
             return
         config.parallel_downloads = count
+    elif key == "language":
+        if value not in SUPPORTED_LANGUAGES:
+            supported = "/".join(SUPPORTED_LANGUAGES)
+            console.print(
+                f"[red]Error:[/red] unsupported language [cyan]{value}[/cyan]. "
+                f"Supported: {supported}."
+            )
+            return
+        config.language = value
     else:
         setattr(config, key, value)
 

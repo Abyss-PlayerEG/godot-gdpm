@@ -28,7 +28,7 @@ from pathlib import Path
 
 import click
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console, require_project
 from gdpm.config.project import read_project_config
 from gdpm.lockfile.lock import find_lockfile, read_lockfile
@@ -38,6 +38,7 @@ from gdpm.utils.tag import scan_addons
 
 @click.command(
     cls=GdpmCommand,
+    category="dependencies",
     examples=[
         ("gdpm export", "Export to default location"),
         ("gdpm export -o backup.zip", "Export to custom file"),

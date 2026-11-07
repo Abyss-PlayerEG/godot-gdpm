@@ -110,8 +110,8 @@ def test_legacy_key_dropped_on_set(tmp_path: Path, monkeypatch) -> None:
     assert get_default_engine() == "new@2.0-stable"
 
 
-def test_sparse_write_only_changed_field(tmp_path: Path, monkeypatch) -> None:
-    """方案 B: 一次修改只产出对应的一条配置, 不物化默认值."""
+def test_full_write_materializes_defaults(tmp_path: Path, monkeypatch) -> None:
+    """全量材料化: 一次修改也产出完整配置文件, 默认键显式在列."""
     config_path, _ = _patch_paths(tmp_path, monkeypatch)
 
     set_default_engine("steam-godot@4.7-stable")
@@ -119,29 +119,29 @@ def test_sparse_write_only_changed_field(tmp_path: Path, monkeypatch) -> None:
 
     assert 'default_engine = "steam-godot@4.7-stable"' in text
     assert "[defaults]" in text
-    # 默认值不落盘
-    assert "godot_path" not in text
-    assert "parallel_downloads" not in text
-    assert "[store]" not in text
-    assert "[cache]" not in text
+    # 默认值同样显式落盘
+    assert "godot_path" in text
+    assert "parallel_downloads" in text
+    assert "[store]" in text
+    assert "[cache]" in text
+    assert "[ui]" in text
 
 
-def test_unset_deletes_file_when_only_customization(
-    tmp_path: Path, monkeypatch
-) -> None:
-    """唯一的定制项被移除后, 配置文件删除 (等价于未配置)."""
+def test_unset_keeps_full_file_with_default(tmp_path: Path, monkeypatch) -> None:
+    """唯一的定制项被移除后, 文件保留且 default_engine 回到默认空值."""
     config_path, _ = _patch_paths(tmp_path, monkeypatch)
 
     set_default_engine("steam-godot@4.7-stable")
     assert config_path.exists()
 
     unset_default_engine()
-    assert not config_path.exists()
+    assert config_path.exists()
+    assert 'default_engine = ""' in config_path.read_text(encoding="utf-8")
     assert get_default_engine() == ""
 
 
-def test_sparse_write_single_section(tmp_path: Path, monkeypatch) -> None:
-    """只定制商店地址 → 文件只有 [store] 一段."""
+def test_full_write_includes_all_sections(tmp_path: Path, monkeypatch) -> None:
+    """任意一次写入都包含全部分段 (store 定制只是其中一行)."""
     config_path, _ = _patch_paths(tmp_path, monkeypatch)
 
     write_global_config(GlobalConfig(store_url="https://mirror.example/api/v1"))
@@ -149,5 +149,6 @@ def test_sparse_write_single_section(tmp_path: Path, monkeypatch) -> None:
 
     assert "[store]" in text
     assert "mirror.example" in text
-    assert "[defaults]" not in text
-    assert "[cache]" not in text
+    assert "[defaults]" in text
+    assert "[cache]" in text
+    assert "[ui]" in text

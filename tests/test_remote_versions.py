@@ -8,13 +8,13 @@
 
 from __future__ import annotations
 
-from gdpm.cli.godot.common import (
+from gdpm.cli.commands.godot.common import (
     RemoteRelease,
     _flavor_channel,
     _parse_display_date,
     parse_versions_json,
 )
-from gdpm.cli.godot.list import _paginate_remote
+from gdpm.cli.commands.godot.list import _paginate_remote
 
 SAMPLE = [
     {

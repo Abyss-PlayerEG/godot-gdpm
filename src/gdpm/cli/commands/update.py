@@ -20,7 +20,7 @@ import asyncio
 
 import click
 
-from gdpm.cli.app import GdpmCommand
+from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console
 from gdpm.cli.context import get_project_context, get_services
 from gdpm.cli.options import yes_option
@@ -31,6 +31,7 @@ from gdpm.utils.version import normalize_version
 
 @click.command(
     cls=GdpmCommand,
+    category="dependencies",
     examples=[
         ("gdpm update", "Update all plugins"),
         ("gdpm update limbo-ai", "Update specific plugin"),
