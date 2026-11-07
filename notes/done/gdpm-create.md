@@ -94,7 +94,7 @@ config/features=PackedStringArray("4.7")
 
 ## 实现步骤
 
-- [ ] 创建 `cli/create.py`
+- [ ] 创建 `cli/commands/create.py`
 - [ ] 交互式收集信息（click.prompt）
 - [ ] 检测已安装 Godot 版本
 - [ ] 生成 project.godot

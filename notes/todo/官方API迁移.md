@@ -17,9 +17,9 @@
 
 | 位置 | 用途 | 迁移目标 |
 |------|------|---------|
-| `cli/godot/common.py::build_download_url` | 按 tag 查 release → 资产下载 URL | **`downloads.godotengine.org` 302 接口** |
-| `cli/godot/common.py::get_asset_hash` | 资产 SHA256（当前坏的） | **`godot-builds` 的 `files[].checksum`** |
-| `cli/godot/list.py`（3 处） | `--remote` 远程版本列表 | **`versions.json`**（静态无速率限制） |
+| `cli/commands/godot/common.py::build_download_url` | 按 tag 查 release → 资产下载 URL | **`downloads.godotengine.org` 302 接口** |
+| `cli/commands/godot/common.py::get_asset_hash` | 资产 SHA256（当前坏的） | **`godot-builds` 的 `files[].checksum`** |
+| `cli/commands/godot/list.py`（3 处） | `--remote` 远程版本列表 | **`versions.json`**（静态无速率限制） |
 | `cli/app.py:495` `contributors` | `gdpm --info` 展示本仓库贡献者 | **保留 GitHub API**（属 gdpm 自身元数据，非 Godot 下载链） |
 | `constants.py` token/headers | GitHub 认证头 | 保留（contributors 仍用；Godot 链路不再需要） |
 
