@@ -20,8 +20,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from gdpm.utils.checksum import sha256_file
-
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -33,7 +31,7 @@ class CacheEntry:
     """
     单条缓存索引记录
 
-    记录缓存文件名, zip 文件的 SHA256 校验和与下载时间.
+    记录缓存文件名与下载时间.
 
     ----
 
@@ -41,14 +39,11 @@ class CacheEntry:
     ----
     file : str
         缓存文件名.
-    hash : str
-        zip 文件的 SHA256 校验和.
     downloaded_at : str
         下载时间 (ISO 格式).
     """
 
     file: str
-    hash: str
     downloaded_at: str
 
 
@@ -133,6 +128,8 @@ class CacheIndex:
             try:
                 raw = json.loads(path.read_text(encoding="utf-8"))
                 for key, entry in raw.items():
+                    # 兼容旧索引: 忽略已移除的 hash 字段
+                    entry.pop("hash", None)
                     data[key] = CacheEntry(**entry)
             except json.JSONDecodeError, TypeError:
                 # 索引损坏时按空索引处理.
@@ -232,12 +229,11 @@ class CacheIndex:
         self,
         key: str,
         file: str,
-        zip_path: Path,
     ) -> CacheEntry:
         """
         写入或更新缓存记录.
 
-        为 zip 文件计算 SHA256 校验和并记录下载时间.
+        记录下载时间, 不计算文件哈希 (无消费方, 属无谓的全文件读取).
 
         ----
 
@@ -247,18 +243,14 @@ class CacheIndex:
             缓存键.
         file : str
             缓存文件名.
-        zip_path : Path
-            用于计算校验和的 zip 文件.
 
         Returns
         ----
         CacheEntry
             写入的缓存记录.
         """
-        hash_val = sha256_file(zip_path) if zip_path.exists() else ""
         entry = CacheEntry(
             file=file,
-            hash=hash_val,
             downloaded_at=datetime.now(UTC).isoformat(),
         )
         letter = self._letter_for_key(key)

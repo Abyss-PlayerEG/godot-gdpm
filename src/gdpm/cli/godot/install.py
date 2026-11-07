@@ -7,7 +7,7 @@ gdpm godot install/uninstall 命令
 
 Notes
 ----
-- godot_install: 分片下载, 校验并解压 Godot 引擎.
+- godot_install: 分片下载并解压 Godot 引擎.
 - godot_uninstall: 删除已安装的 Godot 引擎.
 """
 
@@ -31,11 +31,9 @@ from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import console
 from gdpm.cli.godot.common import (
     build_download_url,
-    get_asset_hash,
     get_engines_dir,
     normalize_version,
 )
-from gdpm.utils.checksum import sha256_file
 from gdpm.utils.download import download_file_chunked
 from gdpm.utils.install import get_godot_ext, get_godot_platform
 
@@ -69,21 +67,13 @@ def godot_install(version: str, csharp: bool) -> None:
         # 确认后删除旧安装目录以便重装
         shutil.rmtree(ver_dir, onexc=lambda *args: None)
 
+    # 官方接口按平台与代际拼接, 无网络请求且恒非空
     url = build_download_url(tag, csharp)
-    if not url:
-        console.print(
-            f"[red]Error:[/red] Failed to fetch download URL for "
-            f"[cyan]{tag}{suffix}[/cyan].\n"
-            "  GitHub API may be rate-limited. Try again later."
-        )
-        return
 
     plat = get_godot_platform()
     ext = get_godot_ext()
     filename = f"Godot_v{tag}{suffix}_{plat}.{ext}"
     zip_path = engines_dir / filename
-
-    expected_hash = get_asset_hash(tag, filename)
 
     progress = Progress(
         TextColumn("[bold blue]{task.fields[name]}"),
@@ -116,19 +106,6 @@ def godot_install(version: str, csharp: bool) -> None:
                 filename=filename,
                 on_progress=on_progress,
             )
-
-        if expected_hash:
-            actual_hash = sha256_file(zip_path)
-            # 校验失败时删除下载文件
-            if actual_hash != expected_hash:
-                zip_path.unlink()
-                console.print(
-                    "[red]Error:[/red] Hash verification failed.\n"
-                    f"  Expected: [dim]{expected_hash}[/dim]\n"
-                    f"  Actual:   [dim]{actual_hash}[/dim]"
-                )
-                return
-            console.print("[dim]  Hash verified ✓[/dim]")
 
     except httpx.HTTPStatusError as e:
         # 保留 404 的友好提示 (版本不存在)

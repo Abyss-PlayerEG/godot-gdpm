@@ -95,9 +95,7 @@ def download_file(
 
     file_path = dest / filename
 
-    with httpx.stream(
-        "GET", url, follow_redirects=True, verify=False, timeout=timeout
-    ) as resp:
+    with httpx.stream("GET", url, follow_redirects=True, timeout=timeout) as resp:
         resp.raise_for_status()
         total = int(resp.headers.get("content-length", 0))
         downloaded = 0
@@ -177,9 +175,7 @@ def download_file_chunked(
     total = 0
     supports_range = False
     try:
-        with httpx.stream(
-            "HEAD", url, follow_redirects=True, verify=False, timeout=timeout
-        ) as resp:
+        with httpx.stream("HEAD", url, follow_redirects=True, timeout=timeout) as resp:
             if resp.status_code < 400:
                 total = int(resp.headers.get("content-length", 0))
                 supports_range = (
@@ -215,7 +211,6 @@ def download_file_chunked(
             url,
             headers=headers,
             follow_redirects=True,
-            verify=False,
             timeout=timeout,
         ) as resp:
             # 必须是 206, 收到 200 说明服务器忽略了 Range

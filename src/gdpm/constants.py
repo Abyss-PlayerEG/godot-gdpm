@@ -29,7 +29,7 @@ HASHES_FILE = ".hashes"
 REPO_URL = "https://github.com/Abyss-PlayerEG/godot-gdpm"
 ISSUES_URL = "https://github.com/Abyss-PlayerEG/godot-gdpm/issues"
 GITHUB_API_URL = "https://api.github.com/repos/Abyss-PlayerEG/godot-gdpm/"
-GODOT_RELEASES_URL = "https://api.github.com/repos/godotengine/godot/releases"
+VERSIONS_JSON_URL = "https://godotengine.org/versions.json"
 
 
 def get_github_token() -> str:

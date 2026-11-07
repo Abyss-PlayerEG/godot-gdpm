@@ -9,8 +9,8 @@ Notes
 ----
 - get_engines_dir: 获取全局引擎目录.
 - normalize_version: 版本号规范化为 tag 格式.
-- build_download_url: 从 GitHub API 获取下载地址.
-- get_asset_hash: 获取发布资源的 SHA256 哈希.
+- build_download_url: 构造官方下载接口 URL (无网络请求).
+- fetch_remote_versions: 从官方 versions.json 拉取版本.
 - ensure_executable: 确保文件具有执行权限.
 - find_engine_binary: 在引擎目录中查找二进制.
 - prepare_engine_dir: 解压后修复权限.
@@ -23,12 +23,13 @@ from __future__ import annotations
 import os
 import platform
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import httpx
 
-from gdpm.constants import GITHUB_API_URL, GODOT_RELEASES_URL, get_github_headers
-from gdpm.utils.install import get_godot_platform
+from gdpm.constants import VERSIONS_JSON_URL
 
 
 def get_engines_dir() -> Path:
@@ -80,94 +81,243 @@ def normalize_version(version: str) -> str:
     return f"{version}-stable"
 
 
+# pylint: disable-next=too-many-return-statements
+def _official_asset(version: str, csharp: bool = False) -> tuple[str, str]:
+    """
+    按平台与版本代际返回官方下载资产的 (slug, platform).
+
+    mono 命名不规则 (linux 变下划线, macOS 保留点), 故用显式代际规则.
+
+    ----
+
+    Parameters
+    ----
+    version : str
+        纯版本号 (不含通道), 如 '4.7.2'.
+    csharp : bool, optional
+        是否为 C# (mono) 版本.
+
+    Returns
+    ----
+    tuple[str, str]
+        (slug, platform) 二元组, 用于拼接官方下载接口 URL.
+    """
+    parts = version.split(".")
+    try:
+        major = int(parts[0])
+    except ValueError:
+        major = 4
+    try:
+        minor = int(parts[1])
+    except IndexError, ValueError:
+        minor = 0
+
+    system = platform.system()
+    machine = platform.machine()
+
+    if system == "Windows":
+        # mono 无 .exe 后缀 (win64.exe.zip -> mono_win64.zip)
+        slug = "mono_win64.zip" if csharp else "win64.exe.zip"
+        return slug, "windows.64"
+
+    if system == "Darwin":
+        if major < 4:
+            slug = "mono_osx.universal.zip" if csharp else "osx.universal.zip"
+            return slug, "macos.universal"
+        # 4.8 起拆分架构, 之前为 universal
+        if (major, minor) >= (4, 8):
+            arch = "arm64" if machine == "arm64" else "x86_64"
+            slug = f"macos.{arch}.zip"
+            return (f"mono_{slug}" if csharp else slug), f"macos.{arch}"
+        slug = "mono_macos.universal.zip" if csharp else "macos.universal.zip"
+        return slug, "macos.universal"
+
+    # Linux
+    if machine in ("aarch64", "arm64"):
+        slug = "linux.arm64.zip"
+        return (f"mono_{slug}" if csharp else slug), "linux.arm64"
+    if major < 4:
+        # 3.x 资产名是 x11.64, mono 版为下划线 x11_64
+        slug = "mono_x11_64.zip" if csharp else "x11.64.zip"
+        return slug, "linux.64"
+    slug = "mono_linux_x86_64.zip" if csharp else "linux.x86_64.zip"
+    return slug, "linux.64"
+
+
 def build_download_url(tag: str, csharp: bool = False) -> str:
     """
-    从 GitHub API 获取 Godot 下载地址.
+    构造官方下载接口 URL (downloads.godotengine.org).
+
+    纯字符串拼接无网络请求, 302 重定向由下载时的 httpx 跟随.
 
     ----
 
     Parameters
     ----
     tag : str
-        发布 tag, 如 '4.7-stable'.
+        发布 tag, 如 '4.7.2-stable'.
     csharp : bool, optional
-        是否获取 C# (mono) 版本.
+        是否为 C# (mono) 版本.
 
     Returns
     ----
     str
-        下载 URL 字符串, 未匹配到资源或请求失败时返回空字符串.
+        官方下载接口 URL.
     """
-    mono = "_mono" if csharp else ""
-    system = get_godot_platform()
-
-    if "macos" in system:
-        keywords: tuple[str, ...] = ("osx", "macos")
-    elif "linux" in system:
-        keywords = ("linux",)
-    else:
-        keywords = ("win",)
-
-    try:
-        resp = httpx.get(
-            f"{GODOT_RELEASES_URL}/tags/{tag}",
-            headers=get_github_headers(),
-            timeout=10,
-            verify=False,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
-        for asset in data.get("assets", []):
-            name = asset["name"]
-            if mono and "_mono" not in name:
-                continue
-            if not mono and "_mono" in name:
-                continue
-            if name.endswith(".zip") and any(k in name for k in keywords):
-                return str(asset["browser_download_url"])
-    except Exception:
-        pass
-
-    return ""
+    version, _, flavor = tag.partition("-")
+    flavor = flavor or "stable"
+    slug, platform_id = _official_asset(version, csharp)
+    return (
+        "https://downloads.godotengine.org/"
+        f"?version={version}&flavor={flavor}&slug={slug}&platform={platform_id}"
+    )
 
 
-def get_asset_hash(tag: str, filename: str) -> str:
+@dataclass(frozen=True)
+class RemoteRelease:
     """
-    从 GitHub API 获取发布资源的 SHA256 哈希.
+    官方 versions.json 中的单个版本条目.
+
+    ----
+
+    Attributes
+    ----
+    tag : str
+        完整版本标签, 如 '4.8-beta2'.
+    date : str
+        发布日期 (ISO 格式), 如 '2026-10-29'.
+    stable : bool
+        是否为 stable 通道.
+    channel : str
+        发布通道 (去除序号), 如 'beta', 'stable', 'rc', 'dev', 'alpha'.
+    """
+
+    tag: str
+    date: str
+    stable: bool
+    channel: str
+
+
+# versions.json 的日期是英文展示串, 月份名映射用于转 ISO 格式
+_DISPLAY_MONTHS = {
+    "January": 1,
+    "February": 2,
+    "March": 3,
+    "April": 4,
+    "May": 5,
+    "June": 6,
+    "July": 7,
+    "August": 8,
+    "September": 9,
+    "October": 10,
+    "November": 11,
+    "December": 12,
+}
+
+
+def _parse_display_date(raw: str) -> str:
+    """
+    将 versions.json 的展示日期转为 ISO 格式.
+
+    '29 October 2026' -> '2026-10-29', 无法解析时原样返回.
 
     ----
 
     Parameters
     ----
-    tag : str
-        发布 tag, 如 '4.7-stable'.
-    filename : str
-        资源文件名.
+    raw : str
+        英文展示日期串.
 
     Returns
     ----
     str
-        十六进制 SHA256 哈希字符串, 获取失败时返回空字符串.
+        ISO 日期或原始字符串.
     """
-    try:
-        resp = httpx.get(
-            f"{GITHUB_API_URL}contributors",
-            headers=get_github_headers(),
-            timeout=5,
-            verify=False,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+    parts = raw.split()
+    if len(parts) != 3 or parts[1] not in _DISPLAY_MONTHS:
+        return raw
+    month = _DISPLAY_MONTHS[parts[1]]
+    return f"{parts[2]}-{month:02d}-{int(parts[0]):02d}"
 
-        for asset in data.get("assets", []):
-            if asset.get("name") == filename:
-                digest = asset.get("digest", "")
-                if digest.startswith("sha256:"):
-                    return str(digest[7:])
-        return ""
-    except Exception:
-        return ""
+
+def _flavor_channel(flavor: str) -> str:
+    """
+    由版本通道名推导发布通道 (去除尾部序号).
+
+    'beta2' -> 'beta', 'rc10' -> 'rc', 'stable' -> 'stable'.
+
+    ----
+
+    Parameters
+    ----
+    flavor : str
+        versions.json 中的通道名, 可带序号.
+
+    Returns
+    ----
+    str
+        去除序号后的通道名, 无数字时原样返回.
+    """
+    return flavor.rstrip("0123456789") or flavor
+
+
+def parse_versions_json(data: list[Any]) -> list[RemoteRelease]:
+    """
+    将 versions.json 数据展平为版本条目列表.
+
+    按文件原有顺序返回 (新版本在前), tag 由组名与通道名拼接.
+
+    ----
+
+    Parameters
+    ----
+    data : list
+        versions.json 的根数组, 形如 [{name, releases: [...]}].
+
+    Returns
+    ----
+    list[RemoteRelease]
+        展平后的版本条目列表.
+    """
+    result: list[RemoteRelease] = []
+    for group in data:
+        version = str(group.get("name", ""))
+        for rel in group.get("releases", []):
+            flavor = str(rel.get("name", ""))
+            if not version or not flavor:
+                continue
+            result.append(
+                RemoteRelease(
+                    tag=f"{version}-{flavor}",
+                    date=_parse_display_date(str(rel.get("release_date", ""))),
+                    stable=flavor == "stable",
+                    channel=_flavor_channel(flavor),
+                )
+            )
+    return result
+
+
+def fetch_remote_versions() -> list[RemoteRelease]:
+    """
+    从官方 versions.json 拉取全部可用版本.
+
+    静态文件无速率限制, 失败时抛出 httpx 异常由调用方处理.
+
+    ----
+
+    Returns
+    ----
+    list[RemoteRelease]
+        全部版本条目 (新版本在前).
+
+    Raises
+    ----
+    httpx.HTTPError
+        网络请求失败或响应非 2xx.
+    """
+    resp = httpx.get(VERSIONS_JSON_URL, timeout=10)
+    resp.raise_for_status()
+    return parse_versions_json(resp.json())
 
 
 def ensure_executable(path: Path) -> None:

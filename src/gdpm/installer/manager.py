@@ -179,7 +179,7 @@ class PluginManager:
         )
 
         # 更新缓存索引
-        self._index.put(cache_key, zip_path.name, zip_path)
+        self._index.put(cache_key, zip_path.name)
 
         return zip_path, ver
 
