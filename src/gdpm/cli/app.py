@@ -110,23 +110,32 @@ class GdpmCommand(click.Command):
         """
         console.print()
         console.print(
-            Text(f"  gdpm {ctx.info_name}", style="bold green")
+            Text(f"  {ctx.command_path}", style="bold green")
             + Text(f"  {self.help or ''}", style="dim")
         )
         console.print()
 
-        # 根据参数类型拼装 Usage: 必填用 <name>, 标志用 [--name], 其余用 [--name VALUE]
-        usage_parts = [f"gdpm {ctx.info_name}"]
+        # 根据参数类型拼装 Usage: 必填 <name>, 可选 [name], 选项用真实 CLI 拼写
+        usage_parts = [ctx.command_path]
         for param in self.params:
             if param.name == "help":
                 continue
-            if param.required:
+            if isinstance(param, click.Argument):
                 # metavar 优先 (如 use 的 <ID>), 缺省回退参数名
-                usage_parts.append(f"<{param.metavar or param.name}>")
-            elif isinstance(param, click.Option) and param.is_flag:
-                usage_parts.append(f"[--{param.name}]")
-            else:
-                usage_parts.append(f"[--{param.name} VALUE]")
+                display = param.metavar or param.name
+                usage_parts.append(f"<{display}>" if param.required else f"[{display}]")
+            elif isinstance(param, click.Option):
+                # 用选项真实拼写 (--all), 而非 Python dest 名 (show_all)
+                long_opts = [o for o in param.opts if o.startswith("--")]
+                spelling = long_opts[0] if long_opts else param.opts[0]
+                if param.is_flag:
+                    usage_parts.append(f"[{spelling}]")
+                elif isinstance(param.type, click.Choice):
+                    # Choice 选项展示全部合法取值 (如 stable|rc|beta)
+                    values = "|".join(str(c) for c in param.type.choices)
+                    usage_parts.append(f"[{spelling} {values}]")
+                else:
+                    usage_parts.append(f"[{spelling} {param.metavar or 'VALUE'}]")
         console.print(
             Text("  Usage: ", style="dim") + Text(" ".join(usage_parts), style="white")
         )
