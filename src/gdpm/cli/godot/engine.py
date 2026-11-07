@@ -100,11 +100,10 @@ def godot_add(path: str, name: str) -> None:
 @click.argument("name_or_id")
 def godot_remove(name_or_id: str) -> None:
     """移除本地 Godot 引擎."""
+    from gdpm.config.global_config import get_default_engine, set_default_engine
     from gdpm.config.local_engines import (
-        get_default_engine,
         load_local_engines,
         remove_local_engine,
-        set_default_engine,
     )
 
     name = name_or_id.split("@")[0] if "@" in name_or_id else name_or_id
@@ -188,12 +187,12 @@ def godot_use(engine_id: str) -> None:
 @click.option("--unset", is_flag=True, help="Remove default engine")
 def godot_default(engine_id: str | None, unset: bool) -> None:
     """设置或显示默认 Godot 引擎."""
-    from gdpm.config.local_engines import (
+    from gdpm.config.global_config import (
         get_default_engine,
-        load_local_engines,
         set_default_engine,
         unset_default_engine,
     )
+    from gdpm.config.local_engines import load_local_engines
 
     if unset:
         unset_default_engine()

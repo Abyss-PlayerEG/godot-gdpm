@@ -36,7 +36,7 @@ from gdpm.cli.godot.common import resolve_engine_path
 )
 def godot_open(run: bool) -> None:
     """为当前项目打开 Godot 编辑器."""
-    from gdpm.config.local_engines import get_default_engine
+    from gdpm.config.global_config import get_default_engine
 
     root = find_project_root()
     conf_path = root / ".engines-conf.json"

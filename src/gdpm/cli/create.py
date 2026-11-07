@@ -34,7 +34,7 @@ from gdpm.cli.godot.common import (
     normalize_version,
     resolve_engine_path,
 )
-from gdpm.config.local_engines import get_default_engine
+from gdpm.config.global_config import get_default_engine
 from gdpm.config.project import ProjectConfig, write_project_config
 
 

@@ -60,6 +60,9 @@ COMMANDS = {
     "Engine": {
         "godot": "Manage Godot engine versions",
     },
+    "Config": {
+        "config": "Manage gdpm global configuration",
+    },
 }
 
 
@@ -585,6 +588,7 @@ def main() -> None:
 # 子命令导入放在 main 定义之后, 避免模块间循环导入
 from gdpm.cli.add import add as add_cmd  # noqa: E402
 from gdpm.cli.cache_cmd import cache as cache_cmd  # noqa: E402
+from gdpm.cli.config import config as config_cmd  # noqa: E402
 from gdpm.cli.create import create as create_cmd  # noqa: E402
 from gdpm.cli.export import export as export_cmd  # noqa: E402
 from gdpm.cli.godot import godot as godot_cmd  # noqa: E402
@@ -602,6 +606,7 @@ from gdpm.cli.update import update as update_cmd  # noqa: E402
 # 将全部子命令挂载到根命令组
 main.add_command(add_cmd, "add")  # type: ignore[has-type]
 main.add_command(cache_cmd, "cache")
+main.add_command(config_cmd, "config")  # type: ignore[has-type]
 main.add_command(create_cmd, "create")
 main.add_command(export_cmd, "export")
 main.add_command(godot_cmd, "godot")  # type: ignore[has-type]

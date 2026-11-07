@@ -33,7 +33,7 @@ from gdpm.cli.godot.common import resolve_engine_path
 )
 def godot_info() -> None:
     """显示当前 Godot 引擎配置."""
-    from gdpm.config.local_engines import get_default_engine
+    from gdpm.config.global_config import get_default_engine
     from gdpm.utils.path import shorten_path
 
     root = find_project_root()

@@ -2,6 +2,8 @@
 本地引擎配置管理
 
 - 维护 ~/.gdpm/local-engines.json, 记录用户手动注册的本地 Godot 引擎.
+- 默认引擎已迁移至全局 config.toml 的 [defaults] default_engine,
+  旧文件中的 default 字段由 get_default_engine 读取时自动迁移清理.
 
 ----
 
@@ -12,8 +14,7 @@ Examples
     {
       "engines": {
         "steam": { "path": "...", "version": "4.7-stable" }
-      },
-      "default": "steam@4.7-stable"
+      }
     }
 
 Notes
@@ -23,8 +24,6 @@ Notes
 - save_local_engines: 保存全部本地引擎.
 - add_local_engine: 注册本地引擎.
 - remove_local_engine: 移除本地引擎.
-- get_default_engine: 获取默认引擎 ID.
-- set_default_engine: 设置默认引擎 ID.
 """
 
 from __future__ import annotations
@@ -225,46 +224,3 @@ def get_local_engine(name: str) -> LocalEngine | None:
         LocalEngine 实例, 未找到时返回 None.
     """
     return load_local_engines().get(name)
-
-
-def get_default_engine() -> str:
-    """
-    获取默认引擎 ID.
-
-    引擎 ID 形如 'steam@4.7-stable'.
-
-    ----
-
-    Returns
-    ----
-    str
-        引擎 ID 字符串, 未设置时为空字符串.
-    """
-    config = load_config()
-    default = config.get("default", "")
-    return str(default) if default else ""
-
-
-def set_default_engine(engine_id: str) -> None:
-    """
-    设置默认引擎 ID.
-
-    将引擎 ID 记录到配置文件的 default 字段.
-
-    ----
-
-    Parameters
-    ----
-    engine_id : str
-        引擎 ID, 如 'steam@4.7-stable'.
-    """
-    config = load_config()
-    config["default"] = engine_id
-    save_config(config)
-
-
-def unset_default_engine() -> None:
-    """移除默认引擎设置."""
-    config = load_config()
-    config.pop("default", None)
-    save_config(config)
