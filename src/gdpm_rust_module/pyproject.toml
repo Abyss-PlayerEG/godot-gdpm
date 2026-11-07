@@ -1,0 +1,13 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "gdpm-rust-module"
+version = "0.1.0"
+description = "gdpm 原生工具模块 (Rust/PyO3), 为 gdpm 提供可选的性能加速"
+requires-python = ">=3.14"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]

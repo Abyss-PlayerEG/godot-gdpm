@@ -1,0 +1,13 @@
+[package]
+name = "gdpm_rust_module"
+version = "0.1.0"
+edition = "2021"
+
+# cdylib: 产出供 Python 加载的动态库
+# 源码在标准位置 src/lib.rs (相对本 Cargo.toml)
+[lib]
+name = "gdpm_rust_module"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.30", features = ["extension-module"] }

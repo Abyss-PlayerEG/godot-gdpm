@@ -45,6 +45,9 @@ site/
 # PyInstaller
 *.spec
 
+# Rust (gdpm_rust_module)
+src/gdpm_rust_module/target/
+
 # OS
 .DS_Store
 Thumbs.db
