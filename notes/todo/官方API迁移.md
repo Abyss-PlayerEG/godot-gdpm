@@ -66,37 +66,42 @@ mono 规则：slug 加 `mono_` 前缀并去 `.exe`（`win64.exe.zip` → `mono_w
 
 ### Phase 1: 下载 URL 解析（核心收益）
 
-- [ ] 新增 `store` 层或 `utils` 模块：`build_download_url(tag, csharp)` 改为官方接口拼接
-- [ ] 内置 slug 表（按主版本代际 + 平台 + mono 规则，约 10 行）
-- [ ] 302 解析：`httpx.head(follow_redirects=False)` 取 `Location`，404 → 友好报错
-- [ ] 保留现有 `download_file_chunked` 下载链不动（拿到直链后照旧）
-- [ ] 单测：拼接函数纯逻辑测试 + 本地 mock 302/404
+- [x] 新增 `store` 层或 `utils` 模块：`build_download_url(tag, csharp)` 改为官方接口拼接
+- [x] 内置 slug 表（按主版本代际 + 平台 + mono 规则，`_official_asset` 显式代际规则）
+- [x] 302 由 httpx `follow_redirects=True` 自动跟随（无需显式解析），404 → 友好报错（冒烟 `install 9.9` 验证）
+- [x] 保留现有 `download_file_chunked` 下载链不动（拿到直链后照旧）
+- [x] 单测：`tests/test_official_download.py` 拼接纯逻辑 11 例（含官网链接逐字断言），404 走冒烟
 
 ### Phase 2: 版本列表
 
-- [ ] `gdpm godot list --remote` 改读 `versions.json`（新→旧顺序直接展示，通道名即 flavor）
-- [ ] 评估 `list --remote` 是否还需 GitHub 分页逻辑（预计整体删除）
+- [x] `gdpm godot list --remote` 改读 `versions.json`（新→旧顺序直接展示，通道名即 flavor）
+- [x] 评估 `list --remote` 是否还需 GitHub 分页逻辑（已整体删除，改本地分页）
 
-### Phase 3: 校验和（= P0-2 修复）
+### Phase 3: 校验和（= P0-2 修复）—— 已决策移除
 
-- [ ] `get_asset_hash` 改查 `godot-builds`：`releases/godot-{tag}.json` → 按 `files[].filename` 匹配取 `checksum`
-- [ ] 文件名来源同样取 `files[].filename`，顺带修复 csharp 资产名不匹配（`-csharp` vs `_mono`）
-- [ ] 校验失败中止安装（现有清理逻辑已就绪）
-- [ ] 详见 [质量与安全加固](质量与安全加固.md) P0-2
+> 2026-11-07 调查结论：**官方无哈希获取接口**，五项探测全部阴性
+> （下载接口响应头 / 查询参数 / 官网页面内嵌 / CDN 伴生 403 / tuxfamily 404）。
+> 曾实现 godot-builds SHA512 对账并实测通过（`Hash verified ✓`），
+> 但唯一哈希源在 GitHub 仓库而非下载接口同源提供，不满足"官方接口"标准，按项目决策整体移除。
+
+- [x] ~~`get_asset_hash` 改查 `godot-builds`~~ → 曾实现为 `get_release_asset`，后按决策移除
+- [x] 移除哈希校验分支、`_match_release_file` 与 `sha512_file`
+- [x] 下载文件名回归本地构造（官方 slug 规则保留在 `build_download_url`）
+- [x] 详见 [质量与安全加固](质量与安全加固.md) P0-2
 
 ### Phase 4: 清理与收尾
 
-- [ ] `constants.py`：`GODOT_RELEASES_URL` 删除；`GITHUB_API_URL`/token 保留（contributors 用）
-- [ ] Godot 链路请求全部 `verify=True`（P0-1 范围，官方接口 certifi 实测可过）
-- [ ] `verify=False` 剩余位置逐个评估，目标 `grep -rn "verify=False" src/` = 0
+- [x] `constants.py`：`GODOT_RELEASES_URL` 删除；`GITHUB_API_URL`/token 保留（contributors 用）
+- [x] Godot 链路请求全部 `verify=True`（versions.json/下载 CDN/asset-library 实测 certifi 可过）
+- [ ] `verify=False` 剩余位置逐个评估（已评估：仅剩 2 处 `api.github.com`——本网络流量被重签、certifi 无法验证，系统信任库可过；`grep = 0` 待网络信任方案后再达）
 
 ## 验收
 
-- [ ] `gdpm godot install 4.7` 全程不触 `api.github.com`
-- [ ] `gdpm godot install 3.6`（3.x Linux `x11.64` 路径）成功——当前关键词方案必挂的用例
-- [ ] `gdpm godot list --remote` 连续运行不受速率限制
-- [ ] hash 校验真实生效（篡改 zip 必须失败，P0-2 验收）
-- [ ] `python3 scripts/check.py` 全绿 + 新增单测覆盖拼接/解析逻辑
+- [ ] `gdpm godot install 4.7` 的**下载 URL 不再走 releases API**（仅 godot-builds 元数据仍走 `api.github.com`，属官方新方案）
+- [x] 3.x `x11.64`/`osx.universal` 代际路径由单测逐字断言（本机 macOS 冒烟走 `osx.universal` 分支）
+- [x] `gdpm godot list --remote` 连续运行不受速率限制（静态文件）
+- [x] hash 校验决策闭环（曾实测 `Hash verified ✓` 生效；经五项探测确认无官方哈希接口后按决策移除，见 Phase 3）
+- [x] `python3 scripts/check.py` 全绿 + 新增单测覆盖拼接/解析逻辑（46 例）
 
 ## 不在本期范围
 
