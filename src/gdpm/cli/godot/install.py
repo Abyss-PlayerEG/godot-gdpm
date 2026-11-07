@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import shutil
 import zipfile
+from typing import TYPE_CHECKING
 
 import click
 import httpx
@@ -22,6 +23,7 @@ from rich.progress import (
     BarColumn,
     DownloadColumn,
     Progress,
+    TaskID,
     TextColumn,
     TimeRemainingColumn,
     TransferSpeedColumn,
@@ -34,8 +36,89 @@ from gdpm.cli.godot.common import (
     get_engines_dir,
     normalize_version,
 )
-from gdpm.utils.download import download_file_chunked
+from gdpm.config.global_config import read_global_config
+from gdpm.utils.download import CHUNK_COUNT, download_file_chunked
 from gdpm.utils.install import get_godot_ext, get_godot_platform
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+def _create_download_tasks(
+    progress: Progress, total_name: str, workers: int | None = None
+) -> tuple[list[TaskID], TaskID]:
+    """
+    创建下载进度任务: n 条分片条 (惰性显形) + 总进度条.
+
+    分片条初始不可见, 由分片回调首次触发时定长显形;
+    每个任务必须携带 name 字段 — TextColumn 按 {task.fields[name]} 渲染,
+    缺失会在显形渲染时抛 KeyError.
+
+    ----
+
+    Parameters
+    ----
+    progress : Progress
+        rich 进度条实例.
+    total_name : str
+        总进度条显示名, 如 'Godot 4.7-stable'.
+    workers : int | None, optional
+        分片数, None 时回退 CHUNK_COUNT (与 download_file_chunked 一致).
+
+    Returns
+    ----
+    tuple[list[TaskID], TaskID]
+        (分片任务 ID 列表, 总任务 ID).
+    """
+    n = max(1, workers or CHUNK_COUNT)
+    slice_ids = [
+        progress.add_task(
+            f"Slice {i + 1}/{n}",
+            name=f"Slice {i + 1}/{n}",
+            total=None,
+            visible=False,
+        )
+        for i in range(n)
+    ]
+    task_id = progress.add_task("download", name=total_name, total=None)
+    return slice_ids, task_id
+
+
+def _make_slice_handler(
+    progress: Progress, slice_ids: list[TaskID]
+) -> Callable[[int | None, int, int], None]:
+    """
+    构造分片进度回调, 供 download_file_chunked 的 on_slice 使用.
+
+    首次收到某片回调时为该条定长并显形; index 为 None (回退单流)
+    时收起全部分片条.
+
+    ----
+
+    Parameters
+    ----
+    progress : Progress
+        rich 进度条实例.
+    slice_ids : list[TaskID]
+        _create_download_tasks 创建的分片任务 ID 列表.
+
+    Returns
+    ----
+    Callable[[int | None, int, int], None]
+        形如 on_slice 的回调函数.
+    """
+
+    def handler(index: int | None, done: int, slice_total: int) -> None:
+        if index is None:
+            for tid in slice_ids:
+                progress.update(tid, visible=False)
+            return
+        tid = slice_ids[index]
+        if progress.tasks[int(tid)].total is None:
+            progress.update(tid, total=slice_total, visible=True)
+        progress.update(tid, completed=done)
+
+    return handler
 
 
 @click.command(
@@ -75,6 +158,9 @@ def godot_install(version: str, csharp: bool) -> None:
     filename = f"Godot_v{tag}{suffix}_{plat}.{ext}"
     zip_path = engines_dir / filename
 
+    # 统一并行度: 分片数与进度条均取全局配置 parallel_downloads
+    workers = read_global_config().parallel_downloads
+
     progress = Progress(
         TextColumn("[bold blue]{task.fields[name]}"),
         BarColumn(),
@@ -85,8 +171,9 @@ def godot_install(version: str, csharp: bool) -> None:
 
     try:
         with progress:
-            task_id = progress.add_task(
-                "download", name=f"Godot {tag}{suffix}", total=None
+            # 分片条在上 (首次回调才定长显形), 总进度垫底
+            slice_ids, task_id = _create_download_tasks(
+                progress, f"Godot {tag}{suffix}", workers
             )
 
             last_downloaded = 0
@@ -99,12 +186,16 @@ def godot_install(version: str, csharp: bool) -> None:
                 progress.update(task_id, advance=done - last_downloaded)
                 last_downloaded = done
 
-            # 4 片并行下载, 服务器不支持 Range 时自动回退单流
+            on_slice = _make_slice_handler(progress, slice_ids)
+
+            # 多片并行下载, 服务器不支持 Range 时自动回退单流
             download_file_chunked(
                 url,
                 engines_dir,
                 filename=filename,
                 on_progress=on_progress,
+                on_slice=on_slice,
+                workers=workers,
             )
 
     except httpx.HTTPStatusError as e:

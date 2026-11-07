@@ -11,7 +11,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING
 
-from gdpm.utils.download import download_file, download_file_chunked
+from gdpm.utils.download import CHUNK_COUNT, download_file, download_file_chunked
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -59,6 +59,8 @@ class _RangeHandler(BaseHTTPRequestHandler):
 
 def _serve(support_range: bool) -> tuple[ThreadingHTTPServer, str]:
     handler = type("Handler", (_RangeHandler,), {"support_range": support_range})
+    # 8 片并发连接突发需要更大 backlog (默认 5 会偶发拒绝连接)
+    ThreadingHTTPServer.request_queue_size = 32
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     url = f"http://127.0.0.1:{server.server_address[1]}/file.bin"
@@ -107,3 +109,79 @@ def test_plain_download_unchanged(tmp_path: Path) -> None:
     finally:
         server.shutdown()
     assert path.read_bytes() == PAYLOAD
+
+
+def test_on_slice_reports_every_slice(tmp_path: Path) -> None:
+    """分片回调: 4 个序号齐全, 每片终值等于片长, 片长之和等于总量."""
+    server, url = _serve(support_range=True)
+    events: list[tuple[int, int, int]] = []
+    try:
+        path = download_file_chunked(
+            url, tmp_path, on_slice=lambda i, d, t: events.append((i, d, t))
+        )
+    finally:
+        server.shutdown()
+
+    assert path.read_bytes() == PAYLOAD
+    indices = {i for i, _, _ in events}
+    assert indices == set(range(CHUNK_COUNT))
+
+    # 每片最后一次回调: 已下载 == 片长; 各片长之和 == 总量; 进度单调不减
+    final: dict[int, tuple[int, int]] = {}
+    last_seen: dict[int, int] = {}
+    for i, done, total in events:
+        final[i] = (done, total)
+        assert i not in last_seen or done >= last_seen[i]
+        last_seen[i] = done
+    for done, total in final.values():
+        assert done == total
+    assert sum(t for _, t in final.values()) == len(PAYLOAD)
+
+
+def test_on_slice_sentinel_on_fallback(tmp_path: Path) -> None:
+    """服务器不支持 Range: 只收到 index=None 回退信号, 无分片事件."""
+    server, url = _serve(support_range=False)
+    events: list[int | None] = []
+    try:
+        path = download_file_chunked(
+            url, tmp_path, on_slice=lambda i, d, t: events.append(i)
+        )
+    finally:
+        server.shutdown()
+
+    assert path.read_bytes() == PAYLOAD
+    assert events == [None]
+
+
+def test_chunk_count_constant_drives_slicing(tmp_path: Path, monkeypatch) -> None:
+    """CHUNK_COUNT 改为 8: 分片数、片长切分与回调序号自动跟随."""
+    monkeypatch.setattr("gdpm.utils.download.CHUNK_COUNT", 8)
+    server, url = _serve(support_range=True)
+    events: list[tuple[int, int, int]] = []
+    try:
+        path = download_file_chunked(
+            url, tmp_path, on_slice=lambda i, d, t: events.append((i, d, t))
+        )
+    finally:
+        server.shutdown()
+
+    assert path.read_bytes() == PAYLOAD
+    indices = {i for i, _, _ in events}
+    assert indices == set(range(8))
+    final = {i: (d, t) for i, d, t in events}
+    assert sum(t for _, t in final.values()) == len(PAYLOAD)
+
+
+def test_workers_param_overrides_default(tmp_path: Path) -> None:
+    """workers 参数 (parallel_downloads 配置值) 直接决定分片数."""
+    server, url = _serve(support_range=True)
+    events: list[int] = []
+    try:
+        path = download_file_chunked(
+            url, tmp_path, workers=8, on_slice=lambda i, d, t: events.append(i)
+        )
+    finally:
+        server.shutdown()
+
+    assert path.read_bytes() == PAYLOAD
+    assert {i for i in events if i is not None} == set(range(8))

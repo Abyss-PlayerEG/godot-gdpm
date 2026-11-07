@@ -11,7 +11,7 @@ Notes
 - 并行下载: 补齐缺失的 Store 插件.
 - 移除多余插件: 删除锁文件之外的插件.
 - 更新锁文件: 记录本次变更.
-- MAX_PARALLEL: 最大并发下载数, 默认 5.
+- 并行度: 由全局配置 parallel_downloads 控制 (默认 4).
 - sync: 命令入口, 内部定义异步 _sync.
 - download_one: 单个插件的并发下载任务.
 """
@@ -36,6 +36,7 @@ from gdpm.cli.app import GdpmCommand
 from gdpm.cli.common import console
 from gdpm.cli.context import get_project_context, get_services
 from gdpm.cli.options import yes_option
+from gdpm.config.global_config import read_global_config
 from gdpm.lockfile.utils import update_lockfile
 from gdpm.models.lock import LockEntry
 from gdpm.store.utils import resolve_publisher
@@ -43,8 +44,6 @@ from gdpm.utils.tag import scan_addons
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-MAX_PARALLEL = 5  # 最大并行下载数
 
 
 @click.command(
@@ -142,14 +141,15 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
                 else:
                     errors.append(f"Plugin '{name}' not found in Store")
 
-        # 并行下载插件
+        # 并行下载插件 (并发数由全局配置 parallel_downloads 控制, 默认 4)
         if download_tasks:
+            parallel = read_global_config().parallel_downloads
             console.print(
                 f"Downloading {len(download_tasks)} plugin(s) "
-                f"(max {MAX_PARALLEL} parallel)..."
+                f"(max {parallel} parallel)..."
             )
 
-            semaphore = asyncio.Semaphore(MAX_PARALLEL)
+            semaphore = asyncio.Semaphore(parallel)
             progress = Progress(
                 TextColumn("[bold blue]{task.fields[name]}"),
                 BarColumn(),

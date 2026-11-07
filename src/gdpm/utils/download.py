@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-CHUNK_COUNT = 4  # 固定切片数
+CHUNK_COUNT = 4  # 默认分片数 (parallel_downloads 配置的回退值)
 
 
 def download_file(
@@ -119,6 +119,8 @@ def download_file_chunked(
     *,
     filename: str = "",
     on_progress: Callable[[int, int, float], None] | None = None,
+    on_slice: Callable[[int | None, int, int], None] | None = None,
+    workers: int | None = None,
     timeout: float = 300,
 ) -> Path:
     """
@@ -140,6 +142,12 @@ def download_file_chunked(
         保存文件名, 为空时从 URL 路径推断.
     on_progress : Callable[[int, int, float], None], optional
         进度回调, 依次传入 (已下载字节数, 总字节数, 速度 B/s).
+    on_slice : Callable[[int | None, int, int], None], optional
+        分片进度回调, 依次传入 (分片序号, 本片已下载字节数, 本片总字节数).
+        分片序号为 None 表示回退单流 (UI 应隐藏分片进度); 单流路径不触发.
+    workers : int | None, optional
+        分片数, None 时回退到模块常量 CHUNK_COUNT (默认 4).
+        调用方通常传入全局配置 parallel_downloads 以统一并行度.
     timeout : float, optional
         请求超时秒数, 默认 300.
 
@@ -155,9 +163,11 @@ def download_file_chunked(
 
     Notes
     ----
-    - 切片数由模块常量 CHUNK_COUNT 固定为 4, 暂不开放参数.
-    - 文件过小 (不足 4 字节) 或不支持 Range 时直接回退单流.
+    - 分片数由 workers 参数控制 (缺省回退 CHUNK_COUNT=4), 调用方传入
+      parallel_downloads 配置值即可全局调节分片/线程池/进度条.
+    - 文件过小 (不足分片数) 或不支持 Range 时直接回退单流.
     - 任一切片失败时清理半成品并回退单流下载.
+    - on_slice 与 on_progress 同锁串行, 回调内可安全更新 UI.
 
     Examples
     ----
@@ -165,6 +175,7 @@ def download_file_chunked(
         PosixPath('/tmp/a.zip')
     """
     dest.mkdir(parents=True, exist_ok=True)
+    n = max(1, workers or CHUNK_COUNT)
 
     if not filename:
         filename = url.split("/")[-1].split("?")[0]
@@ -184,16 +195,16 @@ def download_file_chunked(
     except Exception:
         pass
 
-    if total < CHUNK_COUNT or not supports_range:
+    if total < n or not supports_range:
+        # 回退信号: 不分片, UI 据此隐藏分片进度
+        if on_slice:
+            on_slice(None, 0, 0)
         return download_file(
             url, dest, filename=filename, on_progress=on_progress, timeout=timeout
         )
 
-    # 均分为 4 段闭区间 [start, end]
-    bounds = [
-        (i * total // CHUNK_COUNT, ((i + 1) * total // CHUNK_COUNT) - 1)
-        for i in range(CHUNK_COUNT)
-    ]
+    # 均分为 n 段闭区间 [start, end]
+    bounds = [(i * total // n, ((i + 1) * total // n) - 1) for i in range(n)]
 
     # 预分配目标文件, 各切片线程用独立句柄按偏移写入
     with open(file_path, "wb") as f:
@@ -203,8 +214,10 @@ def download_file_chunked(
     downloaded = 0
     start_time = time.monotonic()
 
-    def fetch(start: int, end: int) -> None:
+    def fetch(index: int, start: int, end: int) -> None:
         nonlocal downloaded
+        slice_done = 0
+        slice_total = end - start + 1
         headers = {"Range": f"bytes={start}-{end}"}
         with httpx.stream(
             "GET",
@@ -222,18 +235,24 @@ def download_file_chunked(
                     f.write(chunk)
                     with lock:
                         downloaded += len(chunk)
+                        slice_done += len(chunk)
                         if on_progress:
                             elapsed = time.monotonic() - start_time
                             speed = downloaded / elapsed if elapsed > 0 else 0
                             on_progress(downloaded, total, speed)
+                        if on_slice:
+                            on_slice(index, slice_done, slice_total)
 
     try:
-        with ThreadPoolExecutor(max_workers=CHUNK_COUNT) as pool:
-            for future in [pool.submit(fetch, s, e) for s, e in bounds]:
+        with ThreadPoolExecutor(max_workers=n) as pool:
+            futures = [pool.submit(fetch, i, s, e) for i, (s, e) in enumerate(bounds)]
+            for future in futures:
                 future.result()
     except Exception:
-        # 任一切片失败: 清理半成品, 回退单流下载
+        # 任一切片失败: 清理半成品, 回退单流下载 (先发回退信号收起分片进度)
         file_path.unlink(missing_ok=True)
+        if on_slice:
+            on_slice(None, 0, 0)
         return download_file(
             url, dest, filename=filename, on_progress=on_progress, timeout=timeout
         )
