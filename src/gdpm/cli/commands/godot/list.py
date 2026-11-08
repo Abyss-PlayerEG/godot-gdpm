@@ -111,13 +111,13 @@ def _local_channel(version: str) -> str:
 
 
 def _filter_local_rows(
-    rows: list[dict[str, str]], version_filter: str, channel: str | None
+    rows: list[dict[str, str]], version_filter: str
 ) -> list[dict[str, str]]:
     """
-    对本地引擎行做版本与通道筛选.
+    对本地引擎行做版本筛选, 并排除全部非 stable 通道.
 
-    仅显式指定时生效: -V 按版本前缀匹配, -c 按发布通道精确匹配.
-    本地是库存视图, 不套用远程的默认 stable 规则.
+    stable-only 决策 (2026-11): rc/beta/alpha/dev 一律不展示;
+    无法推导通道的行 (如版本 '-') 视为未知, 保留展示.
 
     ----
 
@@ -127,29 +127,21 @@ def _filter_local_rows(
         引擎行列表 (含 version 字段).
     version_filter : str
         版本前缀, 空串表示不过滤.
-    channel : str | None
-        发布通道, None 表示不过滤.
 
     Returns
     ----
     list[dict[str, str]]
         筛选后的行列表.
     """
-    result = rows
+    result = [r for r in rows if _local_channel(r["version"]) in ("stable", "")]
     if version_filter:
         result = [r for r in result if r["version"].startswith(version_filter)]
-    if channel:
-        result = [r for r in result if _local_channel(r["version"]) == channel]
     return result
 
 
-def _list_local(
-    show_id: bool = False,
-    version_filter: str = "",
-    channel: str | None = None,
-) -> None:
+def _list_local(show_id: bool = False, version_filter: str = "") -> None:
     """
-    列出已安装的 Godot 版本.
+    列出已安装的 Godot 版本 (仅 stable 通道).
 
     按版本新旧排序 (新版本在前), 默认列与 -id 列共用该顺序.
 
@@ -161,8 +153,6 @@ def _list_local(
         以 ID 列 (Name@Version) 展示, 而非名称和版本两列.
     version_filter : str, optional
         版本前缀筛选, 如 '4.4'.
-    channel : str | None, optional
-        发布通道筛选, 如 'stable', 'rc'.
 
     Returns
     ----
@@ -197,15 +187,15 @@ def _list_local(
             }
         )
 
-    # 显式 -V/-c 筛选 (排序在筛选前, 两种显示模式共用)
+    # 显式 -V 筛选 (排序在筛选前, 两种显示模式共用)
     _sort_local_rows(rows)
-    rows = _filter_local_rows(rows, version_filter, channel)
+    rows = _filter_local_rows(rows, version_filter)
 
     if not rows:
-        if version_filter or channel:
+        if version_filter:
             console.print(
                 "[dim]No engines match the filter.[/dim]\n"
-                "  Use [bold]gdpm godot list[/bold] without -V/-c to list all."
+                "  Use [bold]gdpm godot list[/bold] without -V to list all."
             )
         else:
             console.print(
@@ -252,15 +242,14 @@ def _list_local(
 def _paginate_remote(
     releases: list[RemoteRelease],
     version_filter: str,
-    channel: str | None,
     show_all: bool,
     page: int,
 ) -> tuple[list[RemoteRelease], int, int]:
     """
-    对远程版本列表做过滤与分页.
+    对远程版本列表做过滤与分页 (stable-only).
 
-    通道规则: -c 显式指定优先; -a 表示不限通道; 其余情况默认只看正式版.
-    分页规则: 仅 -a 不分页, 其余模式 (含 -V/-c 筛选) 一律按页切片.
+    通道规则: 永远只含正式版, 非 stable (rc/beta/alpha/dev) 一律排除.
+    分页规则: 仅 -a 不分页, 其余模式 (含 -V 筛选) 一律按页切片.
 
     ----
 
@@ -270,10 +259,8 @@ def _paginate_remote(
         全量版本条目 (新版本在前).
     version_filter : str
         版本前缀过滤, 非空时与其他条件取交集.
-    channel : str | None
-        发布通道过滤 (stable/rc/beta/alpha/dev), None 表示走默认通道规则.
     show_all : bool
-        为 True 时不限通道与版本范围, 且不分页.
+        为 True 时不分页, 且不受旧版本隐藏限制.
     page : int
         请求的页码, 越界时收敛到有效范围.
 
@@ -282,22 +269,16 @@ def _paginate_remote(
     tuple[list[RemoteRelease], int, int]
         (本页条目, 总页数, 生效页码), -a 时总页数为 1.
     """
-    result = releases
+    result = [r for r in releases if r.stable]
     if version_filter:
         result = [r for r in result if r.tag.startswith(version_filter)]
-
-    # 通道: -c 显式指定优先, -a 不限通道, 其余默认只看正式版
-    if channel:
-        result = [r for r in result if r.channel == channel]
-    elif not show_all:
-        result = [r for r in result if r.stable]
 
     # 仅 -a 免除分页
     if show_all:
         return result, 1, 1
 
-    # 旧版本隐藏只作用于默认视图, -V/-c 显式筛选不受限 (如 -V 2.)
-    if not version_filter and not channel:
+    # 旧版本隐藏只作用于默认视图, -V 显式筛选不受限 (如 -V 2.)
+    if not version_filter:
         result = [r for r in result if r.tag.startswith(("3.", "4.", "5."))]
 
     total_pages = max(1, (len(result) + REMOTE_PAGE_SIZE - 1) // REMOTE_PAGE_SIZE)
@@ -306,11 +287,9 @@ def _paginate_remote(
     return result[start : start + REMOTE_PAGE_SIZE], total_pages, page
 
 
-def _list_remote(
-    version_filter: str, channel: str | None, show_all: bool, page: int = 1
-) -> None:
+def _list_remote(version_filter: str, show_all: bool, page: int = 1) -> None:
     """
-    列出官方 versions.json 中可用的 Godot 版本.
+    列出官方 versions.json 中可用的 Godot 版本 (仅正式版).
 
     ----
 
@@ -318,10 +297,8 @@ def _list_remote(
     ----
     version_filter : str
         版本前缀过滤, 如 '4.7'.
-    channel : str | None
-        发布通道过滤, 如 'stable', 'beta'; 缺省时默认只看正式版.
     show_all : bool
-        不限通道与版本范围 (含 1.x/2.x) 且不分页.
+        不分页, 且包含旧版本 (含 1.x/2.x).
     page : int, optional
         远程列表页码, 仅 -a 指定时忽略.
 
@@ -337,7 +314,7 @@ def _list_remote(
         return
 
     releases, total_pages, page = _paginate_remote(
-        all_releases, version_filter, channel, show_all, page
+        all_releases, version_filter, show_all, page
     )
 
     terminal_width = console.width
@@ -350,13 +327,10 @@ def _list_remote(
         width=min(terminal_width - 6, 90),
     )
     table.add_column("Version", style="cyan", min_width=20)
-    table.add_column("Channel", min_width=10)
     table.add_column("Date", min_width=12)
 
     for r in releases:
-        # 通道名上色: stable 绿色, 其余预发布通道黄色
-        color = "green" if r.stable else "yellow"
-        table.add_row(r.tag, f"[{color}]{r.channel}[/{color}]", r.date)
+        table.add_row(r.tag, r.date)
 
     if not table.row_count:
         console.print(
@@ -386,7 +360,6 @@ def _list_remote(
         ("gdpm godot list", "List installed versions"),
         ("gdpm godot list --remote", "List available versions"),
         ("gdpm godot list -V 4.4", "Filter installed versions"),
-        ("gdpm godot list -r -c stable", "List stable releases only"),
     ],
 )
 @click.option(
@@ -404,18 +377,11 @@ def _list_remote(
     help="Filter by version prefix, e.g. '4.7'",
 )
 @click.option(
-    "-c",
-    "--channel",
-    type=click.Choice(["stable", "rc", "beta", "alpha", "dev"]),
-    default=None,
-    help="Filter by release channel (remote defaults to stable)",
-)
-@click.option(
     "-a",
     "--all",
     "show_all",
     is_flag=True,
-    help="Show all versions, any channel, no paging (with --remote)",
+    help="Show all stable versions, no paging (with --remote)",
 )
 @click.option(
     "-p", "--page", "page", default=1, type=int, help="Page number for remote list"
@@ -427,13 +393,12 @@ def godot_list(
     *,
     remote: bool,
     version_filter: str,
-    channel: str | None,
     show_all: bool,
     page: int,
     show_id: bool,
 ) -> None:
-    """列出 Godot 引擎版本."""
+    """列出 Godot 引擎版本 (仅正式版)."""
     if remote:
-        _list_remote(version_filter, channel, show_all, page)
+        _list_remote(version_filter, show_all, page)
     else:
-        _list_local(show_id, version_filter, channel)
+        _list_local(show_id, version_filter)

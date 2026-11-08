@@ -7,7 +7,9 @@ gdpm godot install/uninstall 命令
 
 Notes
 ----
-- godot_install: 分片下载并解压 Godot 引擎.
+- godot_install: 分片下载并解压 Godot 引擎 (仅 stable).
+- _is_stable_tag: stable-only 门禁, 非 stable 通道拒绝安装.
+- Ctrl+C 取消: 下载/解压两段清理现场并以 130 退出.
 - godot_uninstall: 删除已安装的 Godot 引擎.
 """
 
@@ -37,7 +39,7 @@ from gdpm.cli.commands.godot.common import (
 )
 from gdpm.cli.common import console
 from gdpm.config.global_config import read_global_config
-from gdpm.utils.download import CHUNK_COUNT, download_file_chunked
+from gdpm.utils.download import clamp_workers, download_file_chunked
 from gdpm.utils.install import get_godot_ext, get_godot_platform
 
 if TYPE_CHECKING:
@@ -63,14 +65,15 @@ def _create_download_tasks(
     total_name : str
         总进度条显示名, 如 'Godot 4.7-stable'.
     workers : int | None, optional
-        分片数, None 时回退 CHUNK_COUNT (与 download_file_chunked 一致).
+        分片数, None 时回退默认; 生效值经 clamp_workers 收敛到 [1, 32],
+        与 download_file_chunked 的真实切片数保持一致.
 
     Returns
     ----
     tuple[list[TaskID], TaskID]
         (分片任务 ID 列表, 总任务 ID).
     """
-    n = max(1, workers or CHUNK_COUNT)
+    n = clamp_workers(workers)
     slice_ids = [
         progress.add_task(
             f"Slice {i + 1}/{n}",
@@ -121,6 +124,26 @@ def _make_slice_handler(
     return handler
 
 
+def _is_stable_tag(tag: str) -> bool:
+    """
+    判断 tag 是否属于 stable 通道 (空 flavor 视为 stable).
+
+    ----
+
+    Parameters
+    ----
+    tag : str
+        规范化后的版本 tag, 如 '4.7-stable', '4.8-beta2'.
+
+    Returns
+    ----
+    bool
+        stable 通道返回 True, 非 stable (rc/beta/alpha/dev) 返回 False.
+    """
+    _, _, flavor = tag.partition("-")
+    return flavor in ("", "stable")
+
+
 @click.command(
     name="install",
     cls=GdpmCommand,
@@ -133,12 +156,23 @@ def _make_slice_handler(
 @click.argument("version")
 @click.option("--csharp", "-cs", is_flag=True, help="Install C# (mono) version")
 def godot_install(version: str, csharp: bool) -> None:
-    """安装一个 Godot 引擎版本."""
+    """安装一个 Godot 引擎版本 (仅 stable)."""
     if "-csharp" in version or "-mono" in version:
         csharp = True
 
     engines_dir = get_engines_dir()
     tag = normalize_version(version)
+
+    # stable-only 门禁: 下载面只收正式版, 非 stable 通道一律拒绝
+    if not _is_stable_tag(tag):
+        console.print(
+            f"[red]Error:[/red] Non-stable version [cyan]{tag}[/cyan] "
+            "is not supported.\n"
+            "  gdpm manages stable releases only. Use "
+            "[bold]gdpm godot list -r[/bold] to see available stable versions."
+        )
+        return
+
     suffix = "-csharp" if csharp else ""
     ver_dir = engines_dir / f"{tag}{suffix}"
 
@@ -198,6 +232,12 @@ def godot_install(version: str, csharp: bool) -> None:
                 workers=workers,
             )
 
+    except KeyboardInterrupt:
+        # Ctrl+C: 清理半成品压缩包, 以 130 干净退出 (不打印 Aborted/traceback)
+        if zip_path.exists():
+            zip_path.unlink()
+        console.print("\n[yellow]Cancelled.[/yellow]")
+        raise SystemExit(130) from None
     except httpx.HTTPStatusError as e:
         # 保留 404 的友好提示 (版本不存在)
         if e.response.status_code == 404:
@@ -231,6 +271,14 @@ def godot_install(version: str, csharp: bool) -> None:
 
         zip_path.unlink()
         console.print(f"[green]✓[/green] Installed Godot [bold]{tag}{suffix}[/bold]")
+    except KeyboardInterrupt:
+        # Ctrl+C: 清理残留目录与压缩包, 干净退出
+        if ver_dir.exists():
+            shutil.rmtree(ver_dir, ignore_errors=True)
+        if zip_path.exists():
+            zip_path.unlink()
+        console.print("\n[yellow]Cancelled.[/yellow]")
+        raise SystemExit(130) from None
     except Exception as e:
         console.print(f"[red]Error:[/red] Extraction failed: {e}")
         # 解压失败时清理残留目录和压缩包

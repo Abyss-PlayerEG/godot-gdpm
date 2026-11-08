@@ -164,6 +164,7 @@ This allows:
 | `gdpm godot info` | Show current Godot engine configuration |
 | `gdpm godot open` | Open Godot editor |
 | `gdpm godot open --run` | Run the project |
+| `gdpm godot open <ID>` | Open a specific engine by ID (one-off, config untouched) |
 | `gdpm godot default` | Show default engine |
 | `gdpm godot default <id>` | Set default engine |
 | `gdpm godot default --unset` | Remove default engine |

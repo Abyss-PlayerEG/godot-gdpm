@@ -9,7 +9,7 @@ Rich 帮助渲染器
 
 Notes
 ----
-- BANNER: ASCII 横幅, 由 gdpm --info 展示.
+- BANNER: ASCII 横幅, 由 gdpm --about 展示.
 - command_key: 由 click 上下文推导词典键 (根命令裸名 / godot.list 路径).
 - build_usage: 叶子命令 Usage 行 (真实选项拼写 / Choice 展开 / <>[] 区分).
 - build_option_rows: 选项表格行 (含默认值后缀).
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 console = Console()
 
-# ASCII 艺术字横幅, 由 gdpm --info 展示
+# ASCII 艺术字横幅, 由 gdpm --about 展示
 BANNER = r""" ██████╗ ██████╗ ██████╗ ███╗   ███╗
 ██╔════╝ ██╔══██╗██╔══██╗████╗ ████║
 ██║  ███╗██║  ██║██████╔╝██╔████╔██║
@@ -296,7 +296,7 @@ def render_main_help(commands: Mapping[str, click.Command]) -> None:
         f"  {opt:<16}{t(label)}"
         for opt, label in (
             ("-h, --help", "ui.opt_help"),
-            ("-i, --info", "ui.opt_info"),
+            ("-a, --about", "ui.opt_about"),
             ("-V, --version", "ui.opt_version"),
             ("-y, --yes", "ui.opt_yes"),
         )

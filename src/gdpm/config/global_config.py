@@ -2,41 +2,35 @@
 全局配置管理
 
 - 读写 gdpm 全局配置文件 config.toml, 管理跨项目共享的默认设置.
-- 配置为全量材料化: 所有键显式落盘, 文件即完整可编辑模板.
+- 配置为定制清单: 文件只含你设过的行; 写入是行级手术 —— 只动目标键
+  所在行, 其余行 (含手写行与等于默认值的行) 一律原样保留.
 
 ----
 
 Examples
 ----
-配置文件写出全部键, 例如:
+配置文件只存定制行, 例如:
 
     [defaults]
-    godot_path = "godot"
-    addons_dir = "addons"
-    parallel_downloads = 4
     default_engine = ""
 
-    [store]
-    base_url = "https://store.godotengine.org/api/v1"
-
-    [cache]
-    dir = "/home/user/.gdpm/cache"
-
     [ui]
-    language = "en"
+    language = "zh"
 
-可配置键:
-    [defaults] godot_path / addons_dir / parallel_downloads / default_engine
-    [store]    base_url
+可设置键 (仅已实现消费方的键):
+    [defaults] parallel_downloads / default_engine
     [cache]    dir
     [ui]       language
+
+历史字段 godot_path / addons_dir / store_url 仍会被读取, 但暂无消费方,
+已从可设置面移除 (2026-11: 展示与接受只覆盖已实现部分).
 
 Notes
 ----
 - GlobalConfig: 全局配置数据类.
 - get_config_path: 获取配置文件路径 (~/.gdpm/config.toml).
-- read_global_config: 读取全局配置 (缺键回退默认, 兼容历史稀疏文件).
-- write_global_config: 全量写入全局配置 (所有键显式落盘).
+- read_global_config: 读取全局配置 (缺键回退默认, 兼容任意稀疏度的文件).
+- set_config_value: 单键行级写入/删除, 目标键之外的内容原样保留.
 - get_default_engine: 获取全局默认引擎 ID (含旧位置自动迁移).
 - set_default_engine: 设置全局默认引擎 ID.
 - unset_default_engine: 移除全局默认引擎设置.
@@ -106,16 +100,18 @@ def get_config_path() -> Path:
     return Path.home() / ".gdpm" / "config.toml"
 
 
+# 配置键布局: 键 → (TOML 段名, 段内键名, 是否字符串值)
+# 同时是 config set 的合法键表 (CONFIG_FIELDS 由它派生)
+# 只收录已有消费方的键: godot_path / addons_dir / store_url 暂无实现, 不可设置
+_KEY_LAYOUT: dict[str, tuple[str, str, bool]] = {
+    "parallel_downloads": ("defaults", "parallel_downloads", False),
+    "default_engine": ("defaults", "default_engine", True),
+    "cache_dir": ("cache", "dir", True),
+    "language": ("ui", "language", True),
+}
+
 # 全局配置的可设置字段 (GlobalConfig 字段名, 即 config set 的合法键)
-CONFIG_FIELDS: tuple[str, ...] = (
-    "godot_path",
-    "addons_dir",
-    "parallel_downloads",
-    "default_engine",
-    "store_url",
-    "cache_dir",
-    "language",
-)
+CONFIG_FIELDS: tuple[str, ...] = tuple(_KEY_LAYOUT)
 
 
 def _migrate_legacy_config() -> None:
@@ -177,54 +173,114 @@ def read_global_config() -> GlobalConfig:
     )
 
 
-def write_global_config(config: GlobalConfig) -> None:
+def set_config_value(key: str, value: str | int | None) -> None:
     """
-    全量写入全局配置.
+    单键行级写入: 只新增/修改/删除目标键所在行, 其余内容原样保留.
 
-    所有键显式落盘, 文件永远是完整可编辑模板 (全量材料化, 2026-11 由
-    稀疏方案改为本模型): 便于查看全部可配置项与手工编辑, init 即写出
-    完整默认配置. 读取端缺键仍回退默认, 兼容历史稀疏文件.
+    行级手术模型 (2026-11, 取代全量重建): 不基于字段对象重写文件,
+    手写行、等于默认值的历史行与未涉及的段落一律不动 —— set 一条
+    不会让文件里冒出其他键.
 
-    注意:
-    - 本函数基于 GlobalConfig 字段重建文件, 手写的未知键会在
-      下次写入时丢失.
-    - 默认值随版本演进时, 旧文件中物化的旧默认值会钉住用户配置,
-      调整默认值的版本需配迁移 (删除等于旧默认值的行).
+    - value 为 None 或空串: 删除该键行; 所在段因此变空时连段头一并
+      删除; 文件因此无任何内容时删除文件 (回到"未配置"状态)
+    - value 非空: 段内原位替换 (历史重复键行去重), 段不存在则新建段
 
     ----
 
     Parameters
     ----
-    config : GlobalConfig
-        要持久化的全局配置.
+    key : str
+        配置键 (CONFIG_FIELDS 之一).
+    value : str | int | None
+        新值; None/空串表示删除该键行.
 
     Returns
     ----
     None
         无.
+
+    Raises
+    ----
+    ValueError
+        key 不是合法配置键.
     """
+    if key not in _KEY_LAYOUT:
+        raise ValueError(f"unknown config key: {key}")
+    section, toml_key, quoted = _KEY_LAYOUT[key]
+    header = f"[{section}]"
+
     path = get_config_path()
-    sections: list[tuple[str, list[str]]] = [
-        (
-            "[defaults]",
-            [
-                f'godot_path = "{config.godot_path}"',
-                f'addons_dir = "{config.addons_dir}"',
-                f"parallel_downloads = {config.parallel_downloads}",
-                f'default_engine = "{config.default_engine}"',
-            ],
-        ),
-        ("[store]", [f'base_url = "{config.store_url}"']),
-        ("[cache]", [f'dir = "{config.cache_dir}"']),
-        ("[ui]", [f'language = "{config.language}"']),
-    ]
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
 
-    lines: list[str] = []
-    for header, entries in sections:
-        lines.append(header)
-        lines.extend(entries)
-        lines.append("")
+    def is_key_line(line: str) -> bool:
+        head, sep, _ = line.partition("=")
+        return sep != "" and head.strip() == toml_key
 
+    # 定位目标段: [段头行, 下一个段头前)
+    start = end = None
+    for i, line in enumerate(lines):
+        if line.strip() == header:
+            start = i
+            end = i + 1
+            while end < len(lines) and not (
+                lines[end].strip().startswith("[") and lines[end].strip().endswith("]")
+            ):
+                end += 1
+            break
+
+    if value is None or value == "":
+        if start is None or end is None:
+            return
+        block = lines[start + 1 : end]
+        remaining = [line for line in block if not is_key_line(line)]
+        has_assignment = any(
+            line.strip() and not line.strip().startswith("#") and "=" in line
+            for line in remaining
+        )
+        if has_assignment:
+            lines[start + 1 : end] = remaining
+        else:
+            # 段内已无赋值行: 整段 (段头+残留空行/注释) 移除
+            del lines[start:end]
+    else:
+        rendered = f'{toml_key} = "{value}"' if quoted else f"{toml_key} = {value}"
+        if start is not None and end is not None:
+            block = lines[start + 1 : end]
+            key_idx = next(
+                (k for k, line in enumerate(block) if is_key_line(line)), None
+            )
+            if key_idx is not None:
+                # 原位替换, 并清理历史重复键行
+                new_block: list[str] = []
+                replaced = False
+                for line in block:
+                    if is_key_line(line):
+                        if not replaced:
+                            new_block.append(rendered)
+                            replaced = True
+                    else:
+                        new_block.append(line)
+                lines[start + 1 : end] = new_block
+            else:
+                # 插到段尾空行之前, 保持"条目 + 空行分隔"的排版
+                insert_at = len(block)
+                while insert_at > 0 and not block[insert_at - 1].strip():
+                    insert_at -= 1
+                lines[start + 1 : end] = [
+                    *block[:insert_at],
+                    rendered,
+                    *block[insert_at:],
+                ]
+        else:
+            # 段不存在: 文件尾新建段
+            if lines and lines[-1].strip():
+                lines.append("")
+            lines.extend([header, rendered, ""])
+
+    if not any(line.strip() for line in lines):
+        # 无任何内容: 删除文件, 回到"未配置"状态
+        path.unlink(missing_ok=True)
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -261,7 +317,8 @@ def set_default_engine(engine_id: str) -> None:
     """
     设置全局默认引擎 ID.
 
-    写入 config.toml 的 [defaults] default_engine, 并清理旧位置残留字段.
+    行级写入 config.toml 的 [defaults] default_engine (空串删除该行),
+    并清理旧位置残留字段.
 
     ----
 
@@ -270,9 +327,7 @@ def set_default_engine(engine_id: str) -> None:
     engine_id : str
         引擎 ID, 如 'steam-godot@4.7-stable'; 空串表示清除设置.
     """
-    config = read_global_config()
-    config.default_engine = engine_id
-    write_global_config(config)
+    set_config_value("default_engine", engine_id)
     _drop_legacy_default()
 
 

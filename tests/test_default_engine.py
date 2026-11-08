@@ -14,12 +14,11 @@ import platformdirs
 
 from gdpm.config import global_config, local_engines
 from gdpm.config.global_config import (
-    GlobalConfig,
     get_default_engine,
     read_global_config,
+    set_config_value,
     set_default_engine,
     unset_default_engine,
-    write_global_config,
 )
 
 if TYPE_CHECKING:
@@ -85,15 +84,15 @@ def test_legacy_default_migrates_from_local_engines(
 
 
 def test_write_preserves_other_sections(tmp_path: Path, monkeypatch) -> None:
-    """set_default_engine 重写整个文件, 必须保住其他分段的自定义值."""
+    """行级写入: set_default_engine 不动其他段的自定义行."""
     _patch_paths(tmp_path, monkeypatch)
-    write_global_config(GlobalConfig(store_url="https://example.com/api"))
+    set_config_value("language", "zh")
 
     set_default_engine("gdpm-godot@4.7-stable")
 
     config = read_global_config()
     assert config.default_engine == "gdpm-godot@4.7-stable"
-    assert config.store_url == "https://example.com/api"
+    assert config.language == "zh"
 
 
 def test_legacy_key_dropped_on_set(tmp_path: Path, monkeypatch) -> None:
@@ -110,8 +109,8 @@ def test_legacy_key_dropped_on_set(tmp_path: Path, monkeypatch) -> None:
     assert get_default_engine() == "new@2.0-stable"
 
 
-def test_full_write_materializes_defaults(tmp_path: Path, monkeypatch) -> None:
-    """全量材料化: 一次修改也产出完整配置文件, 默认键显式在列."""
+def test_single_key_write_touches_only_target(tmp_path: Path, monkeypatch) -> None:
+    """行级手术: 一次写入只出现目标键, 其他默认键不得被材料化."""
     config_path, _ = _patch_paths(tmp_path, monkeypatch)
 
     set_default_engine("steam-godot@4.7-stable")
@@ -119,36 +118,31 @@ def test_full_write_materializes_defaults(tmp_path: Path, monkeypatch) -> None:
 
     assert 'default_engine = "steam-godot@4.7-stable"' in text
     assert "[defaults]" in text
-    # 默认值同样显式落盘
-    assert "godot_path" in text
-    assert "parallel_downloads" in text
-    assert "[store]" in text
-    assert "[cache]" in text
-    assert "[ui]" in text
+    # 其他键不得出现 (用户反馈: set 后文件冒出没设过的键)
+    for absent in ("godot_path", "parallel_downloads", "[store]", "[cache]", "[ui]"):
+        assert absent not in text
 
 
-def test_unset_keeps_full_file_with_default(tmp_path: Path, monkeypatch) -> None:
-    """唯一的定制项被移除后, 文件保留且 default_engine 回到默认空值."""
+def test_unset_removes_line(tmp_path: Path, monkeypatch) -> None:
+    """移除唯一定制项后删行; 文件因此无内容时删除文件."""
     config_path, _ = _patch_paths(tmp_path, monkeypatch)
 
     set_default_engine("steam-godot@4.7-stable")
     assert config_path.exists()
 
     unset_default_engine()
-    assert config_path.exists()
-    assert 'default_engine = ""' in config_path.read_text(encoding="utf-8")
+    assert not config_path.exists()
     assert get_default_engine() == ""
 
 
-def test_full_write_includes_all_sections(tmp_path: Path, monkeypatch) -> None:
-    """任意一次写入都包含全部分段 (store 定制只是其中一行)."""
+def test_upsert_creates_missing_section(tmp_path: Path, monkeypatch) -> None:
+    """目标段不存在时新建段, 其余段不被创建."""
     config_path, _ = _patch_paths(tmp_path, monkeypatch)
 
-    write_global_config(GlobalConfig(store_url="https://mirror.example/api/v1"))
+    set_config_value("language", "zh")
     text = config_path.read_text(encoding="utf-8")
 
-    assert "[store]" in text
-    assert "mirror.example" in text
-    assert "[defaults]" in text
-    assert "[cache]" in text
     assert "[ui]" in text
+    assert 'language = "zh"' in text
+    assert "[defaults]" not in text
+    assert "[cache]" not in text

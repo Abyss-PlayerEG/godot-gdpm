@@ -6,7 +6,7 @@ CLI 应用入口
 
 Notes
 ----
-- print_info / print_version / print_completion: 全局选项的回调.
+- print_about / print_version / print_completion: 全局选项的回调.
 - main: 根命令组, 模块尾部挂载全部子命令.
 """
 
@@ -36,7 +36,8 @@ from gdpm.cli.commands.status import status as status_cmd
 from gdpm.cli.commands.sync import sync as sync_cmd
 from gdpm.cli.commands.update import update as update_cmd
 from gdpm.cli.help import BANNER
-from gdpm.constants import GITHUB_API_URL, REPO_URL
+from gdpm.cli.i18n import t
+from gdpm.constants import DEVELOPER, GITHUB_API_URL, REPO_URL
 
 console = Console()
 
@@ -83,21 +84,36 @@ def print_completion(ctx: click.Context, _param: click.Parameter, value: str) ->
     ctx.exit()
 
 
-def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
-    """打印信息横幅与版本并退出 (-i/--info); 贡献者拉取失败时静默跳过."""
+def print_about(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
+    """打印关于横幅与版本并退出 (-a/--about); 文案跟随语言, 贡献者拉取失败时静默跳过."""
     if not value:
         return
 
     import httpx
+    from rich.cells import cell_len
     from rich.console import Group
+
+    # 标签经词典取文案; 按显示宽度对齐 (CJK 字符占两列)
+    dev_label = t("ui.developer")
+    gh_label = "GitHub"
+    label_width = max(cell_len(dev_label), cell_len(gh_label)) + 1
 
     info_lines = [
         Text(BANNER, style="bold cyan"),
         Text(""),
         Text("  ") + _version_text(),
-        Text("  Godot Dependency Package Manager", style="dim"),
+        Text("  " + t("ui.tagline"), style="dim"),
         Text(""),
-        Text("  GitHub: ", style="dim") + Text(REPO_URL, style="blue underline"),
+        Text(
+            f"  {dev_label}{' ' * (label_width - cell_len(dev_label))}",
+            style="dim",
+        )
+        + Text(DEVELOPER, style="cyan"),
+        Text(
+            f"  {gh_label}{' ' * (label_width - cell_len(gh_label))}",
+            style="dim",
+        )
+        + Text(REPO_URL, style="blue underline"),
     ]
 
     terminal_width = console.width
@@ -105,7 +121,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
     console.print(
         Panel(
             Group(*info_lines),
-            title="[bold cyan]GDPM-Info[/bold cyan]",
+            title=f"[bold cyan]{t('ui.about_title')}[/bold cyan]",
             border_style="dim",
             padding=(1, 2),
             width=min(terminal_width, 90),
@@ -126,7 +142,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
             console.print(
                 Panel(
                     contrib_text,
-                    title="[bold cyan]Contributors[/bold cyan]",
+                    title=f"[bold cyan]{t('ui.contributors')}[/bold cyan]",
                     border_style="dim",
                     padding=(1, 2),
                     width=min(terminal_width, 90),
@@ -150,13 +166,13 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
 
 @click.group(cls=GdpmGroup, context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
-    "-i",
-    "--info",
+    "-a",
+    "--about",
     is_flag=True,
     is_eager=True,
     expose_value=False,
-    callback=print_info,
-    help="Show project info and version.",
+    callback=print_about,
+    help="Show about information (version, repo, contributors).",
 )
 @click.option(
     "-V",

@@ -21,7 +21,7 @@ from pathlib import Path
 import click
 
 from gdpm.cli.base import GdpmCommand
-from gdpm.cli.commands.godot.common import find_engine
+from gdpm.cli.commands.godot.common import parse_engine_id, resolve_engine_id
 from gdpm.cli.common import console, find_project_root
 
 
@@ -137,22 +137,12 @@ def godot_remove(name_or_id: str) -> None:
 @click.argument("engine_id", metavar="ID")
 def godot_use(engine_id: str) -> None:
     """为当前项目设置 Godot 引擎."""
-    if "@" not in engine_id:
-        console.print(
-            "[red]Error:[/red] Invalid format. Use [cyan]Name@Version[/cyan]\n"
-            "  Example: gdpm godot use gdpm-godot@4.7-stable"
-        )
+    resolved = resolve_engine_id(
+        engine_id, example="gdpm godot use gdpm-godot@4.7-stable"
+    )
+    if not resolved:
         return
-
-    name, version = engine_id.split("@", 1)
-
-    engine_path = find_engine(name, version)
-    if not engine_path:
-        console.print(
-            f"[red]Error:[/red] Engine [cyan]{engine_id}[/cyan] not found.\n"
-            "  Use [bold]gdpm godot list -id[/bold] to see available engines."
-        )
-        return
+    name, version, engine_path = resolved
 
     root = find_project_root()
     conf_path = root / ".engines-conf.json"
@@ -211,11 +201,12 @@ def godot_default(engine_id: str | None, unset: bool) -> None:
             )
         return
 
-    if "@" not in engine_id:
+    parsed = parse_engine_id(engine_id)
+    if not parsed:
         console.print("[red]Error:[/red] Invalid format. Use [cyan]Name@Version[/cyan]")
         return
 
-    name, version = engine_id.split("@", 1)
+    name, version = parsed
     engines = load_local_engines()
 
     if name in engines:

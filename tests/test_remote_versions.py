@@ -2,8 +2,8 @@
 官方 versions.json 解析与远程列表筛选测试.
 
 对应官方API迁移计划 Phase 2: 展平, 通道推导, 日期转换, 分页与筛选语义.
-通道语义: -c 显式指定, -a 不限通道, 其余默认只看正式版.
-分页语义: 仅 -a 不分页, 其余模式 (含筛选) 一律按 30/页切片.
+stable-only 决策 (2026-11): 远程列表恒只含正式版, 非 stable 一律排除,
+-c 选项已移除. 分页语义: 仅 -a 不分页, 其余模式一律按 30/页切片.
 """
 
 from __future__ import annotations
@@ -112,75 +112,51 @@ def _sample_releases() -> list[RemoteRelease]:
 
 
 def test_show_all_returns_everything_unpaginated() -> None:
-    """-a: 不限通道与版本, 全量返回, 总页数 1, 忽略页码."""
+    """-a: 全部 stable (含旧版本), 不分页, 忽略页码."""
     all_releases = _sample_releases()
-    page_items, total_pages, page = _paginate_remote(all_releases, "", None, True, 5)
-    assert len(page_items) == 75  # 40 + 30 + 5, 含全部通道
+    page_items, total_pages, page = _paginate_remote(all_releases, "", True, 5)
+    assert len(page_items) == 45  # 10 个 4.x stable + 30 个 3.x + 5 个 2.x
     assert total_pages == 1
     assert page == 1
-    assert {r.channel for r in page_items} == {"stable", "beta", "rc", "dev"}
+    assert {r.channel for r in page_items} == {"stable"}
+    assert all(r.stable for r in page_items)
+
+
+def test_non_stable_never_returned() -> None:
+    """stable-only 硬保证: 任何模式 (默认/-V/-a) 都不返回预发布版本."""
+    all_releases = _sample_releases()
+    for args in (("", False, 1), ("4.", False, 1), ("", True, 1)):
+        page_items, _, _ = _paginate_remote(all_releases, *args)
+        assert all(r.stable for r in page_items)
+        assert all(r.channel == "stable" for r in page_items)
 
 
 def test_version_filter_defaults_to_stable() -> None:
-    """-V 无 -c 时默认只看正式版, 且不分页."""
-    page_items, total_pages, _ = _paginate_remote(
-        _sample_releases(), "4.1", None, False, 1
-    )
+    """-V 筛选同样只看正式版, 且不分页."""
+    page_items, total_pages, _ = _paginate_remote(_sample_releases(), "4.1", False, 1)
     assert total_pages == 1
     # 前缀 4.1 且 stable: 4.12, 4.16
     assert [r.tag for r in page_items] == ["4.12-stable", "4.16-stable"]
-
-
-def test_channel_filter_paginates_over_all_matches() -> None:
-    """-c: 匹配全部 (含旧版本), 但同样按页切片."""
-    page_items, total_pages, page = _paginate_remote(
-        _sample_releases(), "", "stable", False, 1
-    )
-    # 10 个 4.x stable + 30 个 3.x stable + 5 个 2.x stable = 45 -> 2 页
-    assert total_pages == 2
-    assert page == 1
-    assert len(page_items) == 30
-    assert all(r.channel == "stable" for r in page_items)
-
-    page_items2, _, page2 = _paginate_remote(_sample_releases(), "", "stable", False, 2)
-    assert page2 == 2
-    assert len(page_items2) == 15
 
 
 def test_version_filter_shows_old_versions() -> None:
     """显式 -V 不受旧版本隐藏限制 (如 -V 2.)."""
-    page_items, total_pages, _ = _paginate_remote(
-        _sample_releases(), "2.", None, False, 1
-    )
+    page_items, total_pages, _ = _paginate_remote(_sample_releases(), "2.", False, 1)
     assert total_pages == 1
     assert [r.tag for r in page_items] == [f"2.{i}-stable" for i in range(5)]
 
 
-def test_version_and_channel_filters_combine() -> None:
-    """-V 与 -c 取交集."""
-    page_items, total_pages, _ = _paginate_remote(
-        _sample_releases(), "4.1", "stable", False, 1
-    )
+def test_version_filter_intersects_stable() -> None:
+    """-V 与 stable-only 取交集."""
+    page_items, total_pages, _ = _paginate_remote(_sample_releases(), "4.1", False, 1)
     assert total_pages == 1
-    # 前缀 4.1 且 stable: 4.12, 4.16
+    # 前缀 4.1 且 stable: 4.12, 4.16 (4.10-rc2 等被 stable-only 排除)
     assert [r.tag for r in page_items] == ["4.12-stable", "4.16-stable"]
-
-
-def test_channel_with_show_all() -> None:
-    """-a 与 -c 组合: 指定通道优先, 全量不分页."""
-    page_items, total_pages, _ = _paginate_remote(
-        _sample_releases(), "", "dev", True, 1
-    )
-    assert total_pages == 1
-    assert len(page_items) == 10  # 40 个 4.x 中 10 个 dev
-    assert all(r.channel == "dev" for r in page_items)
 
 
 def test_default_shows_only_stable_and_paginates() -> None:
     """默认: 只看正式版, 过滤 1.x/2.x 后按 30/页切片."""
-    page_items, total_pages, page = _paginate_remote(
-        _sample_releases(), "", None, False, 1
-    )
+    page_items, total_pages, page = _paginate_remote(_sample_releases(), "", False, 1)
     # stable 且 3./4.: 10 个 4.x + 30 个 3.x = 40 -> 2 页
     assert total_pages == 2
     assert page == 1
@@ -188,16 +164,16 @@ def test_default_shows_only_stable_and_paginates() -> None:
     assert all(r.stable for r in page_items)
     assert all(r.tag.startswith(("3.", "4.")) for r in page_items)
 
-    page_items2, _, page2 = _paginate_remote(_sample_releases(), "", None, False, 2)
+    page_items2, _, page2 = _paginate_remote(_sample_releases(), "", False, 2)
     assert page2 == 2
     assert len(page_items2) == 10
 
 
 def test_page_clamped_to_valid_range() -> None:
     """越界页码收敛到有效范围."""
-    _, total_pages, page = _paginate_remote(_sample_releases(), "", None, False, 99)
+    _, total_pages, page = _paginate_remote(_sample_releases(), "", False, 99)
     assert total_pages == 2
     assert page == 2
 
-    _, _, page0 = _paginate_remote(_sample_releases(), "", None, False, 0)
+    _, _, page0 = _paginate_remote(_sample_releases(), "", False, 0)
     assert page0 == 1

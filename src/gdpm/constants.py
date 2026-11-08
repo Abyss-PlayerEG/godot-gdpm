@@ -26,6 +26,7 @@ LOCAL_TAG_PREFIX = "local+"
 LOCAL_DIR_NAME = "gdpm-local"
 HASHES_FILE = ".hashes"
 
+DEVELOPER = "playereg"
 REPO_URL = "https://github.com/Abyss-PlayerEG/godot-gdpm"
 ISSUES_URL = "https://github.com/Abyss-PlayerEG/godot-gdpm/issues"
 GITHUB_API_URL = "https://api.github.com/repos/Abyss-PlayerEG/godot-gdpm/"

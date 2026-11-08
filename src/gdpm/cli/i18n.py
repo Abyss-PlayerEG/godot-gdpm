@@ -22,7 +22,7 @@ Notes
 - _COMMANDS: 命令描述词典 (键 = 根命令裸名 / 组前缀点号路径).
 - _CATEGORIES: 分类名词典 (含兜底 other).
 - _EXAMPLE_LABELS: 示例标签词典 (键 = 英文原文, en 即键名).
-- _UI: 渲染标签词典 (面板标题 / 表头 / 公共选项 / 默认值后缀).
+- _UI: 渲染标签词典 (面板标题 / 表头 / 公共选项 / about 屏 / 默认值后缀).
 """
 
 from __future__ import annotations
@@ -156,8 +156,8 @@ _EXAMPLE_LABELS: dict[str, dict[str, str]] = {
     "Uninstall Godot 4.7 C#": {"zh": "卸载 Godot 4.7 C# 版本"},
     "List installed versions": {"zh": "列出已安装版本"},
     "Filter installed versions": {"zh": "筛选已安装版本"},
-    "List stable releases only": {"zh": "仅列出稳定版"},
     "Open Godot editor": {"zh": "打开 Godot 编辑器"},
+    "Open a specific engine by ID": {"zh": "按 ID 打开指定引擎"},
     "Run the project": {"zh": "运行项目"},
     "Import from zip archive": {"zh": "从 zip 归档导入"},
     "Import from directory": {"zh": "从目录导入"},
@@ -199,7 +199,17 @@ _UI: dict[str, dict[str, str]] = {
     "ui.description": {"en": "Description", "zh": "说明"},
     "ui.command": {"en": "Command", "zh": "命令"},
     "ui.opt_help": {"en": "Show help message", "zh": "显示帮助信息"},
-    "ui.opt_info": {"en": "Show project info and version", "zh": "显示项目信息与版本"},
+    "ui.opt_about": {
+        "en": "Show about information (version, repo, contributors)",
+        "zh": "显示关于信息 (版本、仓库、贡献者)",
+    },
+    "ui.about_title": {"en": "GDPM-About", "zh": "GDPM 关于"},
+    "ui.tagline": {
+        "en": "Godot Dependency Package Manager",
+        "zh": "Godot 依赖包管理器",
+    },
+    "ui.developer": {"en": "Developer:", "zh": "开发者:"},
+    "ui.contributors": {"en": "Contributors", "zh": "贡献者"},
     "ui.opt_version": {"en": "Show version", "zh": "显示版本"},
     "ui.opt_yes": {"en": "Skip confirmation prompts", "zh": "跳过确认提示"},
     "ui.default": {"en": "(default: {v})", "zh": "(默认: {v})"},

@@ -97,7 +97,9 @@ def test_click_params_match_function_signatures() -> None:
 
 def test_use_command_binds_argument(monkeypatch) -> None:
     """godot_use 实际调用不再 TypeError (参数绑定回归)."""
-    monkeypatch.setattr(engine_mod, "find_engine", lambda name, version: None)
+    monkeypatch.setattr(
+        "gdpm.cli.commands.godot.common.find_engine", lambda name, version: None
+    )
 
     result = CliRunner().invoke(engine_mod.godot_use, ["no-such-engine@1.0"])
 

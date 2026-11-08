@@ -15,7 +15,7 @@ from gdpm.config import global_config
 from gdpm.config.global_config import (
     GlobalConfig,
     read_global_config,
-    write_global_config,
+    set_config_value,
 )
 
 
@@ -49,7 +49,7 @@ def test_migrates_from_legacy_platformdirs_location(
 
 def test_existing_new_config_never_clobbered(tmp_path: Path, monkeypatch) -> None:
     new_path, old_path = _patch_paths(tmp_path, monkeypatch)
-    write_global_config(GlobalConfig(default_engine="new@2.0-stable"))
+    set_config_value("default_engine", "new@2.0-stable")
     old_path.parent.mkdir(parents=True)
     old_path.write_text(
         '[defaults]\ndefault_engine = "old@1.0-stable"\n', encoding="utf-8"

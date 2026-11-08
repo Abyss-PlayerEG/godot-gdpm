@@ -16,6 +16,8 @@ Notes
 - prepare_engine_dir: 解压后修复权限.
 - find_engine: 按名称和版本查找引擎.
 - resolve_engine_path: 解析 Godot 二进制路径.
+- parse_engine_id: 纯解析 Name@Version 形式的引擎 ID.
+- resolve_engine_id: 解析引擎 ID 并查找二进制 (统一错误提示).
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ from typing import Any
 
 import httpx
 
+from gdpm.cli.common import console
 from gdpm.constants import VERSIONS_JSON_URL
 
 
@@ -477,6 +480,45 @@ def prepare_engine_dir(directory: Path) -> None:
                 ensure_executable(f)
 
 
+def _find_managed_binary(version: str) -> str | None:
+    """
+    在全局引擎目录按版本查找托管引擎二进制 (find_engine 与
+    resolve_engine_path 共用的唯一查找点).
+
+    后缀语义: 显式带 -csharp/-mono 的版本只找 {tag}-csharp 目录,
+    绝不回退普通版 (否则指定 C# 却打开非 C# —— normalize_version 会
+    剥掉后缀, 曾导致候选循环先命中普通目录); 无后缀时保持旧行为:
+    优先普通版, 缺省时回退 C# 目录.
+
+    ----
+
+    Parameters
+    ----
+    version : str
+        版本串, 如 '4.7-stable' 或 '4.7-stable-csharp'.
+
+    Returns
+    ----
+    str | None
+        二进制路径, 未找到时返回 None.
+    """
+    if not version:
+        return None
+    engines_dir = get_engines_dir()
+    tag = normalize_version(version)
+    candidates: tuple[Path, ...]
+    if "-csharp" in version or "-mono" in version:
+        candidates = (engines_dir / f"{tag}-csharp",)
+    else:
+        candidates = (engines_dir / tag, engines_dir / f"{tag}-csharp")
+    for candidate in candidates:
+        if candidate.exists():
+            binary = find_engine_binary(candidate)
+            if binary:
+                return binary
+    return None
+
+
 def find_engine(name: str, version: str) -> str | None:
     """
     按名称和版本查找 Godot 二进制路径.
@@ -497,8 +539,6 @@ def find_engine(name: str, version: str) -> str | None:
     """
     from gdpm.config.local_engines import load_local_engines
 
-    engines_dir = get_engines_dir()
-
     local_engines = load_local_engines()
     if name in local_engines:
         engine = local_engines[name]
@@ -506,13 +546,7 @@ def find_engine(name: str, version: str) -> str | None:
             return engine.path
 
     if name == "gdpm-godot":
-        tag = normalize_version(version) if version else ""
-        if tag:
-            for candidate in (engines_dir / tag, engines_dir / f"{tag}-csharp"):
-                if candidate.exists():
-                    binary = find_engine_binary(candidate)
-                    if binary:
-                        return binary
+        return _find_managed_binary(version)
 
     return None
 
@@ -540,17 +574,72 @@ def resolve_engine_path(name: str, version: str) -> str:
     from gdpm.config.local_engines import get_local_engine
 
     if name == "gdpm-godot":
-        # 托管引擎: 在全局目录按 tag 查找
-        engines_dir = get_engines_dir()
-        tag = normalize_version(version) if version else ""
-        if tag:
-            for candidate in (engines_dir / tag, engines_dir / f"{tag}-csharp"):
-                if candidate.exists():
-                    binary = find_engine_binary(candidate)
-                    if binary:
-                        return binary
-        return ""
+        # 托管引擎: 在全局目录按 tag 查找 (后缀语义见 _find_managed_binary)
+        return _find_managed_binary(version) or ""
 
     # 本地引擎: 仅按名称匹配
     engine = get_local_engine(name)
     return engine.path if engine else ""
+
+
+def parse_engine_id(engine_id: str) -> tuple[str, str] | None:
+    """
+    纯解析 Name@Version 形式的引擎 ID (不做查找, 不打印).
+
+    ----
+
+    Parameters
+    ----
+    engine_id : str
+        形如 'gdpm-godot@4.7-stable-csharp'.
+
+    Returns
+    ----
+    tuple[str, str] | None
+        (名称, 版本); 缺 @ 或名称/版本为空时返回 None.
+    """
+    if "@" not in engine_id:
+        return None
+    name, version = engine_id.split("@", 1)
+    if not name or not version:
+        return None
+    return name, version
+
+
+def resolve_engine_id(engine_id: str, *, example: str) -> tuple[str, str, str] | None:
+    """
+    解析引擎 ID 并查找二进制 (解析即查找, 失败打印统一错误).
+
+    - 格式错误: 打印 Invalid format + example 示例后返回 None
+    - 引擎不存在: 打印 not found + list -id 提示后返回 None
+
+    ----
+
+    Parameters
+    ----
+    engine_id : str
+        形如 'gdpm-godot@4.7-stable-csharp'.
+    example : str
+        格式错误时展示的示例命令 (各命令上下文不同).
+
+    Returns
+    ----
+    tuple[str, str, str] | None
+        (名称, 版本, 二进制路径); 失败时 None (错误已打印).
+    """
+    parsed = parse_engine_id(engine_id)
+    if not parsed:
+        console.print(
+            "[red]Error:[/red] Invalid format. Use [cyan]Name@Version[/cyan]\n"
+            f"  Example: {example}"
+        )
+        return None
+    name, version = parsed
+    engine_path = find_engine(name, version)
+    if not engine_path:
+        console.print(
+            f"[red]Error:[/red] Engine [cyan]{engine_id}[/cyan] not found.\n"
+            "  Use [bold]gdpm godot list -id[/bold] to see available engines."
+        )
+        return None
+    return name, version, engine_path

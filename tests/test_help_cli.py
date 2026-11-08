@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -16,6 +17,7 @@ from click.testing import CliRunner
 from gdpm.cli import i18n
 from gdpm.cli.app import main
 from gdpm.config.global_config import GlobalConfig
+from gdpm.constants import DEVELOPER, REPO_URL
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -54,6 +56,9 @@ def test_main_help_english_categories_and_descriptions(monkeypatch) -> None:
     assert "Initialize a new gdpm project" in out
     assert "Manage Godot engine versions" in out
     assert "Common Options" in out
+    # 公共选项: -a/--about (原 --info 已改名, 与 info 子命令消歧)
+    assert "-a, --about" in out
+    assert "--info" not in out
 
 
 def test_group_help_english(monkeypatch) -> None:
@@ -72,8 +77,9 @@ def test_leaf_help_full_path_and_key_lines(monkeypatch) -> None:
 
     assert "gdpm godot list List Godot engine versions" in flat
     assert "Usage: gdpm godot list" in flat
-    assert "[--channel stable|rc|beta|alpha|dev]" in flat
     assert "[--version VERSION]" in flat
+    # stable-only: -c/--channel 已移除, 用法行不得出现
+    assert "--channel" not in out
 
 
 def test_usage_shows_real_option_spelling_not_dest_name(monkeypatch) -> None:
@@ -147,3 +153,39 @@ def test_language_config_drives_help(monkeypatch) -> None:
 
     assert "项目" in out
     assert "初始化新的 gdpm 项目" in out
+
+
+def test_about_shows_developer_info(monkeypatch) -> None:
+    """about 屏含静态开发者信息与仓库 (网络失败也显示, 面板标题 GDPM-About)."""
+    monkeypatch.setattr(
+        "httpx.get",
+        lambda *args, **kwargs: SimpleNamespace(status_code=500),
+    )
+
+    result = CliRunner().invoke(main, ["-a"], prog_name="gdpm")
+
+    assert result.exit_code == 0
+    out = result.output
+    assert "GDPM-About" in out
+    assert f"Developer: {DEVELOPER}" in out
+    assert REPO_URL in out
+
+
+def test_about_screen_chinese(monkeypatch) -> None:
+    """GDPM_LANG=zh: about 屏标题/标语/开发者标签/贡献者面板全中文."""
+    monkeypatch.setenv("GDPM_LANG", "zh")
+    monkeypatch.setattr(
+        "httpx.get",
+        lambda *args, **kwargs: SimpleNamespace(
+            status_code=200, json=lambda: [{"login": "dev"}]
+        ),
+    )
+
+    result = CliRunner().invoke(main, ["-a"], prog_name="gdpm")
+
+    assert result.exit_code == 0
+    out = result.output
+    assert "GDPM 关于" in out
+    assert "Godot 依赖包管理器" in out
+    assert f"开发者: {DEVELOPER}" in out
+    assert "贡献者" in out

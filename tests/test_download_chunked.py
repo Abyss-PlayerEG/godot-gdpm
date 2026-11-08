@@ -8,8 +8,11 @@ download_file_chunked 分片下载测试.
 from __future__ import annotations
 
 import threading
+from concurrent.futures import ThreadPoolExecutor as _RealExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING
+
+import pytest
 
 from gdpm.utils.download import CHUNK_COUNT, download_file, download_file_chunked
 
@@ -185,3 +188,69 @@ def test_workers_param_overrides_default(tmp_path: Path) -> None:
 
     assert path.read_bytes() == PAYLOAD
     assert {i for i in events if i is not None} == set(range(8))
+
+
+def test_keyboard_interrupt_cleans_partial(tmp_path: Path, monkeypatch) -> None:
+    """Ctrl+C: 主线程取消时半成品即删, KeyboardInterrupt 原样上抛."""
+
+    class _KIResult:
+        def __init__(self, fut: object) -> None:
+            self._fut = fut
+
+        def result(self, timeout: object = None) -> object:
+            raise KeyboardInterrupt
+
+    class _InterruptingExecutor:
+        """真线程池 + 主线程首次 result() 即抛 KI (模拟 Ctrl+C 落在等待点)."""
+
+        def __init__(self, max_workers: int | None = None) -> None:
+            self._pool = _RealExecutor(max_workers=max_workers)
+
+        def __enter__(self) -> _InterruptingExecutor:
+            return self
+
+        def __exit__(self, *exc: object) -> None:
+            self.shutdown(wait=True)
+
+        def submit(self, fn: object, *args: object, **kwargs: object) -> _KIResult:
+            return _KIResult(self._pool.submit(fn, *args, **kwargs))
+
+        def shutdown(self, wait: bool = True, cancel_futures: bool = False) -> None:
+            self._pool.shutdown(wait=wait, cancel_futures=cancel_futures)
+
+    monkeypatch.setattr("gdpm.utils.download.ThreadPoolExecutor", _InterruptingExecutor)
+    server, url = _serve(support_range=True)
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            download_file_chunked(url, tmp_path)
+    finally:
+        server.shutdown()
+
+    assert not (tmp_path / "file.bin").exists()
+
+
+def test_clamp_workers_bounds() -> None:
+    """生效并行度: 空值回退默认, 负数收敛 1, 超上限按 32 计."""
+    from gdpm.utils.download import MAX_SLICES, clamp_workers
+
+    assert clamp_workers(None) == CHUNK_COUNT
+    assert clamp_workers(0) == CHUNK_COUNT  # 0 为 falsy, 走默认回退
+    assert clamp_workers(-5) == 1
+    assert clamp_workers(12) == 12
+    assert clamp_workers(32) == 32
+    assert clamp_workers(64) == MAX_SLICES == 32
+
+
+def test_workers_clamped_to_max_slices(tmp_path: Path) -> None:
+    """workers=64: 真实下载也只切 32 片 (配置超过上限按 32 计)."""
+    server, url = _serve(support_range=True)
+    events: list[int] = []
+    try:
+        path = download_file_chunked(
+            url, tmp_path, workers=64, on_slice=lambda i, d, t: events.append(i)
+        )
+    finally:
+        server.shutdown()
+
+    assert path.read_bytes() == PAYLOAD
+    assert {i for i in events if i is not None} == set(range(32))

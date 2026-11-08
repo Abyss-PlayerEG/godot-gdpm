@@ -40,6 +40,7 @@ from gdpm.config.global_config import read_global_config
 from gdpm.lockfile.utils import update_lockfile
 from gdpm.models.lock import LockEntry
 from gdpm.store.utils import resolve_publisher
+from gdpm.utils.download import clamp_workers
 from gdpm.utils.tag import scan_addons
 
 if TYPE_CHECKING:
@@ -144,7 +145,7 @@ def sync(frozen: bool, check: bool, no_cache: bool, yes: bool) -> None:
 
         # 并行下载插件 (并发数由全局配置 parallel_downloads 控制, 默认 4)
         if download_tasks:
-            parallel = read_global_config().parallel_downloads
+            parallel = clamp_workers(read_global_config().parallel_downloads)
             console.print(
                 f"Downloading {len(download_tasks)} plugin(s) "
                 f"(max {parallel} parallel)..."

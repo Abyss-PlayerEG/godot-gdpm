@@ -14,10 +14,10 @@ from rich.console import Console
 from rich.progress import Progress, TextColumn
 
 from gdpm.cli.commands.godot.install import (
-    CHUNK_COUNT,
     _create_download_tasks,
     _make_slice_handler,
 )
+from gdpm.utils.download import CHUNK_COUNT
 
 
 def _render_with_slice_updates() -> str:
@@ -48,8 +48,8 @@ def test_slice_tasks_render_without_keyerror() -> None:
 
 
 def test_slice_count_follows_constant(monkeypatch) -> None:
-    """CHUNK_COUNT 改为 8: 分片任务数量与标签自动跟随."""
-    monkeypatch.setattr("gdpm.cli.commands.godot.install.CHUNK_COUNT", 8)
+    """回退默认 CHUNK_COUNT 改为 8: 分片任务数量与标签自动跟随 (经 clamp_workers)."""
+    monkeypatch.setattr("gdpm.utils.download.CHUNK_COUNT", 8)
     buf = io.StringIO()
     console = Console(file=buf, force_terminal=False, width=80)
     with Progress(
@@ -94,3 +94,18 @@ def test_fallback_hides_slice_tasks() -> None:
     out = buf.getvalue()
     assert "Godot 4.7-stable" in out
     assert "Slice" not in out
+
+
+def test_workers_clamped_to_max_slices() -> None:
+    """workers=64 超过硬上限: 进度条仍按 32 片创建, 标签联动."""
+    buf = io.StringIO()
+    console = Console(file=buf, force_terminal=False, width=80)
+    with Progress(
+        TextColumn("[bold blue]{task.fields[name]}"), console=console
+    ) as progress:
+        slice_ids, _ = _create_download_tasks(progress, "Godot 4.7-stable", workers=64)
+        labels = [progress.tasks[int(tid)].description for tid in slice_ids]
+
+    assert len(slice_ids) == 32
+    assert labels[0] == "Slice 1/32"
+    assert labels[-1] == "Slice 32/32"

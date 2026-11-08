@@ -19,7 +19,7 @@ from pathlib import Path
 import click
 
 from gdpm.cli.base import GdpmCommand
-from gdpm.cli.commands.godot.common import resolve_engine_path
+from gdpm.cli.commands.godot.common import resolve_engine_id, resolve_engine_path
 from gdpm.cli.common import console, find_project_root
 
 
@@ -29,13 +29,15 @@ from gdpm.cli.common import console, find_project_root
     examples=[
         ("gdpm godot open", "Open Godot editor"),
         ("gdpm godot open --run", "Run the project"),
+        ("gdpm godot open gdpm-godot@4.7-stable", "Open a specific engine by ID"),
     ],
 )
 @click.option(
     "--run", "-r", is_flag=True, help="Run the project instead of opening editor"
 )
-def godot_open(run: bool) -> None:
-    """为当前项目打开 Godot 编辑器."""
+@click.argument("engine_id", metavar="ID", required=False)
+def godot_open(engine_id: str | None, run: bool) -> None:
+    """为当前项目打开 Godot 编辑器 (可按 ID 一次性指定引擎)."""
     from gdpm.config.global_config import get_default_engine
 
     root = find_project_root()
@@ -45,34 +47,45 @@ def godot_open(run: bool) -> None:
     engine_name = "?"
     engine_ver = "?"
 
-    if conf_path.exists():
-        try:
-            conf = json.loads(conf_path.read_text(encoding="utf-8"))
-            godot = conf.get("godot", {})
-            binary = godot.get("path", "")
-            engine_name = godot.get("name", "?")
-            engine_ver = godot.get("version", "?")
-        except json.JSONDecodeError, TypeError:
-            pass
-
-    if not binary:
-        default_id = get_default_engine()
-        if default_id:
-            name, version = default_id.split("@", 1)
-            binary = resolve_engine_path(name, version)
-            engine_name = name
-            engine_ver = version
-
-    if not binary:
-        console.print(
-            "[red]Error:[/red] No Godot engine configured.\n"
-            "  Use [bold]gdpm godot use <id>[/bold] for this project,\n"
-            "  or [bold]gdpm godot default <id>[/bold] to set a default engine.\n"
-            "\n"
-            "  Available engines:\n"
-            "    [bold]gdpm godot list -id[/bold]"
+    if engine_id:
+        # 显式 ID: 一次性指定引擎, 不读也不改项目/全局配置
+        resolved = resolve_engine_id(
+            engine_id, example="gdpm godot open gdpm-godot@4.7-stable"
         )
-        return
+        if not resolved:
+            return
+        name, version, binary = resolved
+        engine_name = name
+        engine_ver = version
+    else:
+        if conf_path.exists():
+            try:
+                conf = json.loads(conf_path.read_text(encoding="utf-8"))
+                godot = conf.get("godot", {})
+                binary = godot.get("path", "")
+                engine_name = godot.get("name", "?")
+                engine_ver = godot.get("version", "?")
+            except json.JSONDecodeError, TypeError:
+                pass
+
+        if not binary:
+            default_id = get_default_engine()
+            if default_id:
+                name, version = default_id.split("@", 1)
+                binary = resolve_engine_path(name, version)
+                engine_name = name
+                engine_ver = version
+
+        if not binary:
+            console.print(
+                "[red]Error:[/red] No Godot engine configured.\n"
+                "  Use [bold]gdpm godot use <id>[/bold] for this project,\n"
+                "  or [bold]gdpm godot default <id>[/bold] to set a default engine.\n"
+                "\n"
+                "  Available engines:\n"
+                "    [bold]gdpm godot list -id[/bold]"
+            )
+            return
 
     binary_path = Path(binary)
     # .app 包时深入 Contents/MacOS 取真实二进制 (兼容 mono 变体 Godot_mono)

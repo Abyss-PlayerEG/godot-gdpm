@@ -1,22 +1,19 @@
 """
 gdpm config 命令测试.
 
-覆盖: set 键名校验与整数校验, 空值重置 (回写默认值),
+覆盖: set 键名校验与整数校验, 空值重置 (删行), ~ 路径展开,
 open 的三平台目录打开命令分发.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from click.testing import CliRunner
 
 from gdpm.cli.commands.config.open import config_open
 from gdpm.cli.commands.config.set import config_set
 from gdpm.config import global_config
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _patch(tmp_path: Path, monkeypatch) -> Path:
@@ -29,7 +26,8 @@ def _patch(tmp_path: Path, monkeypatch) -> Path:
     return config_path
 
 
-def test_set_string_key_writes_full_file(tmp_path: Path, monkeypatch) -> None:
+def test_set_writes_only_target_key(tmp_path: Path, monkeypatch) -> None:
+    """行级写入: set 一条只出现该键, 不材料化其他默认键."""
     config_path = _patch(tmp_path, monkeypatch)
 
     result = CliRunner().invoke(
@@ -39,10 +37,10 @@ def test_set_string_key_writes_full_file(tmp_path: Path, monkeypatch) -> None:
     assert result.exit_code == 0
     text = config_path.read_text(encoding="utf-8")
     assert 'default_engine = "steam-godot@4.7-stable"' in text
-    # 全量材料化: 其余键同样显式落盘
-    assert "godot_path" in text
-    assert "[store]" in text
-    assert "[ui]" in text
+    assert "[defaults]" in text
+    # 其他键不得出现 (用户反馈: set 后文件冒出没设过的键)
+    for absent in ("godot_path", "parallel_downloads", "[store]", "[cache]", "[ui]"):
+        assert absent not in text, absent
     assert "reset to default" not in result.output
 
 
@@ -79,13 +77,26 @@ def test_set_unknown_key_lists_options(tmp_path: Path, monkeypatch) -> None:
     result = CliRunner().invoke(config_set, ["no_such_key", "x"])
 
     assert "Unknown config key" in result.output
-    # 列出全部合法键
-    for key in ("default_engine", "parallel_downloads", "store_url"):
+    # 只列已实现的可设置键
+    for key in ("default_engine", "parallel_downloads", "cache_dir", "language"):
         assert key in result.output
+    # 未实现的键不展示
+    for key in ("godot_path", "addons_dir", "store_url"):
+        assert key not in result.output
 
 
-def test_set_empty_value_resets_and_keeps_line(tmp_path: Path, monkeypatch) -> None:
-    """空值重置: 写回默认值行而非删除文件 (default_engine = "" 保留)."""
+def test_unimplemented_keys_rejected(tmp_path: Path, monkeypatch) -> None:
+    """godot_path/addons_dir/store_url 暂无消费方: 不展示也不接受设置."""
+    config_path = _patch(tmp_path, monkeypatch)
+
+    for key in ("godot_path", "addons_dir", "store_url"):
+        result = CliRunner().invoke(config_set, [key, "x"])
+        assert "Unknown config key" in result.output, key
+        assert not config_path.exists()
+
+
+def test_set_empty_value_removes_line(tmp_path: Path, monkeypatch) -> None:
+    """空值重置 = 删行: 该文件只有这一个键时, 删行即删文件."""
     config_path = _patch(tmp_path, monkeypatch)
     CliRunner().invoke(config_set, ["default_engine", "x@1.0-stable"])
     assert config_path.exists()
@@ -93,8 +104,24 @@ def test_set_empty_value_resets_and_keeps_line(tmp_path: Path, monkeypatch) -> N
     result = CliRunner().invoke(config_set, ["default_engine", ""])
 
     assert "reset to default" in result.output
-    assert config_path.exists()
-    assert 'default_engine = ""' in config_path.read_text(encoding="utf-8")
+    assert not config_path.exists()
+
+
+def test_set_preserves_unrelated_lines(tmp_path: Path, monkeypatch) -> None:
+    """set 一条只动目标行: 手写行与其他段内容逐字保留."""
+    config_path = _patch(tmp_path, monkeypatch)
+    config_path.write_text(
+        '[store]\nbase_url = "https://mine.example/api"\n\n[ui]\nlanguage = "zh"\n',
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(config_set, ["parallel_downloads", "8"])
+
+    assert result.exit_code == 0
+    text = config_path.read_text(encoding="utf-8")
+    assert 'base_url = "https://mine.example/api"' in text
+    assert 'language = "zh"' in text
+    assert "parallel_downloads = 8" in text
 
 
 def test_default_engine_empty_line_survives_next_set(
@@ -130,3 +157,31 @@ def test_open_dispatches_platform_command(tmp_path: Path, monkeypatch) -> None:
     assert [cmd[0] for cmd in calls] == ["open", "explorer", "xdg-open"]
     # 打开的是配置文件所在目录 (临时目录的父级 = tmp_path)
     assert all(str(tmp_path) in cmd for cmd in calls)
+
+
+def test_set_integer_capped_at_max(tmp_path: Path, monkeypatch) -> None:
+    """超过上限的配置值按上限落盘 (parallel_downloads 100 -> 32)."""
+    config_path = _patch(tmp_path, monkeypatch)
+
+    result = CliRunner().invoke(config_set, ["parallel_downloads", "100"])
+
+    assert result.exit_code == 0
+    assert "parallel_downloads = 32" in config_path.read_text(encoding="utf-8")
+    assert "= 32" in result.output
+
+
+def test_set_cache_dir_expands_user(tmp_path: Path, monkeypatch) -> None:
+    """~ 输入展开为绝对路径; 展开后等于默认值时按重置删行."""
+    config_path = _patch(tmp_path, monkeypatch)
+
+    result = CliRunner().invoke(config_set, ["cache_dir", "~/gdpm-probe"])
+
+    assert result.exit_code == 0
+    text = config_path.read_text(encoding="utf-8")
+    assert str(Path.home() / "gdpm-probe") in text
+    assert "~" not in text
+
+    reset = CliRunner().invoke(config_set, ["cache_dir", "~/.gdpm/cache"])
+
+    assert "reset to default" in reset.output
+    assert not config_path.exists()

@@ -19,6 +19,7 @@ Notes
       (仅 local) 与 publisher (仅 store).
 - import_cmd: 命令入口.
 - _import_store: 异步安装 Store 插件.
+- _store_import_cache: Store 导入缓存走全局配置 (与 sync/add 同根).
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ from gdpm.cache.file_cache import FileCache
 from gdpm.cli.base import GdpmCommand
 from gdpm.cli.common import console, require_project
 from gdpm.cli.options import yes_option
+from gdpm.config.global_config import read_global_config
 from gdpm.config.project import read_project_config, write_project_config
 from gdpm.installer.manager import PluginManager
 from gdpm.lockfile.lock import find_lockfile, read_lockfile
@@ -43,6 +45,20 @@ from gdpm.models.dependency import Dependency
 from gdpm.models.lock import LockEntry
 from gdpm.store.client import StoreClient
 from gdpm.utils.local import LOCAL_DIR_NAME, tag_plugin
+
+
+def _store_import_cache() -> FileCache:
+    """
+    Store 导入的下载缓存: 走全局 cache_dir 配置 (与 sync/add 同一个缓存).
+
+    ----
+
+    Returns
+    ----
+    FileCache
+        指向全局配置缓存目录的缓存实例.
+    """
+    return FileCache(Path(read_global_config().cache_dir))
 
 
 @click.command(
@@ -109,7 +125,7 @@ def import_cmd(source: str, yes: bool) -> None:
             """异步下载并安装 Store 插件."""
             nonlocal imported
             store = StoreClient()
-            cache = FileCache(root / ".gdpm" / "cache")
+            cache = _store_import_cache()
             manager = PluginManager(addons_dir, cache, store)
 
             try:

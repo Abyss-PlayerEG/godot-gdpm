@@ -1,7 +1,8 @@
 """
-本地 list 版本与通道筛选测试.
+本地 list 版本筛选测试 (stable-only).
 
-本地是库存视图: -V/-c 仅显式指定时生效, 不套用远程的默认 stable 规则.
+本地是库存视图: -V 仅显式指定时生效; 非 stable 通道 (rc/beta/alpha/dev)
+一律排除, 无法推导通道的行 (如版本 '-') 保留.
 """
 
 from __future__ import annotations
@@ -34,36 +35,40 @@ def test_local_channel_derivation() -> None:
     assert _local_channel("") == ""
 
 
-def test_no_filter_returns_all_rows() -> None:
-    assert _filter_local_rows(ROWS, "", None) == ROWS
-
-
-def test_version_prefix_filter() -> None:
-    result = _filter_local_rows(ROWS, "4.4", None)
-    assert [r["version"] for r in result] == ["4.4-stable", "4.4-stable-csharp"]
-
-
-def test_channel_filter_includes_csharp_variant() -> None:
-    """csharp 变体的通道仍是 stable, 应被 -c stable 命中."""
-    result = _filter_local_rows(ROWS, "", "stable")
+def test_default_excludes_non_stable_keeps_unknown() -> None:
+    """stable-only: rc 行被排除, 未知通道 ('-') 保留."""
+    result = _filter_local_rows(ROWS, "")
     assert [r["version"] for r in result] == [
         "4.4-stable",
         "4.4-stable-csharp",
         "4.7-stable",
+        "-",
     ]
 
 
-def test_version_and_channel_combine() -> None:
-    result = _filter_local_rows(ROWS, "4.4", "stable")
-    assert len(result) == 2
-    result2 = _filter_local_rows(ROWS, "4.4", "rc")
-    assert result2 == []
+def test_version_prefix_filter() -> None:
+    result = _filter_local_rows(ROWS, "4.4")
+    assert [r["version"] for r in result] == ["4.4-stable", "4.4-stable-csharp"]
 
 
-def test_unknown_version_excluded_by_filters() -> None:
-    """版本为 '-' 的条目无法匹配任何显式筛选."""
-    assert all(r["version"] != "-" for r in _filter_local_rows(ROWS, "4", None))
-    assert all(r["version"] != "-" for r in _filter_local_rows(ROWS, "", "stable"))
+def test_stable_only_keeps_csharp_variant() -> None:
+    """csharp 变体的通道仍是 stable, 不会被 stable-only 过滤误伤."""
+    result = _filter_local_rows(ROWS, "")
+    versions = [r["version"] for r in result]
+    assert "4.4-stable-csharp" in versions
+    assert "4.8-rc1" not in versions
+
+
+def test_non_stable_hidden_even_when_prefix_matches() -> None:
+    """前缀命中非 stable (4.8-rc1) 时依然隐藏."""
+    assert _filter_local_rows(ROWS, "4.8") == []
+    assert len(_filter_local_rows(ROWS, "4.4")) == 2
+
+
+def test_unknown_version_kept_without_filter() -> None:
+    """版本为 '-' 的条目: 无筛选时保留, 显式 -V 时自然排除."""
+    assert "-" in [r["version"] for r in _filter_local_rows(ROWS, "")]
+    assert all(r["version"] != "-" for r in _filter_local_rows(ROWS, "4"))
 
 
 def test_version_nums_parse() -> None:

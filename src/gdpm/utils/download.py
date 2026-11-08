@@ -43,6 +43,28 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 CHUNK_COUNT = 4  # 默认分片数 (parallel_downloads 配置的回退值)
+MAX_SLICES = 32  # 切片数硬上限 (配置超过时按 32 计)
+
+
+def clamp_workers(workers: int | None) -> int:
+    """
+    将并行度收敛到有效范围: 空值回退 CHUNK_COUNT, 下限 1, 上限 MAX_SLICES.
+
+    下载切片、进度条标签与 sync 并发共用本函数, 保证三处生效值永远一致.
+
+    ----
+
+    Parameters
+    ----
+    workers : int | None
+        调用方传入的并行度 (通常来自全局配置 parallel_downloads).
+
+    Returns
+    ----
+    int
+        [1, MAX_SLICES] 区间内的生效并行度.
+    """
+    return min(MAX_SLICES, max(1, workers or CHUNK_COUNT))
 
 
 def download_file(
@@ -163,10 +185,12 @@ def download_file_chunked(
 
     Notes
     ----
-    - 分片数由 workers 参数控制 (缺省回退 CHUNK_COUNT=4), 调用方传入
-      parallel_downloads 配置值即可全局调节分片/线程池/进度条.
+    - 分片数由 workers 参数控制 (缺省回退 CHUNK_COUNT=4), 经 clamp_workers
+      收敛到 [1, MAX_SLICES=32] —— 配置超过 32 时按 32 计.
     - 文件过小 (不足分片数) 或不支持 Range 时直接回退单流.
     - 任一切片失败时清理半成品并回退单流下载.
+    - Ctrl+C 优雅取消: cancel 事件让切片在下个分块退出, 半成品即删,
+      KeyboardInterrupt 原样上抛 (调用方负责提示与退出码).
     - on_slice 与 on_progress 同锁串行, 回调内可安全更新 UI.
 
     Examples
@@ -175,7 +199,7 @@ def download_file_chunked(
         PosixPath('/tmp/a.zip')
     """
     dest.mkdir(parents=True, exist_ok=True)
-    n = max(1, workers or CHUNK_COUNT)
+    n = clamp_workers(workers)
 
     if not filename:
         filename = url.split("/")[-1].split("?")[0]
@@ -211,6 +235,7 @@ def download_file_chunked(
         f.truncate(total)
 
     lock = threading.Lock()
+    cancel = threading.Event()
     downloaded = 0
     start_time = time.monotonic()
 
@@ -232,6 +257,9 @@ def download_file_chunked(
             with open(file_path, "r+b") as f:
                 f.seek(start)
                 for chunk in resp.iter_bytes(8192):
+                    if cancel.is_set():
+                        # 取消信号: 本切片立即退出, 不再写入
+                        return
                     f.write(chunk)
                     with lock:
                         downloaded += len(chunk)
@@ -245,9 +273,20 @@ def download_file_chunked(
 
     try:
         with ThreadPoolExecutor(max_workers=n) as pool:
-            futures = [pool.submit(fetch, i, s, e) for i, (s, e) in enumerate(bounds)]
-            for future in futures:
-                future.result()
+            try:
+                futures = [
+                    pool.submit(fetch, i, s, e) for i, (s, e) in enumerate(bounds)
+                ]
+                for future in futures:
+                    future.result()
+            except BaseException:
+                # 任意异常 (含 Ctrl+C): 先通知切片线程退出, 再由 with 收尾
+                cancel.set()
+                raise
+    except KeyboardInterrupt:
+        # 优雅取消: 半成品即删, KI 原样上抛给调用方清理
+        file_path.unlink(missing_ok=True)
+        raise
     except Exception:
         # 任一切片失败: 清理半成品, 回退单流下载 (先发回退信号收起分片进度)
         file_path.unlink(missing_ok=True)
