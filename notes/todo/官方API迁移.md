@@ -20,7 +20,7 @@
 | `cli/commands/godot/common.py::build_download_url` | 按 tag 查 release → 资产下载 URL | **`downloads.godotengine.org` 302 接口** |
 | `cli/commands/godot/common.py::get_asset_hash` | 资产 SHA256（当前坏的） | **`godot-builds` 的 `files[].checksum`** |
 | `cli/commands/godot/list.py`（3 处） | `--remote` 远程版本列表 | **`versions.json`**（静态无速率限制） |
-| `cli/app.py:495` `contributors` | `gdpm --info` 展示本仓库贡献者 | **保留 GitHub API**（属 gdpm 自身元数据，非 Godot 下载链） |
+| `cli/app.py:495` `contributors` | `gdpm --about` 展示本仓库贡献者 | **保留 GitHub API**（属 gdpm 自身元数据，非 Godot 下载链） |
 | `constants.py` token/headers | GitHub 认证头 | 保留（contributors 仍用；Godot 链路不再需要） |
 
 ## 目标：官方三件套
@@ -42,7 +42,7 @@
 实测记录（2026-11-07）：
 - `4.8-beta2` / `4.7.2-stable` → 302 到官方 CDN ✅
 - `3.6-stable` → 302 到 GitHub godot-builds ✅
-- mono / 预发布通道均支持 ✅
+- mono 支持 ✅；预发布通道已按 stable-only 决策移除（2026-11，list 排除非 stable、install 拒绝非 stable、`-c` 已删）
 - httpx 默认校验（certifi）访问官方接口成功 → P0-1 关闭 `verify=False` 无兼容障碍
 
 ## 平台参数表（内置 slug 表，唯一需维护的资产）
@@ -105,6 +105,6 @@ mono 规则：slug 加 `mono_` 前缀并去 `.exe`（`win64.exe.zip` → `mono_w
 
 ## 不在本期范围
 
-- `gdpm --info` 贡献者列表（继续走 GitHub API + token）
+- `gdpm --about` 贡献者列表（继续走 GitHub API + token）
 - Asset Store API（`store.godotengine.org`，与引擎下载无关）
 - Steam 引擎发现/自动解析链（另见引擎解析计划）
