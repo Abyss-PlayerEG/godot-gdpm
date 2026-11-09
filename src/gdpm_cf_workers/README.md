@@ -66,16 +66,16 @@ curl -sI "<同 3 的最终中继 URL>" | grep -i cf-cache-status
 
 ## gdpm 接入
 
-gdpm 侧**已写死双通道, 无需任何配置**: 官方接口优先, 走不通 (404 未收录、
-本地证书拦截、故障) 自动切换本镜像 —— 官方与镜像的 query 形态逐字一致,
-客户端不再直连 GitHub:
+gdpm 侧**只走本镜像, 无任何配置**: 引擎下载与 `versions.json` 均直打
+`godot-download.playereg.top` (常量 `GODOT_DOWNLOAD_MIRROR` 写死在
+`src/gdpm/constants.py`), 官方 URL 已从客户端移除 —— query 语义仍与官方
+逐字一致, 官方回源、GitHub 中继、slug 容错全部由本 Worker 服务端完成:
 
 ```
-官方 downloads.godotengine.org ──失败──> 本镜像 godot-download.playereg.top
+gdpm ──> godot-download.playereg.top ──(Worker 内部)──> 官方接口 / GitHub
 ```
 
-换镜像域名时改两处常量即可: `src/gdpm/constants.py` 的
-`GODOT_DOWNLOAD_BASE` / `GODOT_DOWNLOAD_MIRROR`。
+换镜像域名时只改 `src/gdpm/constants.py` 的 `GODOT_DOWNLOAD_MIRROR` 一处。
 
 ## /versions.json — 自建版本清单
 
@@ -89,7 +89,7 @@ gdpm 侧**已写死双通道, 无需任何配置**: 官方接口优先, 走不�
 - 与官方差异（预期内）：仅含 GitHub 有 tag 的版本（官方独有的 2.0.4/2.0.4.1
   两组无 GitHub tag，不覆盖）；官方可能缺而 GitHub 有的会补上（如 3.2.4）；
   `release_notes` 指向 GitHub release 页而非 godotengine.org 文章
-- gdpm 侧 `fetch_remote_versions` 同样双通道：官方优先，失败自动切本端点
+- gdpm 侧 `fetch_remote_versions` 也只走本镜像 `/versions.json`（唯一通道）
 
 ```bash
 curl -s https://godot-download.playereg.top/versions.json | head -c 300

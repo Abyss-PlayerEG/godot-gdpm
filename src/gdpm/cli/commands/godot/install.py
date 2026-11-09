@@ -34,7 +34,7 @@ from rich.prompt import Confirm
 
 from gdpm.cli.base import GdpmCommand
 from gdpm.cli.commands.godot.common import (
-    build_download_urls,
+    build_download_url,
     get_engines_dir,
     normalize_version,
 )
@@ -193,8 +193,8 @@ def godot_install(version: str, csharp: bool) -> None:
         # 确认后删除旧安装目录以便重装
         shutil.rmtree(ver_dir, onexc=lambda *args: None)
 
-    # 官方优先, 官方走不通切换自建镜像 (两个 base 写死在 constants)
-    urls = build_download_urls(tag, csharp)
+    # 唯一通道: 自建镜像 (写死在 constants; 官方回源由 Worker 服务端处理)
+    url = build_download_url(tag, csharp)
 
     plat = get_godot_platform()
     ext = get_godot_ext()
@@ -263,24 +263,12 @@ def godot_install(version: str, csharp: bool) -> None:
         console.print("\n[yellow]Cancelled.[/yellow]")
         raise SystemExit(130) from None
 
-    last_error: Exception | None = None
-    for index, target_url in enumerate(urls):
-        try:
-            _run_download(target_url)
-            last_error = None
-            break
-        except KeyboardInterrupt:
-            _abort_download()
-        except Exception as attempt_error:
-            last_error = attempt_error
-            if index + 1 < len(urls):
-                # 官方失败才有下一站: 自动切换自建镜像
-                console.print(
-                    f"[dim]Official channel failed ({type(attempt_error).__name__}), "
-                    "switching to download mirror...[/dim]"
-                )
-    if last_error is not None:
-        _report_failure(last_error)
+    try:
+        _run_download(url)
+    except KeyboardInterrupt:
+        _abort_download()
+    except Exception as download_error:
+        _report_failure(download_error)
         if zip_path.exists():
             zip_path.unlink()
         return

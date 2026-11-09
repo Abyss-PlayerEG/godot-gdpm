@@ -1,9 +1,9 @@
 """
-官方下载接口 URL 构造测试.
+下载接口 URL 构造测试 (自建镜像单通道).
 
-对应官方API迁移计划 Phase 1: slug 代际规则与 mono 命名.
-所有 URL 断言均与官网 archive 页面实抓链接逐字一致.
-哈希校验已按决策移除 (无官方哈希获取接口, 见官方API迁移.md Phase 3).
+slug 代际规则与 mono 命名沿用官方接口语义 (query 逐字一致, 与官网
+archive 实抓链接同款), base 为写死的自建镜像 godot-download.playereg.top;
+官方 URL 已从客户端移除, 回源由 Worker 服务端处理.
 """
 
 from __future__ import annotations
@@ -20,22 +20,22 @@ def _with_platform(system: str, machine: str):
     )
 
 
-def test_linux_x64_url_matches_official() -> None:
+def test_linux_x64_url_uses_mirror_base() -> None:
     sys_p, mach_p = _with_platform("Linux", "x86_64")
     with sys_p, mach_p:
         url = build_download_url("4.7.2-stable")
     assert url == (
-        "https://downloads.godotengine.org/"
+        "https://godot-download.playereg.top/"
         "?version=4.7.2&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
     )
 
 
-def test_windows_mono_url_matches_official() -> None:
+def test_windows_mono_url_uses_mirror_base() -> None:
     sys_p, mach_p = _with_platform("Windows", "AMD64")
     with sys_p, mach_p:
         url = build_download_url("4.7.2-stable", csharp=True)
     assert url == (
-        "https://downloads.godotengine.org/"
+        "https://godot-download.playereg.top/"
         "?version=4.7.2&flavor=stable&slug=mono_win64.zip&platform=windows.64"
     )
 

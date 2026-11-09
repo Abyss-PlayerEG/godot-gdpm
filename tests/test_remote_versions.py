@@ -196,48 +196,27 @@ class _Resp:
         return self._data
 
 
-def test_fetch_official_first_then_mirror(monkeypatch) -> None:
-    """双通道: 官方优先, 失败切镜像 /versions.json, 顺序与地址写死."""
+def test_fetch_uses_mirror_endpoint(monkeypatch) -> None:
+    """唯一通道: 直打自建镜像 /versions.json, 不再访问官方地址."""
     calls: list[str] = []
 
     def fake_get(url: str, **kwargs):
         calls.append(url)
-        if "godotengine.org" in url:
-            raise httpx.ConnectError("official down")
         return _Resp(SAMPLE)
 
     monkeypatch.setattr("gdpm.cli.commands.godot.common.httpx.get", fake_get)
 
     releases = fetch_remote_versions()
 
-    assert calls == [
-        "https://godotengine.org/versions.json",
-        "https://godot-download.playereg.top/versions.json",
-    ]
+    assert calls == ["https://godot-download.playereg.top/versions.json"]
     assert releases[0].tag == "4.8-beta2"
 
 
-def test_fetch_uses_official_when_healthy(monkeypatch) -> None:
-    """官方健康时只打一次, 不碰镜像."""
-    calls: list[str] = []
+def test_fetch_raises_on_failure(monkeypatch) -> None:
+    """镜像不可达: 抛出异常由调用方统一提示."""
 
     def fake_get(url: str, **kwargs):
-        calls.append(url)
-        return _Resp(SAMPLE)
-
-    monkeypatch.setattr("gdpm.cli.commands.godot.common.httpx.get", fake_get)
-
-    fetch_remote_versions()
-
-    assert len(calls) == 1
-    assert calls[0] == "https://godotengine.org/versions.json"
-
-
-def test_fetch_raises_when_both_channels_fail(monkeypatch) -> None:
-    """两通道均失败: 抛出最后一次异常 (调用方统一提示)."""
-
-    def fake_get(url: str, **kwargs):
-        raise httpx.ConnectError("all down")
+        raise httpx.ConnectError("mirror down")
 
     monkeypatch.setattr("gdpm.cli.commands.godot.common.httpx.get", fake_get)
 

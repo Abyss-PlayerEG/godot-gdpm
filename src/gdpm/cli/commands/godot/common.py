@@ -9,9 +9,8 @@ Notes
 ----
 - get_engines_dir: 获取全局引擎目录.
 - normalize_version: 版本号规范化为 tag 格式.
-- build_download_url: 构造官方下载接口 URL (无网络请求).
-- build_download_urls: 官方优先、自建镜像兜底的下载候选 (base 写死).
-- fetch_remote_versions: 拉取版本 (官方 versions.json 优先, 自建镜像兜底).
+- build_download_url: 构造自建镜像下载接口 URL (客户端唯一通道, 无网络请求).
+- fetch_remote_versions: 从自建镜像 /versions.json 拉取版本 (唯一通道).
 - ensure_executable: 确保文件具有执行权限.
 - find_engine_binary: 在引擎目录中查找二进制.
 - prepare_engine_dir: 解压后修复权限.
@@ -33,11 +32,7 @@ from typing import Any
 import httpx
 
 from gdpm.cli.common import console
-from gdpm.constants import (
-    GODOT_DOWNLOAD_BASE,
-    GODOT_DOWNLOAD_MIRROR,
-    VERSIONS_JSON_URL,
-)
+from gdpm.constants import GODOT_DOWNLOAD_MIRROR
 
 
 def get_engines_dir() -> Path:
@@ -178,9 +173,10 @@ def _download_query(tag: str, csharp: bool = False) -> str:
 
 def build_download_url(tag: str, csharp: bool = False) -> str:
     """
-    构造官方下载接口 URL (downloads.godotengine.org).
+    构造自建镜像下载接口 URL (gdpm 唯一下载通道, 无配置项).
 
-    纯字符串拼接无网络请求, 302 重定向由下载时的 httpx 跟随.
+    纯字符串拼接无网络请求, 302 重定向由下载时的 httpx 跟随;
+    query 语义与官方接口逐字一致, 回源由 Worker 服务端处理.
 
     ----
 
@@ -194,44 +190,15 @@ def build_download_url(tag: str, csharp: bool = False) -> str:
     Returns
     ----
     str
-        官方下载接口 URL.
+        自建镜像下载接口 URL.
     """
-    return f"{GODOT_DOWNLOAD_BASE}/?{_download_query(tag, csharp)}"
-
-
-def build_download_urls(tag: str, csharp: bool = False) -> list[str]:
-    """
-    下载候选 URL 列表 (官方与自建镜像两个 base 写死, 无配置项).
-
-    install 按序尝试: 官方接口优先, 走不通 (未收录 404、本地证书拦截、
-    故障) 自动切换自建镜像 godot-download.playereg.top —— 镜像内部
-    已完成 GitHub 中继与老版本 slug 容错, 客户端不再直连 GitHub.
-
-    ----
-
-    Parameters
-    ----
-    tag : str
-        发布 tag, 如 '4.7.2-stable'.
-    csharp : bool, optional
-        是否为 C# (mono) 版本.
-
-    Returns
-    ----
-    list[str]
-        [官方 URL, 镜像 URL], 两端 query 形态完全一致.
-    """
-    query = _download_query(tag, csharp)
-    return [
-        f"{GODOT_DOWNLOAD_BASE}/?{query}",
-        f"{GODOT_DOWNLOAD_MIRROR}/?{query}",
-    ]
+    return f"{GODOT_DOWNLOAD_MIRROR}/?{_download_query(tag, csharp)}"
 
 
 @dataclass(frozen=True)
 class RemoteRelease:
     """
-    官方 versions.json 中的单个版本条目.
+    versions.json 中的单个版本条目 (schema 与官方一致, 源为自建镜像).
 
     ----
 
@@ -354,11 +321,10 @@ def parse_versions_json(data: list[Any]) -> list[RemoteRelease]:
 
 def fetch_remote_versions() -> list[RemoteRelease]:
     """
-    拉取全部可用版本 (双通道: 官方 versions.json 优先, 自建镜像兜底).
+    从自建镜像 /versions.json 拉取全部可用版本 (唯一通道).
 
-    官方失败 (网络、本地证书拦截、故障) 时自动切换镜像的 /versions.json
-    (Worker 经 GitHub releases API 整理, schema 与官方一致);
-    两通道均失败时抛出最后一次异常由调用方处理.
+    端点由 Worker 经 GitHub releases API 整理, schema 与官方一致;
+    失败时抛出异常由调用方处理.
 
     ----
 
@@ -369,18 +335,12 @@ def fetch_remote_versions() -> list[RemoteRelease]:
 
     Raises
     ----
-    Exception
-        两通道均失败 (网络请求失败、响应非 2xx 或 JSON 解析失败).
+    httpx.HTTPError
+        网络请求失败或响应非 2xx (JSON 解析失败时抛 ValueError).
     """
-    errors: list[Exception] = []
-    for source in (VERSIONS_JSON_URL, f"{GODOT_DOWNLOAD_MIRROR}/versions.json"):
-        try:
-            resp = httpx.get(source, timeout=10)
-            resp.raise_for_status()
-            return parse_versions_json(resp.json())
-        except Exception as error:
-            errors.append(error)
-    raise errors[-1]
+    resp = httpx.get(f"{GODOT_DOWNLOAD_MIRROR}/versions.json", timeout=10)
+    resp.raise_for_status()
+    return parse_versions_json(resp.json())
 
 
 def ensure_executable(path: Path) -> None:
