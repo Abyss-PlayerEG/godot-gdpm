@@ -13,7 +13,7 @@ gdpm → godot-download.playereg.top/?version=&flavor=&slug=&platform=
         │   ├─ 302 → 对象存储 (≥4.4)      → 直接 302 给客户端 (本机直连可达)
         │   └─ 302 → github.com (≤4.3)    → 302 到本域 /gh/... 中继
         ├─ 官方 404 (1.x/2.x/3.0-mac 未收录)
-        │   → GitHub releases API 资产名匹配 (同 gdpm 兜底规则) → /gh/... 中继
+        │   → GitHub releases API 资产名匹配 (平台关键词 + mono 过滤) → /gh/... 中继
         └─ /gh/ 中继: CF→GitHub 回源 (海外直连, 不经本机网络)
             ├─ 完整 GET → 边缘缓存 30 天
             └─ Range 206 (gdpm 分片) → 逐片回源透传
@@ -66,19 +66,16 @@ curl -sI "<同 3 的最终中继 URL>" | grep -i cf-cache-status
 
 ## gdpm 接入
 
-两种方式任选, query 语义与官方完全一致:
+gdpm 侧**已写死双通道, 无需任何配置**: 官方接口优先, 走不通 (404 未收录、
+本地证书拦截、故障) 自动切换本镜像 —— 官方与镜像的 query 形态逐字一致,
+客户端不再直连 GitHub:
 
-```bash
-# 方式 A: 环境变量 (单次/临时)
-GDPM_GODOT_MIRROR=https://godot-download.playereg.top gdpm godot install 4.3
-
-# 方式 B: 全局配置 (持久, 优先级低于 env)
-gdpm config set godot_mirror https://godot-download.playereg.top
-gdpm godot install 4.3
-
-# 回到官方
-gdpm config set godot_mirror ""
 ```
+官方 downloads.godotengine.org ──失败──> 本镜像 godot-download.playereg.top
+```
+
+换镜像域名时改两处常量即可: `src/gdpm/constants.py` 的
+`GODOT_DOWNLOAD_BASE` / `GODOT_DOWNLOAD_MIRROR`。
 
 ## 运维备注
 

@@ -14,6 +14,7 @@ gdpm is a dependency package manager for Godot plugins, similar to uv/npm/cargo.
 | Format | `uv run ruff format src/` |
 | All checks | `python3 scripts/check.py` |
 | Update version | `python3 scripts/version.py <version> [tag]` |
+| Deploy Worker | `python3 scripts/deploy_worker.py [--dry-run]` |
 | Install (editable) | `pip install -e .` |
 
 ## Project Structure
@@ -306,4 +307,4 @@ gh release create v0.1.0 --title "v0.1.0" --notes-file RELEASE_NOTES.md
 - `gdpm cache` for managing download cache
 - `.engines-conf.json` stores per-project Godot engine configuration
 - `~/.gdpm/engines/` stores downloaded Godot binaries
-- `~/.gdpm/github_token.txt` stores GitHub API token (optional)
+- Engine downloads use two hardcoded channels: official `downloads.godotengine.org` first, then self-hosted mirror `godot-download.playereg.top`

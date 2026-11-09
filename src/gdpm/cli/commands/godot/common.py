@@ -9,8 +9,8 @@ Notes
 ----
 - get_engines_dir: 获取全局引擎目录.
 - normalize_version: 版本号规范化为 tag 格式.
-- build_download_url: 构造下载接口 URL (支持镜像 base 覆盖, 无网络请求).
-- build_github_download_urls: 旧 GitHub 方案按资产名构造下载地址候选 (兜底).
+- build_download_url: 构造官方下载接口 URL (无网络请求).
+- build_download_urls: 官方优先、自建镜像兜底的下载候选 (base 写死).
 - fetch_remote_versions: 从官方 versions.json 拉取版本.
 - ensure_executable: 确保文件具有执行权限.
 - find_engine_binary: 在引擎目录中查找二进制.
@@ -33,9 +33,11 @@ from typing import Any
 import httpx
 
 from gdpm.cli.common import console
-from gdpm.config.global_config import read_global_config
-from gdpm.constants import VERSIONS_JSON_URL, get_github_headers
-from gdpm.utils.install import get_godot_platform
+from gdpm.constants import (
+    GODOT_DOWNLOAD_BASE,
+    GODOT_DOWNLOAD_MIRROR,
+    VERSIONS_JSON_URL,
+)
 
 
 def get_engines_dir() -> Path:
@@ -150,14 +152,9 @@ def _official_asset(version: str, csharp: bool = False) -> tuple[str, str]:
     return slug, "linux.64"
 
 
-def build_download_url(tag: str, csharp: bool = False) -> str:
+def _download_query(tag: str, csharp: bool = False) -> str:
     """
-    构造下载接口 URL (默认官方 downloads.godotengine.org).
-
-    纯字符串拼接无网络请求, 302 重定向由下载时的 httpx 跟随.
-    自建镜像 (如自部署的 Cloudflare Worker, 仿官方 query 语义) 按优先级
-    覆盖 base: 环境变量 GDPM_GODOT_MIRROR > 全局配置 godot_mirror >
-    官方地址; 尾部斜杠统一去除, 产出 URL 形态与官方完全一致.
+    构造下载接口 query 参数 (官方与镜像共用, 语义逐字一致).
 
     ----
 
@@ -171,87 +168,64 @@ def build_download_url(tag: str, csharp: bool = False) -> str:
     Returns
     ----
     str
-        下载接口 URL.
+        'version=...&flavor=...&slug=...&platform=...' 形式的 query 串.
     """
     version, _, flavor = tag.partition("-")
     flavor = flavor or "stable"
     slug, platform_id = _official_asset(version, csharp)
-    base = (
-        os.environ.get("GDPM_GODOT_MIRROR", "")
-        or read_global_config().godot_mirror
-        or "https://downloads.godotengine.org"
-    ).rstrip("/")
-    return (
-        f"{base}/?version={version}&flavor={flavor}&slug={slug}&platform={platform_id}"
-    )
+    return f"version={version}&flavor={flavor}&slug={slug}&platform={platform_id}"
 
 
-def build_github_download_urls(tag: str, csharp: bool = False) -> list[str]:
+def build_download_url(tag: str, csharp: bool = False) -> str:
     """
-    旧 GitHub 方案: 按 release 资产名匹配构造下载地址候选 (官方通道兜底).
+    构造官方下载接口 URL (downloads.godotengine.org).
 
-    官方 downloads.godotengine.org 走不通 (未收录如 1.x/2.x/3.0-mac、
-    宕机、本地证书拦截) 时自动回退; 与历史实现一致使用 verify=False
-    (本机存在本地拦截证书如加速器时的唯一通路).
-
-    查询顺序: godot 主仓库 (历史方案同源) -> godot-builds (官方跳板同源),
-    每仓库取首个匹配资产; 返回全部去重候选, 由调用方按序尝试 ——
-    单个仓库/通道 504 或失效时自动换下一个.
+    纯字符串拼接无网络请求, 302 重定向由下载时的 httpx 跟随.
 
     ----
 
     Parameters
     ----
     tag : str
-        发布 tag, 如 '4.3-stable'.
+        发布 tag, 如 '4.7.2-stable'.
     csharp : bool, optional
-        是否获取 C# (mono) 版本.
+        是否为 C# (mono) 版本.
+
+    Returns
+    ----
+    str
+        官方下载接口 URL.
+    """
+    return f"{GODOT_DOWNLOAD_BASE}/?{_download_query(tag, csharp)}"
+
+
+def build_download_urls(tag: str, csharp: bool = False) -> list[str]:
+    """
+    下载候选 URL 列表 (官方与自建镜像两个 base 写死, 无配置项).
+
+    install 按序尝试: 官方接口优先, 走不通 (未收录 404、本地证书拦截、
+    故障) 自动切换自建镜像 godot-download.playereg.top —— 镜像内部
+    已完成 GitHub 中继与老版本 slug 容错, 客户端不再直连 GitHub.
+
+    ----
+
+    Parameters
+    ----
+    tag : str
+        发布 tag, 如 '4.7.2-stable'.
+    csharp : bool, optional
+        是否为 C# (mono) 版本.
 
     Returns
     ----
     list[str]
-        候选下载 URL 列表, 全部仓库无匹配时为空列表.
+        [官方 URL, 镜像 URL], 两端 query 形态完全一致.
     """
-    mono = "_mono" if csharp else ""
-    system = get_godot_platform()
-
-    if "macos" in system:
-        keywords: tuple[str, ...] = ("osx", "macos")
-    elif "linux" in system:
-        # x11: 3.x 资产名为 Godot_v3.x_x11.64.zip
-        keywords = ("linux", "x11")
-    else:
-        keywords = ("win",)
-
-    urls: list[str] = []
-    for repo in ("godotengine/godot", "godotengine/godot-builds"):
-        try:
-            resp = httpx.get(
-                f"https://api.github.com/repos/{repo}/releases/tags/{tag}",
-                headers=get_github_headers(),
-                timeout=10,
-                verify=False,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-        except Exception:
-            continue
-
-        for asset in data.get("assets", []):
-            name = asset["name"]
-            if "server" in name:
-                # 排除 linux server 构建
-                continue
-            if mono and "_mono" not in name:
-                continue
-            if not mono and "_mono" in name:
-                continue
-            if name.endswith(".zip") and any(k in name for k in keywords):
-                candidate = str(asset["browser_download_url"])
-                if candidate not in urls:
-                    urls.append(candidate)
-                break
-    return urls
+    query = _download_query(tag, csharp)
+    return [
+        f"{GODOT_DOWNLOAD_BASE}/?{query}",
+        f"{GODOT_DOWNLOAD_MIRROR}/?{query}",
+    ]
 
 
 @dataclass(frozen=True)

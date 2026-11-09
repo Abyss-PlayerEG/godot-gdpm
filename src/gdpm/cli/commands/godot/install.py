@@ -34,8 +34,7 @@ from rich.prompt import Confirm
 
 from gdpm.cli.base import GdpmCommand
 from gdpm.cli.commands.godot.common import (
-    build_download_url,
-    build_github_download_urls,
+    build_download_urls,
     get_engines_dir,
     normalize_version,
 )
@@ -194,8 +193,8 @@ def godot_install(version: str, csharp: bool) -> None:
         # 确认后删除旧安装目录以便重装
         shutil.rmtree(ver_dir, onexc=lambda *args: None)
 
-    # 官方接口按平台与代际拼接, 无网络请求且恒非空
-    url = build_download_url(tag, csharp)
+    # 官方优先, 官方走不通切换自建镜像 (两个 base 写死在 constants)
+    urls = build_download_urls(tag, csharp)
 
     plat = get_godot_platform()
     ext = get_godot_ext()
@@ -205,8 +204,8 @@ def godot_install(version: str, csharp: bool) -> None:
     # 统一并行度: 分片数与进度条均取全局配置 parallel_downloads
     workers = read_global_config().parallel_downloads
 
-    def _run_download(target_url: str, verify: bool = True) -> None:
-        """一次完整的进度显示 + 分片下载 (每次尝试全新进度条)."""
+    def _run_download(target_url: str) -> None:
+        """一次完整的进度显示 + 分片下载 (每次尝试全新进度条, 严格证书校验)."""
         progress = Progress(
             # 模板不染色: 样式由 name 字段自带 (单 Progress 共列, 按任务着色)
             TextColumn("{task.fields[name]}"),
@@ -241,7 +240,6 @@ def godot_install(version: str, csharp: bool) -> None:
                 on_progress=on_progress,
                 on_slice=on_slice,
                 workers=workers,
-                verify=verify,
             )
 
     def _report_failure(error: Exception) -> None:
@@ -265,47 +263,27 @@ def godot_install(version: str, csharp: bool) -> None:
         console.print("\n[yellow]Cancelled.[/yellow]")
         raise SystemExit(130) from None
 
-    try:
-        _run_download(url)
-    except KeyboardInterrupt:
-        _abort_download()
-    except Exception as official_error:
-        # 官方通道走不通 (未收录如 1.x/3.0-mac、证书拦截、故障) → 自动切换
-        # 旧 GitHub 方案: 候选按序尝试 (单个仓库 504/失效时自动换下一个)
-        github_urls: list[str] = []
+    last_error: Exception | None = None
+    for index, target_url in enumerate(urls):
         try:
-            github_urls = build_github_download_urls(tag, csharp)
-        except Exception:
-            github_urls = []
-        if not github_urls:
-            _report_failure(official_error)
-            if zip_path.exists():
-                zip_path.unlink()
-            return
-        console.print(
-            f"[dim]Official channel failed ({type(official_error).__name__}), "
-            "switching to GitHub download...[/dim]"
-        )
-        last_error: Exception | None = None
-        for github_url in github_urls:
-            try:
-                # 旧方案同款: GitHub 直链放宽证书校验 (本地拦截证书唯一通路)
-                _run_download(github_url, verify=False)
-                last_error = None
-                break
-            except KeyboardInterrupt:
-                _abort_download()
-            except Exception as candidate_error:
+            _run_download(target_url)
+            last_error = None
+            break
+        except KeyboardInterrupt:
+            _abort_download()
+        except Exception as attempt_error:
+            last_error = attempt_error
+            if index + 1 < len(urls):
+                # 官方失败才有下一站: 自动切换自建镜像
                 console.print(
-                    f"[dim]  GitHub candidate failed: "
-                    f"{type(candidate_error).__name__} ({github_url})[/dim]"
+                    f"[dim]Official channel failed ({type(attempt_error).__name__}), "
+                    "switching to download mirror...[/dim]"
                 )
-                last_error = candidate_error
-        if last_error is not None:
-            _report_failure(last_error)
-            if zip_path.exists():
-                zip_path.unlink()
-            return
+    if last_error is not None:
+        _report_failure(last_error)
+        if zip_path.exists():
+            zip_path.unlink()
+        return
 
     console.print("Extracting...")
 

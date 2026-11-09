@@ -9,7 +9,7 @@
  *      - 非 GitHub (对象存储, 如 godot-releases.nbg1...) → 直接 302 给客户端
  *      - github.com → 302 到本域 /gh/... 中继 (客户端只走 CF 边缘)
  *   2. 官方 404 (1.x/2.x/3.0-mac 未收录) → GitHub releases API 按资产名
- *      匹配 (与 gdpm build_github_download_urls 同规则) → 302 到 /gh/... 中继
+ *      匹配 (平台关键词 + mono 过滤) → 302 到 /gh/... 中继
  *   3. /gh/ 中继: CF → GitHub 回源 (海外直连, 不经本机网络), 完整 GET 边缘
  *      缓存 30 天, Range 分片透传 (206 不缓存, 逐片回源, CF→GitHub 稳定)
  *
