@@ -11,7 +11,7 @@ Notes
 - normalize_version: 版本号规范化为 tag 格式.
 - build_download_url: 构造官方下载接口 URL (无网络请求).
 - build_download_urls: 官方优先、自建镜像兜底的下载候选 (base 写死).
-- fetch_remote_versions: 从官方 versions.json 拉取版本.
+- fetch_remote_versions: 拉取版本 (官方 versions.json 优先, 自建镜像兜底).
 - ensure_executable: 确保文件具有执行权限.
 - find_engine_binary: 在引擎目录中查找二进制.
 - prepare_engine_dir: 解压后修复权限.
@@ -354,9 +354,11 @@ def parse_versions_json(data: list[Any]) -> list[RemoteRelease]:
 
 def fetch_remote_versions() -> list[RemoteRelease]:
     """
-    从官方 versions.json 拉取全部可用版本.
+    拉取全部可用版本 (双通道: 官方 versions.json 优先, 自建镜像兜底).
 
-    静态文件无速率限制, 失败时抛出 httpx 异常由调用方处理.
+    官方失败 (网络、本地证书拦截、故障) 时自动切换镜像的 /versions.json
+    (Worker 经 GitHub releases API 整理, schema 与官方一致);
+    两通道均失败时抛出最后一次异常由调用方处理.
 
     ----
 
@@ -367,12 +369,18 @@ def fetch_remote_versions() -> list[RemoteRelease]:
 
     Raises
     ----
-    httpx.HTTPError
-        网络请求失败或响应非 2xx.
+    Exception
+        两通道均失败 (网络请求失败、响应非 2xx 或 JSON 解析失败).
     """
-    resp = httpx.get(VERSIONS_JSON_URL, timeout=10)
-    resp.raise_for_status()
-    return parse_versions_json(resp.json())
+    errors: list[Exception] = []
+    for source in (VERSIONS_JSON_URL, f"{GODOT_DOWNLOAD_MIRROR}/versions.json"):
+        try:
+            resp = httpx.get(source, timeout=10)
+            resp.raise_for_status()
+            return parse_versions_json(resp.json())
+        except Exception as error:
+            errors.append(error)
+    raise errors[-1]
 
 
 def ensure_executable(path: Path) -> None:

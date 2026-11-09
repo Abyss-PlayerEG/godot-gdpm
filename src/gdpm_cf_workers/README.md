@@ -77,6 +77,24 @@ gdpm 侧**已写死双通道, 无需任何配置**: 官方接口优先, 走不�
 换镜像域名时改两处常量即可: `src/gdpm/constants.py` 的
 `GODOT_DOWNLOAD_BASE` / `GODOT_DOWNLOAD_MIRROR`。
 
+## /versions.json — 自建版本清单
+
+仿官方 `https://godotengine.org/versions.json`（顶层 `[{name, releases}]` 数组、
+组间版本号倒序、组内 stable→rc→beta→dev、英文展示日期），数据源为
+**GitHub releases API** 整理两个仓库的已发布版本：
+
+- `godot-builds`（357 个 release，4 页全量：含 dev/beta 快照）+ `godot` 主仓库（补缺，含 1.x/2.x/3.x stable）
+- 单页失败自动重试 1 次；组装结果缓存 6 小时（`x-gdpm-built-at` 头判定），
+  GitHub API 不可用时回退上一份；响应 `cache-control: public, max-age=3600`
+- 与官方差异（预期内）：仅含 GitHub 有 tag 的版本（官方独有的 2.0.4/2.0.4.1
+  两组无 GitHub tag，不覆盖）；官方可能缺而 GitHub 有的会补上（如 3.2.4）；
+  `release_notes` 指向 GitHub release 页而非 godotengine.org 文章
+- gdpm 侧 `fetch_remote_versions` 同样双通道：官方优先，失败自动切本端点
+
+```bash
+curl -s https://godot-download.playereg.top/versions.json | head -c 300
+```
+
 ## 运维备注
 
 - 免费档 10 万请求/天: 单次引擎安装约 40 请求, 余量巨大

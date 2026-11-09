@@ -12,14 +12,24 @@
  *      匹配 (平台关键词 + mono 过滤) → 302 到 /gh/... 中继
  *   3. /gh/ 中继: CF → GitHub 回源 (海外直连, 不经本机网络), 完整 GET 边缘
  *      缓存 30 天, Range 分片透传 (206 不缓存, 逐片回源, CF→GitHub 稳定)
+ *   4. /versions.json: 仿官方 godotengine.org/versions.json, 经 GitHub
+ *      releases API 整理两仓库已发布版本 (含 dev/beta 快照), schema 一致;
+ *      组装结果缓存 6 小时, GitHub API 不可用时回退上一份
  *
  * 部署与验证见同目录 README.md.
  */
 
 const OFFICIAL_BASE = "https://downloads.godotengine.org/";
-const REPOS = ["godotengine/godot", "godotengine/godot-builds"];
+const REPOS = ["godotengine/godot-builds", "godotengine/godot"];
 const API_CACHE_TTL = 3600;
 const ASSET_CACHE_TTL = 30 * 24 * 3600;
+const VERSIONS_TTL = 6 * 3600;
+const VERSIONS_BUILT_AT = "x-gdpm-built-at";
+const RELEASE_PAGES_CAP = 8;
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 export default {
   async fetch(request, env, ctx) {
@@ -32,11 +42,18 @@ export default {
       return resolveAsset(request, url, env, ctx);
     }
 
-    if (url.pathname.startsWith("/gh/godotengine/")) {
+    if (url.pathname === "/gh/godotengine/") {
       if (request.method !== "GET" && request.method !== "HEAD") {
         return json(405, { error: "method_not_allowed" });
       }
       return relayGitHub(request, url, ctx);
+    }
+
+    if (url.pathname === "/versions.json") {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return json(405, { error: "method_not_allowed" });
+      }
+      return versionsJson(request, env, ctx);
     }
 
     return json(404, { error: "not_found" });
@@ -247,4 +264,167 @@ function json(status, body) {
       "cache-control": "no-store",
     },
   });
+}
+
+/* ---------- /versions.json: 仿官方 schema, 源为 GitHub releases ---------- */
+
+async function versionsJson(request, env, ctx) {
+  const cacheKey = new Request("https://gdpm-worker-cache/versions.json");
+  const hit = await caches.default.match(cacheKey);
+  const builtAt = hit ? Number(hit.headers.get(VERSIONS_BUILT_AT) || 0) : 0;
+
+  if (hit && builtAt && Date.now() - builtAt < VERSIONS_TTL * 1000) {
+    return versionsResponse(request, hit.body, hit.headers);
+  }
+
+  let body;
+  try {
+    body = JSON.stringify(await assembleVersions(env));
+  } catch (error) {
+    // GitHub API 不可用: 回退上一份组装结果 (即使已过重建周期)
+    if (hit) return versionsResponse(request, hit.body, hit.headers);
+    return json(502, { error: "versions_build_failed", detail: String(error) });
+  }
+
+  const stored = new Response(body, {
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": `public, max-age=${VERSIONS_TTL}`,
+      [VERSIONS_BUILT_AT]: String(Date.now()),
+    },
+  });
+  ctx.waitUntil(caches.default.put(cacheKey, stored.clone()));
+  return versionsResponse(request, body, stored.headers);
+}
+
+function versionsResponse(request, body, headers) {
+  const out = new Response(request.method === "HEAD" ? null : body, { headers });
+  out.headers.set("cache-control", "public, max-age=3600");
+  out.headers.set("access-control-allow-origin", "*");
+  return out;
+}
+
+async function assembleVersions(env) {
+  const releases = await fetchAllReleases(env);
+  const groups = new Map();
+
+  for (const rel of releases) {
+    if (rel.draft) continue;
+    const tag = String(rel.tag_name || "");
+    const idx = tag.lastIndexOf("-");
+    const version = tag.slice(0, idx);
+    const flavor = tag.slice(idx + 1);
+    if (!groups.has(version)) groups.set(version, []);
+    groups.get(version).push({
+      name: flavor,
+      release_date: formatDisplayDate(rel.published_at),
+      release_notes: rel.html_url || "",
+      _ts: String(rel.published_at || ""),
+    });
+  }
+
+  const out = [];
+  for (const [version, list] of groups) {
+    // 组内: 通道序 (stable > rc > beta > alpha > dev), 同通道序号大者前,
+    // 再按发布时间倒序 —— 与官方 versions.json 的组内顺序一致
+    list.sort(
+      (a, b) =>
+        channelRank(b.name) - channelRank(a.name) ||
+        channelNum(b.name) - channelNum(a.name) ||
+        (a._ts < b._ts ? 1 : a._ts > b._ts ? -1 : 0)
+    );
+    out.push({
+      name: version,
+      releases: list.map(({ name, release_date, release_notes }) => ({
+        name,
+        release_date,
+        release_notes,
+      })),
+    });
+  }
+  // 组间: 版本号倒序 (4.8 → 4.7.2 → 4.7 → ... → 1.1), 与官方一致
+  out.sort((a, b) => compareVersion(b.name, a.name));
+  return out;
+}
+
+async function fetchAllReleases(env) {
+  const headers = {
+    accept: "application/vnd.github+json",
+    "user-agent": "godot-download-worker",
+  };
+  if (env.GITHUB_TOKEN) headers.authorization = `Bearer ${env.GITHUB_TOKEN}`;
+
+  const seen = new Set();
+  const merged = [];
+
+  for (const repo of REPOS) {
+    for (let page = 1; page <= RELEASE_PAGES_CAP; page++) {
+      const batch = await fetchReleasePage(
+        `https://api.github.com/repos/${repo}/releases?per_page=100&page=${page}`,
+        headers,
+        repo,
+        page
+      );
+      if (!Array.isArray(batch) || batch.length === 0) break;
+      for (const rel of batch) {
+        const tag = String(rel.tag_name || "");
+        if (seen.has(tag)) continue;
+        // 只收规范版本 tag (4.7.2-stable / 4.8-beta2 / 2.0.4.1-stable),
+        // 过滤杂物; 版本号允许多段 (2.0.4.1)
+        if (!/^\d+(\.\d+)+-[a-z]+\d*$/i.test(tag)) continue;
+        seen.add(tag);
+        merged.push(rel);
+      }
+      if (batch.length < 100) break;
+    }
+  }
+  if (merged.length === 0) {
+    throw new Error("no releases parsed from GitHub");
+  }
+  return merged;
+}
+
+async function fetchReleasePage(url, headers, repo, page) {
+  // 单次重试: 冷启动首建曾因 GitHub 瞬时抖动整轮失败
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const resp = await fetch(url, { headers });
+      if (resp.ok) return resp.json();
+      lastError = new Error(`GitHub API ${resp.status} (${repo} p${page})`);
+    } catch (error) {
+      lastError = new Error(`GitHub API unreachable (${repo} p${page}): ${error}`);
+    }
+    if (attempt === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+  }
+  // 任一页最终失败整体抛出: 由 versionsJson 回退上一份, 不产出半截列表
+  throw lastError;
+}
+
+function formatDisplayDate(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return String(iso || "");
+  return `${Number(m[3])} ${MONTHS[Number(m[2]) - 1] || ""} ${m[1]}`;
+}
+
+function channelRank(flavor) {
+  const channel = String(flavor).replace(/\d+$/, "");
+  return { stable: 5, rc: 4, beta: 3, alpha: 2, dev: 1 }[channel] ?? 0;
+}
+
+function channelNum(flavor) {
+  const m = String(flavor).match(/(\d+)$/);
+  return m ? Number(m[1]) : 0;
+}
+
+function compareVersion(a, b) {
+  const pa = String(a).split(".").map((n) => Number(n) || 0);
+  const pb = String(b).split(".").map((n) => Number(n) || 0);
+  for (let i = 0; i < 3; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
 }
