@@ -1,0 +1,154 @@
+"""
+gdpm search 命令
+
+- 在 Godot Asset Store 中搜索插件: 查询 Store API, 过滤模板, 输出结果.
+
+----
+
+Notes
+----
+- 查询 Store API: 按关键词检索插件.
+- 过滤项目模板: 默认排除模板类插件.
+- 输出结果: 格式化列表或 JSON.
+- search: 命令入口, 内部定义异步 _search.
+"""
+
+from __future__ import annotations
+
+import asyncio
+
+import click
+
+from gdpm.cli.base import GdpmCommand
+from gdpm.cli.common import console, is_template
+from gdpm.cli.display import format_plugin_meta, format_version_info
+from gdpm.config.project import read_project_config
+from gdpm.store.client import StoreClient
+
+
+@click.command(
+    cls=GdpmCommand,
+    category="dependencies",
+    examples=[
+        ("gdpm search mcp", "Search for MCP plugins"),
+        ("gdpm search ai --limit 5", "Show top 5 results"),
+        ("gdpm search controller --all", "Include templates"),
+        ("gdpm search input --sort downloads", "Sort by downloads"),
+    ],
+)
+@click.argument("query")
+@click.option("--limit", "-n", default=20, help="Number of results")
+@click.option(
+    "--sort",
+    type=click.Choice(
+        ["relevance", "updated_desc", "reviews_desc", "created_desc"],
+    ),
+    default="relevance",
+    help="Sort order: relevance, updated_desc, reviews_desc, created_desc",
+)
+@click.option("--all", "show_all", is_flag=True, help="Include project templates")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def search(query: str, limit: int, sort: str, show_all: bool, as_json: bool) -> None:
+    """在 Godot Asset Store 中搜索插件."""
+
+    async def _search() -> None:
+        """执行搜索并格式化输出."""
+        from gdpm.cli.common import find_project_root
+
+        root = find_project_root()
+        config_path = root / "gdproject.toml"
+        project_godot = ""
+
+        if config_path.exists():
+            try:
+                config = read_project_config(config_path)
+                project_godot = config.godot
+            except Exception:
+                pass
+
+        client = StoreClient()
+        try:
+            results = await client.search(
+                query, limit=limit, sort=sort, include_projects=show_all
+            )
+        finally:
+            await client.close()
+
+        # 除非指定 --all, 否则过滤项目模板
+        if not show_all:
+            results = [r for r in results if not is_template(r.tags)]
+
+        if not results:
+            console.print(f"No results found for [bold]{query}[/bold]")
+            return
+
+        if as_json:
+            import json
+
+            output = [
+                {
+                    "slug": p.slug,
+                    "name": p.name,
+                    "description": p.description,
+                    "author": p.author,
+                    "license": p.license,
+                    "tags": p.tags,
+                    "stars": p.stars,
+                }
+                for p in results
+            ]
+            console.print(json.dumps(output, indent=2))
+            return
+
+        console.print(
+            f"Search results for [bold]{query}[/bold] ({len(results)} found):"
+        )
+
+        for plugin in results:
+            add_route = f"{plugin.publisher_slug}/{plugin.slug}"
+
+            lines = []
+            lines.append(f"  [bold cyan]{plugin.name}[/bold cyan]")
+
+            desc = plugin.description.replace("\n", " ")[:100]
+            if len(plugin.description) > 100:
+                desc += "..."
+            lines.append(f"    {desc}")
+
+            meta = format_plugin_meta(
+                license_name=plugin.license,
+                stars=plugin.stars,
+                tags=plugin.tags,
+                store_url=plugin.store_url,
+            )
+            lines.extend(meta)
+
+            if not is_template(plugin.tags):
+                # 查询最新版本并校验 Godot 兼容性
+                try:
+                    versions = await client.get_versions(
+                        plugin.publisher_slug, plugin.slug
+                    )
+                    if versions:
+                        latest = versions[0]
+                        ver_info = format_version_info(
+                            ver=latest.get("version", ""),
+                            min_godot=latest.get("min_godot_version", ""),
+                            max_godot=latest.get("max_godot_version", ""),
+                            project_godot=project_godot,
+                        )
+                        if ver_info:
+                            lines.extend(ver_info)
+                except Exception:
+                    pass
+
+            if is_template(plugin.tags):
+                lines.append(
+                    "    [dim]Project template - not installable as addon[/dim]"
+                )
+            elif project_godot:
+                lines.append(f"    [green]gdpm add {add_route}[/green]")
+
+            console.print("\n".join(lines))
+
+    asyncio.run(_search())

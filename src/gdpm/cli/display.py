@@ -1,4 +1,16 @@
-"""CLI display utilities."""
+"""
+CLI 展示工具
+
+- 提供插件版本兼容性与元数据的格式化/打印函数, 以及 JSON 输出工具.
+
+----
+
+Notes
+----
+- format_version_info / display_version_info: 版本与兼容性信息.
+- format_plugin_meta / display_plugin_meta: 插件元数据.
+- output_json: JSON 输出.
+"""
 
 from __future__ import annotations
 
@@ -12,11 +24,33 @@ def format_version_info(
     max_godot: str,
     project_godot: str = "",
 ) -> list[str]:
-    """Format version and compatibility info."""
+    """
+    格式化版本与兼容性信息行.
+
+    ----
+
+    Parameters
+    ----
+    ver : str
+        插件版本号.
+    min_godot : str
+        最低 Godot 版本, 可为空.
+    max_godot : str
+        最高 Godot 版本, 可为空.
+    project_godot : str, optional
+        项目 Godot 版本, 为空则不做兼容性判断.
+
+    Returns
+    ----
+    list[str]
+        可直接传给 console.print 的富文本行列表.
+    """
     lines = []
+    # 统一显示为 v 前缀
     ver_display = ver if ver.startswith(("v", "V")) else f"v{ver}"
     lines.append(f"    [dim]{ver_display}[/dim]")
 
+    # 字符串 "None" 与空串同样视为未设置
     godot_parts = []
     if min_godot and min_godot not in ("None", ""):
         godot_parts.append(f">={min_godot}")
@@ -26,6 +60,7 @@ def format_version_info(
     if godot_parts:
         lines.append(f"    [dim]Godot {' '.join(godot_parts)}[/dim]")
 
+    # 提供项目 Godot 版本时输出兼容性标记
     if project_godot:
         compatible, msg = is_compatible(project_godot, min_godot, max_godot)
         if compatible:
@@ -42,7 +77,27 @@ def format_plugin_meta(
     tags: list[str] | None = None,
     store_url: str = "",
 ) -> list[str]:
-    """Format plugin metadata lines."""
+    """
+    格式化插件元数据行.
+
+    ----
+
+    Parameters
+    ----
+    license_name : str, optional
+        许可证名称.
+    stars : int, optional
+        商店评分或星数.
+    tags : list[str] | None, optional
+        标签列表.
+    store_url : str, optional
+        商店页面地址.
+
+    Returns
+    ----
+    list[str]
+        可直接传给 console.print 的富文本行列表.
+    """
     lines = []
     parts = []
     if license_name:
@@ -65,7 +120,22 @@ def display_version_info(
     max_godot: str,
     project_godot: str = "",
 ) -> None:
-    """Display version and compatibility info."""
+    """
+    打印版本与兼容性信息.
+
+    ----
+
+    Parameters
+    ----
+    ver : str
+        插件版本号.
+    min_godot : str
+        最低 Godot 版本.
+    max_godot : str
+        最高 Godot 版本.
+    project_godot : str, optional
+        项目 Godot 版本.
+    """
     lines = format_version_info(ver, min_godot, max_godot, project_godot)
     console.print("\n".join(lines))
 
@@ -76,13 +146,37 @@ def display_plugin_meta(
     tags: list[str] | None = None,
     store_url: str = "",
 ) -> None:
-    """Display plugin metadata."""
+    """
+    打印插件元数据.
+
+    ----
+
+    Parameters
+    ----
+    license_name : str, optional
+        许可证名称.
+    stars : int, optional
+        商店评分或星数.
+    tags : list[str] | None, optional
+        标签列表.
+    store_url : str, optional
+        商店页面地址.
+    """
     lines = format_plugin_meta(license_name, stars, tags, store_url)
     console.print("\n".join(lines))
 
 
 def output_json(data: object) -> None:
-    """Output data as JSON."""
+    """
+    以 JSON 格式打印数据.
+
+    ----
+
+    Parameters
+    ----
+    data : object
+        可被 json 序列化的数据.
+    """
     import json
 
     console.print(json.dumps(data, indent=2, ensure_ascii=False))

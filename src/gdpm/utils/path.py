@@ -1,4 +1,14 @@
-"""Path utilities."""
+"""
+路径工具
+
+- 提供路径显示缩短等辅助函数.
+
+----
+
+Notes
+----
+- shorten_path: 缩短路径显示.
+"""
 
 from __future__ import annotations
 
@@ -6,14 +16,22 @@ from pathlib import Path
 
 
 def shorten_path(path: str, max_len: int = 35) -> str:
-    """Shorten a path by replacing home directory with ~ and truncating.
+    """
+    缩短路径显示: 家目录替换为 ~, 超长时截断.
 
-    Args:
-        path: Full path string
-        max_len: Maximum length before truncation
+    ----
 
-    Returns:
-        Shortened path string
+    Parameters
+    ----
+    path : str
+        完整路径字符串.
+    max_len : int, optional
+        截断前的最大长度.
+
+    Returns
+    ----
+    str
+        缩短后的路径字符串.
     """
     short = path.replace(str(Path.home()), "~")
     if len(short) > max_len:

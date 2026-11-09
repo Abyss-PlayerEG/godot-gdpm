@@ -1,4 +1,16 @@
-"""CLI context utilities."""
+"""
+CLI 上下文工具
+
+- 定义命令共享的项目上下文与服务上下文, 并提供对应的构建函数.
+
+----
+
+Notes
+----
+- ProjectContext: 项目根目录, 配置, 锁文件与依赖的聚合.
+- ServiceContext: 商店客户端与插件管理器的容器.
+- get_project_context / get_services: 上下文构建函数.
+"""
 
 from __future__ import annotations
 
@@ -21,6 +33,31 @@ if TYPE_CHECKING:
 
 @dataclass
 class ProjectContext:
+    """
+    项目上下文
+
+    聚合配置与锁文件信息.
+
+    ----
+
+    Attributes
+    ----
+    root : Path
+        项目根目录.
+    config : ProjectConfig
+        项目配置对象.
+    config_path : Path
+        gdproject.toml 的路径.
+    addons_dir : Path
+        插件安装目录.
+    lock_path : Path
+        锁文件路径.
+    lock_map : dict[str, LockEntry]
+        锁条目表, 按插件名索引.
+    all_deps : dict[str, Dependency]
+        运行与开发依赖合并后的依赖表.
+    """
+
     root: Path
     config: ProjectConfig
     config_path: Path
@@ -32,12 +69,43 @@ class ProjectContext:
 
 @dataclass
 class ServiceContext:
+    """
+    服务上下文
+
+    持有商店客户端与插件管理器.
+
+    ----
+
+    Attributes
+    ----
+    store : StoreClient
+        Godot Asset Store API 客户端.
+    manager : PluginManager
+        插件安装管理器.
+    """
+
     store: StoreClient
     manager: PluginManager
 
 
 def get_project_context() -> ProjectContext:
-    """Load project context from current directory."""
+    """
+    从当前目录加载项目上下文.
+
+    读取 gdproject.toml 与锁文件, 合并运行和开发依赖后返回上下文.
+
+    ----
+
+    Returns
+    ----
+    ProjectContext
+        组装完成的项目上下文.
+
+    Raises
+    ----
+    SystemExit
+        非 gdpm 项目时终止.
+    """
     root = require_project()
     config_path = root / "gdproject.toml"
     config = read_project_config(config_path)
@@ -45,6 +113,7 @@ def get_project_context() -> ProjectContext:
     lock_path = find_lockfile(root)
     lock_entries = read_lockfile(lock_path)
     lock_map = {e.name: e for e in lock_entries}
+    # 合并依赖: 键冲突时开发依赖覆盖运行依赖
     all_deps = {**config.dependencies, **config.dev_dependencies}
 
     return ProjectContext(
@@ -59,7 +128,21 @@ def get_project_context() -> ProjectContext:
 
 
 def get_services(ctx: ProjectContext) -> ServiceContext:
-    """Create store and manager instances."""
+    """
+    创建商店客户端与插件管理器实例.
+
+    ----
+
+    Parameters
+    ----
+    ctx : ProjectContext
+        项目上下文, 提供 addons 目录.
+
+    Returns
+    ----
+    ServiceContext
+        组装完成的服务上下文.
+    """
     store = StoreClient()
     global_config = read_global_config()
     cache = FileCache(Path(global_config.cache_dir))

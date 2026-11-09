@@ -1,4 +1,14 @@
-"""Dependency model."""
+"""
+依赖项模型
+
+- 描述插件依赖的声明信息, 包括名称, 版本约束与来源.
+
+----
+
+Notes
+----
+- Dependency: 不可变依赖项数据类.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +19,29 @@ from gdpm.models.version import VersionConstraint
 
 @dataclass(frozen=True)
 class Dependency:
+    """
+    插件依赖项.
+
+    ----
+
+    Attributes
+    ----
+    name : str
+        依赖插件名称.
+    constraint : VersionConstraint
+        版本约束.
+    publisher_slug : str
+        发布者 slug, 用于商店定位.
+    path : str
+        本地路径 (本地依赖时使用).
+    is_local : bool
+        是否为本地依赖.
+    is_dev : bool
+        是否为开发依赖.
+    source : str
+        来源标识 (如商店 URL 或 local).
+    """
+
     name: str
     constraint: VersionConstraint
     publisher_slug: str = ""
@@ -28,12 +61,47 @@ class Dependency:
         is_local: bool = False,
         is_dev: bool = False,
     ) -> Dependency:
+        """
+        从版本规范字符串构建依赖.
+
+        支持 caret (^), tilde (~) 与通配 (*) 简写, 其余按原样作为约束.
+
+        ----
+
+        Parameters
+        ----
+        name : str
+            依赖插件名称.
+        spec : str
+            版本规范字符串.
+        publisher_slug : str, optional
+            发布者 slug.
+        path : str, optional
+            本地路径.
+        is_local : bool, optional
+            是否为本地依赖.
+        is_dev : bool, optional
+            是否为开发依赖.
+
+        Returns
+        ----
+        Dependency
+            解析后的依赖项.
+
+        Examples
+        ----
+        "^1.2.3" -> ">=1.2.3,<2.0.0" (锁定主版本).
+        "~1.2.3" -> ">=1.2.3,<1.3.0" (锁定主次版本).
+        "*" -> ">=0.0.0" (任意版本).
+        """
         if spec.startswith("^"):
+            # caret: 允许不改动主版本的更新
             base = spec[1:]
             parts = base.split(".")
             major = int(parts[0])
             constraint = f">={base},<{major + 1}.0.0"
         elif spec.startswith("~"):
+            # tilde: 仅允许补丁位更新
             base = spec[1:]
             parts = base.split(".")
             major, minor = int(parts[0]), int(parts[1])

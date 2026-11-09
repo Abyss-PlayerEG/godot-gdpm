@@ -1,277 +1,69 @@
-"""CLI application entry point."""
+"""
+CLI 应用入口
+
+- 组合根: 定义 main 与全局选项回调, 并挂载 gdpm.cli.commands 下的
+  全部子命令. 命令基类在 gdpm.cli.base, 帮助渲染在 gdpm.cli.help.
+
+Notes
+----
+- print_about / print_version / print_completion: 全局选项的回调.
+- main: 根命令组, 模块尾部挂载全部子命令.
+"""
 
 from __future__ import annotations
 
-from typing import Any
-
 import click
-from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 from rich.text import Text
 
 from gdpm import __tag__, __version__
-from gdpm.constants import GITHUB_API_URL, REPO_URL
+from gdpm.cli.base import GdpmGroup
+from gdpm.cli.commands.add import add as add_cmd
+from gdpm.cli.commands.cache import cache as cache_cmd
+from gdpm.cli.commands.config import config as config_cmd
+from gdpm.cli.commands.create import create as create_cmd
+from gdpm.cli.commands.export import export as export_cmd
+from gdpm.cli.commands.godot import godot as godot_cmd
+from gdpm.cli.commands.import_cmd import import_cmd as import_cmd_
+from gdpm.cli.commands.info import info as info_cmd
+from gdpm.cli.commands.init import init as init_cmd
+from gdpm.cli.commands.list import list_cmd
+from gdpm.cli.commands.lock import lock as lock_cmd
+from gdpm.cli.commands.remove import remove as remove_cmd
+from gdpm.cli.commands.search import search as search_cmd
+from gdpm.cli.commands.status import status as status_cmd
+from gdpm.cli.commands.sync import sync as sync_cmd
+from gdpm.cli.commands.update import update as update_cmd
+from gdpm.cli.help import BANNER
+from gdpm.cli.i18n import t
+from gdpm.constants import (
+    DEVELOPER,
+    GITHUB_API_URL,
+    OFFICIAL_SITE_URL,
+    REPO_URL,
+    WEBSITE_REPO_URL,
+)
 
 console = Console()
 
-BANNER = r""" ██████╗ ██████╗ ██████╗ ███╗   ███╗
-██╔════╝ ██╔══██╗██╔══██╗████╗ ████║
-██║  ███╗██║  ██║██████╔╝██╔████╔██║
-██║   ██║██║  ██║██╔═══╝ ██║╚██╔╝██║
-╚██████╔╝██████╔╝██║     ██║ ╚═╝ ██║
- ╚═════╝ ╚═════╝ ╚═╝     ╚═╝     ╚═╝"""
-
-COMMANDS = {
-    "Project": {
-        "init": "Initialize a new gdpm project",
-        "create": "Create a new Godot project",
-        "sync": "Sync addons/ to lock file state",
-        "lock": "Generate or update lock file",
-        "list": "List installed plugins",
-        "status": "Show plugin status and updates",
-    },
-    "Dependencies": {
-        "add": "Add plugins to the project",
-        "remove": "Remove plugins",
-        "update": "Update plugins to newer versions",
-        "search": "Search Godot Asset Store",
-        "info": "Show plugin details",
-        "cache": "Manage global cache (info, clean)",
-        "export": "Export plugins to zip archive",
-        "import": "Import plugins from zip archive",
-    },
-    "Engine": {
-        "godot": "Manage Godot engine versions",
-    },
-}
-
-
-class GdpmCommand(click.Command):
-    """Custom command class with Rich-formatted help."""
-
-    def __init__(
-        self,
-        *args: Any,
-        examples: list[tuple[str, str]] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.examples: list[tuple[str, str]] = examples or []
-
-    def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        console.print()
-        console.print(
-            Text(f"  gdpm {ctx.info_name}", style="bold green")
-            + Text(f"  {self.help or ''}", style="dim")
-        )
-        console.print()
-
-        usage_parts = [f"gdpm {ctx.info_name}"]
-        for param in self.params:
-            if param.name == "help":
-                continue
-            if param.required:
-                usage_parts.append(f"<{param.name}>")
-            elif isinstance(param, click.Option) and param.is_flag:
-                usage_parts.append(f"[--{param.name}]")
-            else:
-                usage_parts.append(f"[--{param.name} VALUE]")
-        console.print(
-            Text("  Usage: ", style="dim") + Text(" ".join(usage_parts), style="white")
-        )
-        console.print()
-
-        options = [
-            p for p in self.params if p.name != "help" and isinstance(p, click.Option)
-        ]
-        if options:
-            table = Table(
-                box=box.SIMPLE,
-                show_header=True,
-                header_style="bold",
-                padding=(0, 2),
-                width=min(80, 90),
-            )
-            table.add_column("Option", style="green", min_width=20, justify="left")
-            table.add_column("Description", justify="left")
-
-            for param in options:
-                opts = ", ".join(param.opts)
-                desc = param.help or ""
-                default = ""
-                if param.default is not None and not param.is_flag:
-                    default = f" [dim](default: {param.default})[/dim]"
-                elif param.is_flag and param.default:
-                    default = " [dim](default: on)[/dim]"
-                table.add_row(f"  {opts}", f"{desc}{default}")
-
-            console.print(
-                Panel(
-                    table,
-                    title="[bold cyan]Options[/bold cyan]",
-                    border_style="dim",
-                    padding=(0, 1),
-                    width=min(80, 90),
-                )
-            )
-
-        if self.examples:
-            lines = []
-            for example_cmd, example_desc in self.examples:
-                lines.append(f"  [dim]# {example_desc}[/dim]")
-                lines.append(f"  $ {example_cmd}")
-            console.print(
-                Panel(
-                    "\n".join(lines),
-                    title="[bold cyan]Examples[/bold cyan]",
-                    border_style="dim",
-                    padding=(0, 1),
-                    width=min(80, 90),
-                )
-            )
-
-
-class GdpmGroup(click.Group):
-    """Custom group class with Rich-formatted help."""
-
-    def __init__(
-        self,
-        *args: Any,
-        examples: list[tuple[str, str]] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.examples: list[tuple[str, str]] = examples or []
-
-    def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        terminal_width = console.width
-        panel_width = min(terminal_width - 6, 80)
-
-        if ctx.info_name == "gdpm":
-            self._format_main_help(ctx, panel_width)
-        else:
-            self._format_group_help(ctx, panel_width)
-
-    def _format_main_help(self, ctx: click.Context, panel_width: int) -> None:
-        console.print()
-
-        table = Table(
-            box=None,
-            show_header=False,
-            padding=(0, 1),
-            width=panel_width - 4,
-        )
-        table.add_column("Content", justify="left")
-
-        for category, cmds in COMMANDS.items():
-            table.add_row(Text(f"  {category}", style="bold magenta"))
-            for cmd_name, desc in cmds.items():
-                table.add_row(
-                    Text(f"    {cmd_name:<16}", style="green")
-                    + Text(desc, style="dim")
-                )
-            table.add_row(Text(""))
-
-        console.print(
-            Panel(
-                table,
-                title="[bold cyan]Commands[/bold cyan]",
-                border_style="dim",
-                padding=(0, 1),
-                width=panel_width,
-            )
-        )
-
-        console.print()
-        console.print(
-            Text("  Usage: ", style="dim")
-            + Text("gdpm", style="bold green")
-            + Text(" <command>", style="white")
-            + Text(" [options]", style="dim")
-        )
-        console.print(
-            Text("  Help:  ", style="dim")
-            + Text("gdpm", style="bold green")
-            + Text(" <command>", style="white")
-            + Text(" --help", style="dim")
-        )
-        console.print()
-        console.print(
-            Panel(
-                Text("  -h, --help      Show help message\n", style="dim")
-                + Text("  -i, --info      Show project info and version\n", style="dim")
-                + Text("  -V, --version   Show version\n", style="dim")
-                + Text("  -y, --yes       Skip confirmation prompts", style="dim"),
-                title="[bold cyan]Common Options[/bold cyan]",
-                border_style="dim",
-                padding=(0, 1),
-                width=panel_width,
-            )
-        )
-
-    def _format_group_help(self, ctx: click.Context, panel_width: int) -> None:
-        console.print()
-        console.print(
-            Text(f"  gdpm {ctx.info_name}", style="bold green")
-            + Text(f"  {self.help or ''}", style="dim")
-        )
-        console.print()
-        console.print(
-            Text("  Usage: ", style="dim")
-            + Text(f"gdpm {ctx.info_name}", style="bold green")
-            + Text(" <command>", style="white")
-        )
-        console.print()
-
-        table = Table(
-            box=box.SIMPLE,
-            show_header=True,
-            header_style="bold magenta",
-            padding=(0, 2),
-            width=panel_width - 4,
-        )
-        table.add_column("Command", style="green", width=16, justify="left")
-        table.add_column("Description", justify="left")
-
-        for name, cmd in self.commands.items():
-            table.add_row(f"  {name}", cmd.help or "")
-
-        console.print(
-            Panel(
-                table,
-                title="[bold cyan]Commands[/bold cyan]",
-                border_style="dim",
-                padding=(0, 1),
-                width=panel_width,
-            )
-        )
-
-        if self.examples:
-            lines = []
-            for example_cmd, example_desc in self.examples:
-                lines.append(f"  [dim]# {example_desc}[/dim]")
-                lines.append(f"  $ {example_cmd}")
-            console.print(
-                Panel(
-                    "\n".join(lines),
-                    title="[bold cyan]Examples[/bold cyan]",
-                    border_style="dim",
-                    padding=(0, 1),
-                    width=panel_width,
-                )
-            )
-
 
 def _version_text() -> Text:
-    """Build version text with tag and platform info."""
+    """构建版本文本: 基础版本 + 带序号的发布标签 (beta3/dev2/rc1) + 平台."""
     import re
 
     from gdpm.utils.install import get_install_type, get_platform
 
+    # 去掉 dev/a/b/rc 等预发布后缀得到展示用基础版本
     base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
-    tag_display = f" [{__tag__}]" if __tag__ else ""
+    # 标签序号从 __version__ 的预发布后缀提取, 与 __tag__ 拼接展示
+    # ("0.0.1b3" -> [beta3], "0.1.1.dev2" -> [dev2]); 无后缀则只显示标签
+    tag_display = ""
+    if __tag__:
+        suffix = __version__[len(base_version) :]
+        num_match = re.search(r"(\d+)$", suffix)
+        number = num_match.group(1) if num_match else ""
+        tag_display = f" [{__tag__}{number}]"
     install_type = get_install_type()
     platform_info = get_platform()
 
@@ -284,7 +76,7 @@ def _version_text() -> Text:
 
 
 def print_completion(ctx: click.Context, _param: click.Parameter, value: str) -> None:
-    """Generate shell completion script."""
+    """生成 shell 补全脚本: 设置 _GDPM_COMPLETE 后重调自身 (click 补全协议)."""
     if not value or ctx.resilient_parsing:
         return
 
@@ -305,45 +97,59 @@ def print_completion(ctx: click.Context, _param: click.Parameter, value: str) ->
     ctx.exit()
 
 
-
-def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
-    """Print project info with banner and version."""
+def print_about(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
+    """打印关于横幅与版本并退出 (-a/--about); 文案跟随语言, 贡献者拉取失败时静默跳过."""
     if not value:
         return
 
     import httpx
+    from rich.cells import cell_len
     from rich.console import Group
 
-    info_lines = []
-    info_lines.append(Text(BANNER, style="bold cyan"))
-    info_lines.append(Text(""))
-    info_lines.append(Text("  ") + _version_text())
-    info_lines.append(Text("  Godot Dependency Package Manager", style="dim"))
-    info_lines.append(Text(""))
-    info_lines.append(
-        Text("  GitHub: ", style="dim")
-        + Text(REPO_URL, style="blue underline")
+    # 标签经词典取文案; 按显示宽度对齐 (CJK 字符占两列)
+    # 布局: 官网单独置顶, 空行后是开发者与两个相关仓库
+    site_label = t("ui.about_site")
+    info_rows: list[tuple[str, str, str]] = [
+        (t("ui.developer"), DEVELOPER, "cyan"),
+        (t("ui.about_repo"), REPO_URL, "blue underline"),
+        (t("ui.about_website"), WEBSITE_REPO_URL, "blue underline"),
+    ]
+    label_width = (
+        max([cell_len(site_label), *(cell_len(label) for label, _, _ in info_rows)]) + 1
     )
+
+    def _row(label: str, value: str, value_style: str) -> Text:
+        pad = " " * (label_width - cell_len(label))
+        return Text(f"  {label}{pad}", style="dim") + Text(value, style=value_style)
+
+    info_lines = [
+        Text(BANNER, style="bold cyan"),
+        Text(""),
+        Text("  ") + _version_text(),
+        Text("  " + t("ui.tagline"), style="dim"),
+        Text(""),
+        _row(site_label, OFFICIAL_SITE_URL, "blue underline"),
+        Text(""),
+        *[_row(label, value, style) for label, value, style in info_rows],
+    ]
 
     terminal_width = console.width
     console.print()
     console.print(
         Panel(
             Group(*info_lines),
-            title="[bold cyan]GDPM-Info[/bold cyan]",
+            title=f"[bold cyan]{t('ui.about_title')}[/bold cyan]",
             border_style="dim",
             padding=(1, 2),
             width=min(terminal_width, 90),
         )
     )
 
+    # 从 GitHub API 拉取贡献者列表; 网络失败时静默跳过
     try:
         resp = httpx.get(f"{GITHUB_API_URL}contributors", timeout=5, verify=False)
         if resp.status_code == 200:
-            contributors = sorted(
-                [c["login"] for c in resp.json()],
-                key=str.lower,
-            )
+            contributors = sorted([c["login"] for c in resp.json()], key=str.lower)
             contrib_text = Text()
             for i, name in enumerate(contributors):
                 if i > 0:
@@ -353,10 +159,10 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
             console.print(
                 Panel(
                     contrib_text,
-                    title="[bold cyan]Contributors[/bold cyan]",
+                    title=f"[bold cyan]{t('ui.contributors')}[/bold cyan]",
                     border_style="dim",
                     padding=(1, 2),
-                width=min(terminal_width, 90),
+                    width=min(terminal_width, 90),
                 )
             )
     except Exception:
@@ -367,7 +173,7 @@ def print_info(ctx: click.Context, _param: click.Parameter, value: bool) -> None
 
 
 def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
-    """Print version info."""
+    """打印版本信息并退出 (-V/--version 回调)."""
     if not value:
         return
 
@@ -377,13 +183,13 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
 
 @click.group(cls=GdpmGroup, context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
-    "-i",
-    "--info",
+    "-a",
+    "--about",
     is_flag=True,
     is_eager=True,
     expose_value=False,
-    callback=print_info,
-    help="Show project info and version.",
+    callback=print_about,
+    help="Show about information (version, repo, contributors).",
 )
 @click.option(
     "-V",
@@ -403,27 +209,13 @@ def print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> N
     help="Generate shell completion script.",
 )
 def main() -> None:
-    """Godot Dependency Package Manager."""
+    """Godot 依赖包管理器."""
 
 
-from gdpm.cli.add import add as add_cmd  # noqa: E402
-from gdpm.cli.cache_cmd import cache as cache_cmd  # noqa: E402
-from gdpm.cli.create import create as create_cmd  # noqa: E402
-from gdpm.cli.export import export as export_cmd  # noqa: E402
-from gdpm.cli.godot import godot as godot_cmd  # noqa: E402
-from gdpm.cli.import_cmd import import_cmd as import_cmd_  # noqa: E402
-from gdpm.cli.info import info as info_cmd  # noqa: E402
-from gdpm.cli.init import init as init_cmd  # noqa: E402
-from gdpm.cli.list import list_cmd  # noqa: E402
-from gdpm.cli.lock import lock as lock_cmd  # noqa: E402
-from gdpm.cli.remove import remove as remove_cmd  # noqa: E402
-from gdpm.cli.search import search as search_cmd  # noqa: E402
-from gdpm.cli.status import status as status_cmd  # noqa: E402
-from gdpm.cli.sync import sync as sync_cmd  # noqa: E402
-from gdpm.cli.update import update as update_cmd  # noqa: E402
-
-main.add_command(add_cmd, "add")  # type: ignore[has-type]
+# 将全部子命令挂载到根命令组
+main.add_command(add_cmd, "add")
 main.add_command(cache_cmd, "cache")
+main.add_command(config_cmd, "config")
 main.add_command(create_cmd, "create")
 main.add_command(export_cmd, "export")
 main.add_command(godot_cmd, "godot")

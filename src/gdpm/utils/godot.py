@@ -1,11 +1,16 @@
-"""Godot project.godot file parser.
+"""
+Godot project.godot 文件解析
 
-Detects Godot engine version from project.godot files.
-Supports Godot 3.x and 4.x formats.
+- 从 project.godot 文件检测 Godot 引擎版本, 支持 Godot 3.x 与 4.x 格式.
 
-Version detection by config_version:
-- config_version=5 → Godot 4.x: config/features=PackedStringArray("4.7", "Forward Plus")
-- config_version=4 → Godot 3.x: config/version="3.5.2"
+----
+
+Notes
+----
+- 版本检测规则 (按 config_version):
+- config_version=5 -> Godot 4.x:
+    config/features=PackedStringArray("4.7", "Forward Plus")
+- config_version=4 -> Godot 3.x: config/version="3.5.2"
 """
 
 from __future__ import annotations
@@ -21,7 +26,24 @@ if TYPE_CHECKING:
 
 @dataclass
 class GodotProject:
-    """Parsed Godot project information."""
+    """
+    解析后的 Godot 项目信息.
+
+    ----
+
+    Attributes
+    ----
+    name : str
+        项目名称.
+    godot_version : str
+        Godot 版本, 如 "4.7".
+    config_version : int
+        project.godot 的 config_version 值.
+    renderer : str
+        渲染器名称.
+    features : list[str] | None
+        config/features 特性列表.
+    """
 
     name: str = ""
     godot_version: str = ""
@@ -31,7 +53,16 @@ class GodotProject:
 
     @property
     def version_constraint(self) -> str:
-        """Return a version constraint string for gdproject.toml."""
+        """
+        生成 gdproject.toml 的版本约束字符串.
+
+        ----
+
+        Returns
+        ----
+        str
+            形如 ">=4.2.0" 的约束; 版本缺失时返回 ">=3.0".
+        """
         if not self.godot_version:
             return ">=3.0"
 
@@ -45,9 +76,21 @@ class GodotProject:
 
 
 def parse_project_godot(path: Path) -> GodotProject:
-    """Parse a project.godot file and extract project information.
+    """
+    解析 project.godot 文件并提取项目信息, 支持 Godot 3.x (config_version=4)
+    与 4.x (config_version=5).
 
-    Supports Godot 3.x (config_version=4) and 4.x (config_version=5).
+    ----
+
+    Parameters
+    ----
+    path : Path
+        project.godot 文件路径.
+
+    Returns
+    ----
+    GodotProject
+        解析出的项目信息; 文件不存在或格式过旧时返回空对象.
     """
     if not path.exists():
         return GodotProject()
@@ -62,15 +105,29 @@ def parse_project_godot(path: Path) -> GodotProject:
 
 
 def _parse_content(content: str) -> GodotProject:
-    """Parse project.godot content string."""
+    """
+    解析 project.godot 的文本内容.
+
+    ----
+
+    Parameters
+    ----
+    content : str
+        project.godot 文件内容.
+
+    Returns
+    ----
+    GodotProject
+        解析出的项目信息.
+    """
     project = GodotProject()
 
-    # Parse config_version
+    # 解析 config_version
     match = re.search(r"config_version=(\d+)", content)
     if match:
         project.config_version = int(match.group(1))
 
-    # Parse project name
+    # 解析项目名称
     # Godot 4.x/3.x: config/name="..."
     # Godot 2.x/1.x: name="..."
     match = re.search(r'config/name="([^"]+)"', content)
@@ -79,9 +136,10 @@ def _parse_content(content: str) -> GodotProject:
     if match:
         project.name = match.group(1)
 
-    # Parse version based on config_version
+    # 按 config_version 解析版本
     if project.config_version >= 5:
-        # Godot 4.x: config/features=PackedStringArray("4.7", "Forward Plus")
+        # Godot 4.x: 版本与渲染器记录在 config/features 中,
+        # 如 config/features=PackedStringArray("4.7", "Forward Plus")
         match = re.search(r"config/features=PackedStringArray\(([^)]+)\)", content)
         if match:
             features_str = match.group(1)
@@ -92,13 +150,13 @@ def _parse_content(content: str) -> GodotProject:
             ]
             project.features = features
 
-            # Extract version from features
+            # 从 features 中提取版本
             for f in features:
                 if re.match(r"^\d+\.\d+", f):
                     project.godot_version = f
                     break
 
-            # Extract renderer
+            # 提取渲染器
             renderers = {
                 "Forward Plus": "Forward Plus",
                 "Mobile": "Mobile",
@@ -112,12 +170,12 @@ def _parse_content(content: str) -> GodotProject:
                     break
 
     elif project.config_version == 4:
-        # Godot 3.x: config/version="3.5.2"
+        # Godot 3.x: 版本记录在 config/version 中, 例如 config/version="3.5.2"
         match = re.search(r'config/version="([^"]+)"', content)
         if match:
             project.godot_version = match.group(1)
 
-        # Try to detect renderer
+        # 尝试检测渲染器
         if "GLES2" in content:
             project.renderer = "GLES2"
         elif "GLES3" in content:
@@ -127,10 +185,20 @@ def _parse_content(content: str) -> GodotProject:
 
 
 def detect_godot_version(project_dir: Path) -> str:
-    """Detect Godot version from project.godot.
+    """
+    从 project.godot 检测 Godot 版本.
 
-    Returns version string like "4.7" or "3.5".
-    Returns empty string if not found.
+    ----
+
+    Parameters
+    ----
+    project_dir : Path
+        项目根目录.
+
+    Returns
+    ----
+    str
+        形如 "4.7" 或 "3.5" 的版本字符串, 未找到时为空字符串.
     """
     project_file = project_dir / "project.godot"
     project = parse_project_godot(project_file)
@@ -138,10 +206,20 @@ def detect_godot_version(project_dir: Path) -> str:
 
 
 def detect_version_constraint(project_dir: Path) -> str:
-    """Detect Godot version constraint for gdproject.toml.
+    """
+    检测 gdproject.toml 所需的 Godot 版本约束.
 
-    Returns constraint string like ">=4.2.0".
-    Returns ">=4.0" if not found.
+    ----
+
+    Parameters
+    ----
+    project_dir : Path
+        项目根目录.
+
+    Returns
+    ----
+    str
+        形如 ">=4.2.0" 的约束字符串, 未找到时返回 ">=4.0".
     """
     project_file = project_dir / "project.godot"
     project = parse_project_godot(project_file)
@@ -149,29 +227,38 @@ def detect_version_constraint(project_dir: Path) -> str:
 
 
 def detect_godot_binary(path: Path) -> Path | None:
-    """Detect Godot binary path from a given path.
+    """
+    从给定路径检测 Godot 可执行文件, 对 macOS .app 捆绑包返回
+    Contents/MacOS/ 下的二进制, 对 Linux/Windows 则在路径本身可执行时
+    直接返回.
 
-    For macOS .app bundles, returns the binary inside Contents/MacOS/.
-    For Linux/Windows, returns the path directly if it's executable.
+    ----
 
-    Returns:
-        Path to Godot binary, or None if not valid.
+    Parameters
+    ----
+    path : Path
+        疑似 Godot 可执行文件或 .app 的路径.
+
+    Returns
+    ----
+    pathlib.Path | None
+        Godot 二进制路径, 无效时返回 None.
     """
     if not path.exists():
         return None
 
-    # macOS .app bundle
+    # macOS .app 捆绑包
     if path.suffix == ".app":
         binary = path / "Contents" / "MacOS" / "Godot"
         if binary.exists():
             return binary
-        # Try stem-based name (e.g., Godot_mono.app -> Godot_mono)
+        # 尝试同名二进制 (例如 Godot_mono.app -> Godot_mono)
         binary = path / "Contents" / "MacOS" / path.stem
         if binary.exists():
             return binary
         return None
 
-    # Linux/Windows executable
+    # Linux/Windows 可执行文件
     if path.is_file():
         return path
 
@@ -179,12 +266,20 @@ def detect_godot_binary(path: Path) -> Path | None:
 
 
 def get_godot_version(binary: Path) -> str:
-    """Get Godot version from binary.
+    """
+    获取 Godot 二进制的版本号, 运行 'godot --version' 并解析输出.
 
-    Runs 'godot --version' and parses the output.
+    ----
 
-    Returns:
-        Version string like '4.7-stable', or empty string if failed.
+    Parameters
+    ----
+    binary : Path
+        Godot 可执行文件路径.
+
+    Returns
+    ----
+    str
+        形如 '4.7-stable' 的版本字符串, 失败时为空字符串.
     """
     try:
         result = subprocess.run(
@@ -198,15 +293,30 @@ def get_godot_version(binary: Path) -> str:
             return ""
 
         version_str = result.stdout.strip()
-        # "4.7.0.stable.official.h" -> "4.7-stable"
+        # 输出示例: "4.7.0.stable.official.h" -> "4.7-stable"
         return _parse_version_string(version_str)
     except Exception:
         return ""
 
 
 def _parse_version_string(version_str: str) -> str:
-    """Parse Godot version string to short format.
+    """
+    将 Godot 版本字符串解析为简短格式.
 
+    ----
+
+    Parameters
+    ----
+    version_str : str
+        原始版本字符串.
+
+    Returns
+    ----
+    str
+        简短格式的版本字符串.
+
+    Examples
+    ----
     '4.7.0.stable.official.h' -> '4.7-stable'
     '3.6.2.stable.official.h' -> '3.6.2-stable'
     '4.7.0.rc1.official.h' -> '4.7-rc1'
@@ -218,7 +328,7 @@ def _parse_version_string(version_str: str) -> str:
     major = parts[0]
     minor = parts[1]
 
-    # Find the stability tag (stable, rc, beta, dev)
+    # 查找稳定性标签 (stable, rc, beta, dev)
     stability = ""
     for part in parts[2:]:
         if part in ("stable", "rc", "beta", "dev"):

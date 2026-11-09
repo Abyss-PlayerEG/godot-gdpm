@@ -45,6 +45,13 @@ site/
 # PyInstaller
 *.spec
 
+# Rust (gdpm_rust_module)
+src/gdpm_rust_module/target/
+
+# Cloudflare Worker (gdpm_cf_workers)
+src/gdpm_cf_workers/.wrangler/
+src/gdpm_cf_workers/node_modules/
+
 # OS
 .DS_Store
 Thumbs.db
