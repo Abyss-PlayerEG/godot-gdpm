@@ -37,7 +37,13 @@ from gdpm.cli.commands.sync import sync as sync_cmd
 from gdpm.cli.commands.update import update as update_cmd
 from gdpm.cli.help import BANNER
 from gdpm.cli.i18n import t
-from gdpm.constants import DEVELOPER, GITHUB_API_URL, REPO_URL
+from gdpm.constants import (
+    DEVELOPER,
+    GITHUB_API_URL,
+    OFFICIAL_SITE_URL,
+    REPO_URL,
+    WEBSITE_REPO_URL,
+)
 
 console = Console()
 
@@ -101,9 +107,20 @@ def print_about(ctx: click.Context, _param: click.Parameter, value: bool) -> Non
     from rich.console import Group
 
     # 标签经词典取文案; 按显示宽度对齐 (CJK 字符占两列)
-    dev_label = t("ui.developer")
-    gh_label = "GitHub"
-    label_width = max(cell_len(dev_label), cell_len(gh_label)) + 1
+    # 布局: 官网单独置顶, 空行后是开发者与两个相关仓库
+    site_label = t("ui.about_site")
+    info_rows: list[tuple[str, str, str]] = [
+        (t("ui.developer"), DEVELOPER, "cyan"),
+        (t("ui.about_repo"), REPO_URL, "blue underline"),
+        (t("ui.about_website"), WEBSITE_REPO_URL, "blue underline"),
+    ]
+    label_width = (
+        max([cell_len(site_label), *(cell_len(label) for label, _, _ in info_rows)]) + 1
+    )
+
+    def _row(label: str, value: str, value_style: str) -> Text:
+        pad = " " * (label_width - cell_len(label))
+        return Text(f"  {label}{pad}", style="dim") + Text(value, style=value_style)
 
     info_lines = [
         Text(BANNER, style="bold cyan"),
@@ -111,16 +128,9 @@ def print_about(ctx: click.Context, _param: click.Parameter, value: bool) -> Non
         Text("  ") + _version_text(),
         Text("  " + t("ui.tagline"), style="dim"),
         Text(""),
-        Text(
-            f"  {dev_label}{' ' * (label_width - cell_len(dev_label))}",
-            style="dim",
-        )
-        + Text(DEVELOPER, style="cyan"),
-        Text(
-            f"  {gh_label}{' ' * (label_width - cell_len(gh_label))}",
-            style="dim",
-        )
-        + Text(REPO_URL, style="blue underline"),
+        _row(site_label, OFFICIAL_SITE_URL, "blue underline"),
+        Text(""),
+        *[_row(label, value, style) for label, value, style in info_rows],
     ]
 
     terminal_width = console.width

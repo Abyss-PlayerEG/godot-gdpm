@@ -28,6 +28,8 @@ HASHES_FILE = ".hashes"
 
 DEVELOPER = "playereg"
 REPO_URL = "https://github.com/Abyss-PlayerEG/godot-gdpm"
+WEBSITE_REPO_URL = "https://github.com/Abyss-PlayerEG/gdpm-website"
+OFFICIAL_SITE_URL = "https://gdpm.playereg.top"
 ISSUES_URL = "https://github.com/Abyss-PlayerEG/godot-gdpm/issues"
 GITHUB_API_URL = "https://api.github.com/repos/Abyss-PlayerEG/godot-gdpm/"
 VERSIONS_JSON_URL = "https://godotengine.org/versions.json"

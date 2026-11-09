@@ -205,6 +205,9 @@ _UI: dict[str, dict[str, str]] = {
         "zh": "显示关于信息 (版本、仓库、贡献者)",
     },
     "ui.about_title": {"en": "GDPM-About", "zh": "GDPM 关于"},
+    "ui.about_repo": {"en": "GDPM:", "zh": "GDPM:"},
+    "ui.about_website": {"en": "Website:", "zh": "Website:"},
+    "ui.about_site": {"en": "Site:", "zh": "官网:"},
     "ui.tagline": {
         "en": "Godot Dependency Package Manager",
         "zh": "Godot 依赖包管理器",

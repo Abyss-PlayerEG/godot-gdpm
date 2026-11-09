@@ -17,7 +17,7 @@ from click.testing import CliRunner
 from gdpm.cli import i18n
 from gdpm.cli.app import main
 from gdpm.config.global_config import GlobalConfig
-from gdpm.constants import DEVELOPER, REPO_URL
+from gdpm.constants import DEVELOPER, OFFICIAL_SITE_URL, REPO_URL, WEBSITE_REPO_URL
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -169,6 +169,14 @@ def test_about_shows_developer_info(monkeypatch) -> None:
     assert "GDPM-About" in out
     assert f"Developer: {DEVELOPER}" in out
     assert REPO_URL in out
+    assert WEBSITE_REPO_URL in out
+    assert OFFICIAL_SITE_URL in out
+    # 标签 (用户格式): GDPM: / Website:
+    assert "GDPM:" in out
+    assert "Website:" in out
+    # 布局: 官网置顶 -> 空行 -> 开发者与两行仓库
+    assert out.index("Site:") < out.index("Developer:")
+    assert out.index("Developer:") < out.index("GDPM:")
 
 
 def test_about_screen_chinese(monkeypatch) -> None:
@@ -187,5 +195,10 @@ def test_about_screen_chinese(monkeypatch) -> None:
     out = result.output
     assert "GDPM 关于" in out
     assert "Godot 依赖包管理器" in out
-    assert f"开发者: {DEVELOPER}" in out
+    assert "开发者:" in out
+    assert DEVELOPER in out
     assert "贡献者" in out
+    assert "官网:" in out
+    assert OFFICIAL_SITE_URL in out
+    # 布局: 官网在开发者之上
+    assert out.index("官网:") < out.index("开发者:")
