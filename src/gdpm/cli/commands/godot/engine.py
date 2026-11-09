@@ -19,6 +19,7 @@ import json
 from pathlib import Path
 
 import click
+from rich.prompt import Confirm
 
 from gdpm.cli.base import GdpmCommand
 from gdpm.cli.commands.godot.common import parse_engine_id, resolve_engine_id
@@ -80,8 +81,8 @@ def godot_add(path: str, name: str) -> None:
         default_name = version or engine_path.stem
         name = click.prompt("  Alias", default=default_name, type=str)
 
-    if name in engines and not click.confirm(
-        f"  [yellow]'{name}' already exists. Overwrite?[/yellow]"
+    if name in engines and not Confirm.ask(
+        f"  [yellow]'{name}' already exists. Overwrite?[/yellow]", default=False
     ):
         return
 

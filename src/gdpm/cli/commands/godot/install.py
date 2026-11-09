@@ -30,6 +30,7 @@ from rich.progress import (
     TimeRemainingColumn,
     TransferSpeedColumn,
 )
+from rich.prompt import Confirm
 
 from gdpm.cli.base import GdpmCommand
 from gdpm.cli.commands.godot.common import (
@@ -38,6 +39,7 @@ from gdpm.cli.commands.godot.common import (
     normalize_version,
 )
 from gdpm.cli.common import console
+from gdpm.cli.i18n import t
 from gdpm.config.global_config import read_global_config
 from gdpm.utils.download import clamp_workers, download_file_chunked
 from gdpm.utils.install import get_godot_ext, get_godot_platform
@@ -184,9 +186,9 @@ def godot_install(version: str, csharp: bool) -> None:
     ver_dir = engines_dir / f"{tag}{suffix}"
 
     if ver_dir.exists():
-        if not click.confirm(
-            f"  Godot [cyan]{tag}{suffix}[/cyan] is already installed. Reinstall?"
-        ):
+        # click 不渲染 rich 标记 → 用 rich Confirm (标记渲染 + 跟随语言)
+        prompt = t("ui.reinstall_confirm").format(engine=f"[cyan]{tag}{suffix}[/cyan]")
+        if not Confirm.ask(f"  {prompt}"):
             return
         # 确认后删除旧安装目录以便重装
         shutil.rmtree(ver_dir, onexc=lambda *args: None)

@@ -22,7 +22,8 @@ Notes
 - _COMMANDS: 命令描述词典 (键 = 根命令裸名 / 组前缀点号路径).
 - _CATEGORIES: 分类名词典 (含兜底 other).
 - _EXAMPLE_LABELS: 示例标签词典 (键 = 英文原文, en 即键名).
-- _UI: 渲染标签词典 (面板标题 / 表头 / 公共选项 / about 屏 / 默认值后缀).
+- _UI: 渲染标签词典 (面板标题 / 表头 / 公共选项 / about 屏 / 默认值后缀 /
+  运行时提示).
 """
 
 from __future__ import annotations
@@ -214,6 +215,10 @@ _UI: dict[str, dict[str, str]] = {
     "ui.opt_yes": {"en": "Skip confirmation prompts", "zh": "跳过确认提示"},
     "ui.default": {"en": "(default: {v})", "zh": "(默认: {v})"},
     "ui.default_on": {"en": "(default: on)", "zh": "(默认: 开启)"},
+    "ui.reinstall_confirm": {
+        "en": "Godot {engine} is already installed. Reinstall?",
+        "zh": "Godot {engine} 已安装, 重新安装?",
+    },
 }
 
 
