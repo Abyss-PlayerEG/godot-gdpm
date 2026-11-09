@@ -1,0 +1,15 @@
+# godot-download — Godot 官方下载接口仿真 Worker
+name = "godot-download"
+main = "index.js"
+compatibility_date = "2026-11-09"
+
+# 不暴露 *.workers.dev (国内常被墙), 只走自有域名
+workers_dev = false
+
+# 自有域名接入 (zone 需在本 CF 账号下): 自动创建 DNS 记录与证书
+[[routes]]
+pattern = "godot-download.playereg.top"
+custom_domain = true
+
+# GitHub API token 走 secret 而非 vars (免 60/时 未认证限流, 非必需):
+#   npx wrangler secret put GITHUB_TOKEN

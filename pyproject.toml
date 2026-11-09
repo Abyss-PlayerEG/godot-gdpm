@@ -44,7 +44,7 @@ build-backend = "hatchling.build"
 packages = ["src/gdpm"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["docs/", "notes/", "installer/", ".github/", "scripts/", "src/gdpm_rust_module/target/"]
+exclude = ["docs/", "notes/", "installer/", ".github/", "scripts/", "src/gdpm_rust_module/target/", "src/gdpm_cf_workers/"]
 
 [dependency-groups]
 dev = [
