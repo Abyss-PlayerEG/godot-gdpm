@@ -96,8 +96,8 @@ def download_file(
     timeout : float, optional
         请求超时秒数, 默认 300.
     verify : bool, optional
-        TLS 证书校验; False 时接受本地拦截证书 (旧 GitHub 方案兜底通路),
-        默认 True (官方 CDN 主通道保持严格校验).
+        TLS 证书校验; False 时接受本地拦截证书 (特殊网络环境),
+        默认 True (自建镜像通道严格校验).
 
     Returns
     ----
@@ -180,8 +180,8 @@ def download_file_chunked(
     timeout : float, optional
         请求超时秒数, 默认 300.
     verify : bool, optional
-        TLS 证书校验; False 时接受本地拦截证书 (旧 GitHub 方案兜底通路),
-        默认 True (官方 CDN 主通道保持严格校验).
+        TLS 证书校验; False 时接受本地拦截证书 (特殊网络环境),
+        默认 True (自建镜像通道严格校验).
 
     Returns
     ----

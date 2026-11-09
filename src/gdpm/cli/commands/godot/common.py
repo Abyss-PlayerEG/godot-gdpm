@@ -9,9 +9,8 @@ Notes
 ----
 - get_engines_dir: 获取全局引擎目录.
 - normalize_version: 版本号规范化为 tag 格式.
-- build_download_url: 构造下载接口 URL (支持镜像 base 覆盖, 无网络请求).
-- build_github_download_urls: 旧 GitHub 方案按资产名构造下载地址候选 (兜底).
-- fetch_remote_versions: 从官方 versions.json 拉取版本.
+- build_download_url: 构造自建镜像下载接口 URL (客户端唯一通道, 无网络请求).
+- fetch_remote_versions: 从自建镜像 /versions.json 拉取版本 (唯一通道).
 - ensure_executable: 确保文件具有执行权限.
 - find_engine_binary: 在引擎目录中查找二进制.
 - prepare_engine_dir: 解压后修复权限.
@@ -33,9 +32,7 @@ from typing import Any
 import httpx
 
 from gdpm.cli.common import console
-from gdpm.config.global_config import read_global_config
-from gdpm.constants import VERSIONS_JSON_URL, get_github_headers
-from gdpm.utils.install import get_godot_platform
+from gdpm.constants import GODOT_DOWNLOAD_MIRROR
 
 
 def get_engines_dir() -> Path:
@@ -150,14 +147,9 @@ def _official_asset(version: str, csharp: bool = False) -> tuple[str, str]:
     return slug, "linux.64"
 
 
-def build_download_url(tag: str, csharp: bool = False) -> str:
+def _download_query(tag: str, csharp: bool = False) -> str:
     """
-    构造下载接口 URL (默认官方 downloads.godotengine.org).
-
-    纯字符串拼接无网络请求, 302 重定向由下载时的 httpx 跟随.
-    自建镜像 (如自部署的 Cloudflare Worker, 仿官方 query 语义) 按优先级
-    覆盖 base: 环境变量 GDPM_GODOT_MIRROR > 全局配置 godot_mirror >
-    官方地址; 尾部斜杠统一去除, 产出 URL 形态与官方完全一致.
+    构造下载接口 query 参数 (官方与镜像共用, 语义逐字一致).
 
     ----
 
@@ -171,93 +163,42 @@ def build_download_url(tag: str, csharp: bool = False) -> str:
     Returns
     ----
     str
-        下载接口 URL.
+        'version=...&flavor=...&slug=...&platform=...' 形式的 query 串.
     """
     version, _, flavor = tag.partition("-")
     flavor = flavor or "stable"
     slug, platform_id = _official_asset(version, csharp)
-    base = (
-        os.environ.get("GDPM_GODOT_MIRROR", "")
-        or read_global_config().godot_mirror
-        or "https://downloads.godotengine.org"
-    ).rstrip("/")
-    return (
-        f"{base}/?version={version}&flavor={flavor}&slug={slug}&platform={platform_id}"
-    )
+    return f"version={version}&flavor={flavor}&slug={slug}&platform={platform_id}"
 
 
-def build_github_download_urls(tag: str, csharp: bool = False) -> list[str]:
+def build_download_url(tag: str, csharp: bool = False) -> str:
     """
-    旧 GitHub 方案: 按 release 资产名匹配构造下载地址候选 (官方通道兜底).
+    构造自建镜像下载接口 URL (gdpm 唯一下载通道, 无配置项).
 
-    官方 downloads.godotengine.org 走不通 (未收录如 1.x/2.x/3.0-mac、
-    宕机、本地证书拦截) 时自动回退; 与历史实现一致使用 verify=False
-    (本机存在本地拦截证书如加速器时的唯一通路).
-
-    查询顺序: godot 主仓库 (历史方案同源) -> godot-builds (官方跳板同源),
-    每仓库取首个匹配资产; 返回全部去重候选, 由调用方按序尝试 ——
-    单个仓库/通道 504 或失效时自动换下一个.
+    纯字符串拼接无网络请求, 302 重定向由下载时的 httpx 跟随;
+    query 语义与官方接口逐字一致, 回源由 Worker 服务端处理.
 
     ----
 
     Parameters
     ----
     tag : str
-        发布 tag, 如 '4.3-stable'.
+        发布 tag, 如 '4.7.2-stable'.
     csharp : bool, optional
-        是否获取 C# (mono) 版本.
+        是否为 C# (mono) 版本.
 
     Returns
     ----
-    list[str]
-        候选下载 URL 列表, 全部仓库无匹配时为空列表.
+    str
+        自建镜像下载接口 URL.
     """
-    mono = "_mono" if csharp else ""
-    system = get_godot_platform()
-
-    if "macos" in system:
-        keywords: tuple[str, ...] = ("osx", "macos")
-    elif "linux" in system:
-        # x11: 3.x 资产名为 Godot_v3.x_x11.64.zip
-        keywords = ("linux", "x11")
-    else:
-        keywords = ("win",)
-
-    urls: list[str] = []
-    for repo in ("godotengine/godot", "godotengine/godot-builds"):
-        try:
-            resp = httpx.get(
-                f"https://api.github.com/repos/{repo}/releases/tags/{tag}",
-                headers=get_github_headers(),
-                timeout=10,
-                verify=False,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-        except Exception:
-            continue
-
-        for asset in data.get("assets", []):
-            name = asset["name"]
-            if "server" in name:
-                # 排除 linux server 构建
-                continue
-            if mono and "_mono" not in name:
-                continue
-            if not mono and "_mono" in name:
-                continue
-            if name.endswith(".zip") and any(k in name for k in keywords):
-                candidate = str(asset["browser_download_url"])
-                if candidate not in urls:
-                    urls.append(candidate)
-                break
-    return urls
+    return f"{GODOT_DOWNLOAD_MIRROR}/?{_download_query(tag, csharp)}"
 
 
 @dataclass(frozen=True)
 class RemoteRelease:
     """
-    官方 versions.json 中的单个版本条目.
+    versions.json 中的单个版本条目 (schema 与官方一致, 源为自建镜像).
 
     ----
 
@@ -380,9 +321,10 @@ def parse_versions_json(data: list[Any]) -> list[RemoteRelease]:
 
 def fetch_remote_versions() -> list[RemoteRelease]:
     """
-    从官方 versions.json 拉取全部可用版本.
+    从自建镜像 /versions.json 拉取全部可用版本 (唯一通道).
 
-    静态文件无速率限制, 失败时抛出 httpx 异常由调用方处理.
+    端点由 Worker 经 GitHub releases API 整理, schema 与官方一致;
+    失败时抛出异常由调用方处理.
 
     ----
 
@@ -394,9 +336,9 @@ def fetch_remote_versions() -> list[RemoteRelease]:
     Raises
     ----
     httpx.HTTPError
-        网络请求失败或响应非 2xx.
+        网络请求失败或响应非 2xx (JSON 解析失败时抛 ValueError).
     """
-    resp = httpx.get(VERSIONS_JSON_URL, timeout=10)
+    resp = httpx.get(f"{GODOT_DOWNLOAD_MIRROR}/versions.json", timeout=10)
     resp.raise_for_status()
     return parse_versions_json(resp.json())
 

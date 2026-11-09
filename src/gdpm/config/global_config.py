@@ -18,7 +18,7 @@ Examples
     language = "zh"
 
 可设置键 (仅已实现消费方的键):
-    [defaults] parallel_downloads / default_engine / godot_mirror
+    [defaults] parallel_downloads / default_engine
     [cache]    dir
     [ui]       language
 
@@ -65,9 +65,6 @@ class GlobalConfig:
         并行下载数.
     default_engine : str
         全局默认引擎 ID, 形如 'steam-godot@4.7-stable', 空表示未设置.
-    godot_mirror : str
-        Godot 引擎下载镜像 base URL (如自建 Cloudflare Worker),
-        空表示走官方 downloads.godotengine.org.
     cache_dir : str
         下载缓存目录.
     store_url : str
@@ -80,7 +77,6 @@ class GlobalConfig:
     addons_dir: str = "addons"
     parallel_downloads: int = 4
     default_engine: str = ""
-    godot_mirror: str = ""
     cache_dir: str = ""
     store_url: str = "https://store.godotengine.org/api/v1"
     language: str = "en"
@@ -110,7 +106,6 @@ def get_config_path() -> Path:
 _KEY_LAYOUT: dict[str, tuple[str, str, bool]] = {
     "parallel_downloads": ("defaults", "parallel_downloads", False),
     "default_engine": ("defaults", "default_engine", True),
-    "godot_mirror": ("defaults", "godot_mirror", True),
     "cache_dir": ("cache", "dir", True),
     "language": ("ui", "language", True),
 }
@@ -172,7 +167,6 @@ def read_global_config() -> GlobalConfig:
         addons_dir=defaults.get("addons_dir", "addons"),
         parallel_downloads=defaults.get("parallel_downloads", 4),
         default_engine=defaults.get("default_engine", ""),
-        godot_mirror=defaults.get("godot_mirror", ""),
         cache_dir=cache.get("dir", ""),
         store_url=store.get("base_url", "https://store.godotengine.org/api/v1"),
         language=ui.get("language", "en"),

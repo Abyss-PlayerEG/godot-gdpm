@@ -8,10 +8,14 @@ stable-only 决策 (2026-11): 远程列表恒只含正式版, 非 stable 一律�
 
 from __future__ import annotations
 
+import httpx
+import pytest
+
 from gdpm.cli.commands.godot.common import (
     RemoteRelease,
     _flavor_channel,
     _parse_display_date,
+    fetch_remote_versions,
     parse_versions_json,
 )
 from gdpm.cli.commands.godot.list import _paginate_remote
@@ -177,3 +181,44 @@ def test_page_clamped_to_valid_range() -> None:
 
     _, _, page0 = _paginate_remote(_sample_releases(), "", False, 0)
     assert page0 == 1
+
+
+class _Resp:
+    """versions.json 响应替身."""
+
+    def __init__(self, data: list) -> None:
+        self._data = data
+
+    def raise_for_status(self) -> None:
+        pass
+
+    def json(self) -> list:
+        return self._data
+
+
+def test_fetch_uses_mirror_endpoint(monkeypatch) -> None:
+    """唯一通道: 直打自建镜像 /versions.json, 不再访问官方地址."""
+    calls: list[str] = []
+
+    def fake_get(url: str, **kwargs):
+        calls.append(url)
+        return _Resp(SAMPLE)
+
+    monkeypatch.setattr("gdpm.cli.commands.godot.common.httpx.get", fake_get)
+
+    releases = fetch_remote_versions()
+
+    assert calls == ["https://godot-download.playereg.top/versions.json"]
+    assert releases[0].tag == "4.8-beta2"
+
+
+def test_fetch_raises_on_failure(monkeypatch) -> None:
+    """镜像不可达: 抛出异常由调用方统一提示."""
+
+    def fake_get(url: str, **kwargs):
+        raise httpx.ConnectError("mirror down")
+
+    monkeypatch.setattr("gdpm.cli.commands.godot.common.httpx.get", fake_get)
+
+    with pytest.raises(httpx.ConnectError):
+        fetch_remote_versions()
