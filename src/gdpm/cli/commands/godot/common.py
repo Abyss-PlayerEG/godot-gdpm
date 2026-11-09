@@ -10,6 +10,7 @@ Notes
 - get_engines_dir: 获取全局引擎目录.
 - normalize_version: 版本号规范化为 tag 格式.
 - build_download_url: 构造官方下载接口 URL (无网络请求).
+- build_github_download_urls: 旧 GitHub 方案按资产名构造下载地址候选 (兜底).
 - fetch_remote_versions: 从官方 versions.json 拉取版本.
 - ensure_executable: 确保文件具有执行权限.
 - find_engine_binary: 在引擎目录中查找二进制.
@@ -32,7 +33,8 @@ from typing import Any
 import httpx
 
 from gdpm.cli.common import console
-from gdpm.constants import VERSIONS_JSON_URL
+from gdpm.constants import VERSIONS_JSON_URL, get_github_headers
+from gdpm.utils.install import get_godot_platform
 
 
 def get_engines_dir() -> Path:
@@ -174,6 +176,74 @@ def build_download_url(tag: str, csharp: bool = False) -> str:
         "https://downloads.godotengine.org/"
         f"?version={version}&flavor={flavor}&slug={slug}&platform={platform_id}"
     )
+
+
+def build_github_download_urls(tag: str, csharp: bool = False) -> list[str]:
+    """
+    旧 GitHub 方案: 按 release 资产名匹配构造下载地址候选 (官方通道兜底).
+
+    官方 downloads.godotengine.org 走不通 (未收录如 1.x/2.x/3.0-mac、
+    宕机、本地证书拦截) 时自动回退; 与历史实现一致使用 verify=False
+    (本机存在本地拦截证书如加速器时的唯一通路).
+
+    查询顺序: godot 主仓库 (历史方案同源) -> godot-builds (官方跳板同源),
+    每仓库取首个匹配资产; 返回全部去重候选, 由调用方按序尝试 ——
+    单个仓库/通道 504 或失效时自动换下一个.
+
+    ----
+
+    Parameters
+    ----
+    tag : str
+        发布 tag, 如 '4.3-stable'.
+    csharp : bool, optional
+        是否获取 C# (mono) 版本.
+
+    Returns
+    ----
+    list[str]
+        候选下载 URL 列表, 全部仓库无匹配时为空列表.
+    """
+    mono = "_mono" if csharp else ""
+    system = get_godot_platform()
+
+    if "macos" in system:
+        keywords: tuple[str, ...] = ("osx", "macos")
+    elif "linux" in system:
+        # x11: 3.x 资产名为 Godot_v3.x_x11.64.zip
+        keywords = ("linux", "x11")
+    else:
+        keywords = ("win",)
+
+    urls: list[str] = []
+    for repo in ("godotengine/godot", "godotengine/godot-builds"):
+        try:
+            resp = httpx.get(
+                f"https://api.github.com/repos/{repo}/releases/tags/{tag}",
+                headers=get_github_headers(),
+                timeout=10,
+                verify=False,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception:
+            continue
+
+        for asset in data.get("assets", []):
+            name = asset["name"]
+            if "server" in name:
+                # 排除 linux server 构建
+                continue
+            if mono and "_mono" not in name:
+                continue
+            if not mono and "_mono" in name:
+                continue
+            if name.endswith(".zip") and any(k in name for k in keywords):
+                candidate = str(asset["browser_download_url"])
+                if candidate not in urls:
+                    urls.append(candidate)
+                break
+    return urls
 
 
 @dataclass(frozen=True)

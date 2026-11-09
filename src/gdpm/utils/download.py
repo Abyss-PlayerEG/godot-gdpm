@@ -74,6 +74,7 @@ def download_file(
     filename: str = "",
     on_progress: Callable[[int, int, float], None] | None = None,
     timeout: float = 300,
+    verify: bool = True,
 ) -> Path:
     """
     下载文件, 支持进度回调.
@@ -94,6 +95,9 @@ def download_file(
         进度回调, 依次传入 (已下载字节数, 总字节数, 速度 B/s).
     timeout : float, optional
         请求超时秒数, 默认 300.
+    verify : bool, optional
+        TLS 证书校验; False 时接受本地拦截证书 (旧 GitHub 方案兜底通路),
+        默认 True (官方 CDN 主通道保持严格校验).
 
     Returns
     ----
@@ -117,7 +121,9 @@ def download_file(
 
     file_path = dest / filename
 
-    with httpx.stream("GET", url, follow_redirects=True, timeout=timeout) as resp:
+    with httpx.stream(
+        "GET", url, follow_redirects=True, verify=verify, timeout=timeout
+    ) as resp:
         resp.raise_for_status()
         total = int(resp.headers.get("content-length", 0))
         downloaded = 0
@@ -144,12 +150,13 @@ def download_file_chunked(
     on_slice: Callable[[int | None, int, int], None] | None = None,
     workers: int | None = None,
     timeout: float = 300,
+    verify: bool = True,
 ) -> Path:
     """
-    分片并行下载文件, 固定切为 4 片.
+    分片并行下载文件 (片数由 clamp_workers 决定, 上限 32).
 
-    先用 HEAD 探测文件大小与 Range 支持, 将字节范围均分给 4 个工作
-    线程同时下载, 各线程独立句柄按偏移直接写入目标文件, 无需合并.
+    先用 HEAD 探测文件大小与 Range 支持, 将字节范围均分给 workers 个
+    工作线程同时下载, 各线程独立句柄按偏移直接写入目标文件, 无需合并.
     服务器不支持 Range 或探测失败时回退为 download_file 单流下载.
 
     ----
@@ -172,6 +179,9 @@ def download_file_chunked(
         调用方通常传入全局配置 parallel_downloads 以统一并行度.
     timeout : float, optional
         请求超时秒数, 默认 300.
+    verify : bool, optional
+        TLS 证书校验; False 时接受本地拦截证书 (旧 GitHub 方案兜底通路),
+        默认 True (官方 CDN 主通道保持严格校验).
 
     Returns
     ----
@@ -210,7 +220,9 @@ def download_file_chunked(
     total = 0
     supports_range = False
     try:
-        with httpx.stream("HEAD", url, follow_redirects=True, timeout=timeout) as resp:
+        with httpx.stream(
+            "HEAD", url, follow_redirects=True, verify=verify, timeout=timeout
+        ) as resp:
             if resp.status_code < 400:
                 total = int(resp.headers.get("content-length", 0))
                 supports_range = (
@@ -224,7 +236,12 @@ def download_file_chunked(
         if on_slice:
             on_slice(None, 0, 0)
         return download_file(
-            url, dest, filename=filename, on_progress=on_progress, timeout=timeout
+            url,
+            dest,
+            filename=filename,
+            on_progress=on_progress,
+            timeout=timeout,
+            verify=verify,
         )
 
     # 均分为 n 段闭区间 [start, end]
@@ -249,6 +266,7 @@ def download_file_chunked(
             url,
             headers=headers,
             follow_redirects=True,
+            verify=verify,
             timeout=timeout,
         ) as resp:
             # 必须是 206, 收到 200 说明服务器忽略了 Range
@@ -293,7 +311,12 @@ def download_file_chunked(
         if on_slice:
             on_slice(None, 0, 0)
         return download_file(
-            url, dest, filename=filename, on_progress=on_progress, timeout=timeout
+            url,
+            dest,
+            filename=filename,
+            on_progress=on_progress,
+            timeout=timeout,
+            verify=verify,
         )
 
     actual = file_path.stat().st_size

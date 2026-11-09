@@ -35,6 +35,7 @@ from rich.prompt import Confirm
 from gdpm.cli.base import GdpmCommand
 from gdpm.cli.commands.godot.common import (
     build_download_url,
+    build_github_download_urls,
     get_engines_dir,
     normalize_version,
 )
@@ -204,16 +205,16 @@ def godot_install(version: str, csharp: bool) -> None:
     # 统一并行度: 分片数与进度条均取全局配置 parallel_downloads
     workers = read_global_config().parallel_downloads
 
-    progress = Progress(
-        # 模板不染色: 样式由 name 字段自带 (单 Progress 共列, 按任务着色)
-        TextColumn("{task.fields[name]}"),
-        BarColumn(),
-        DownloadColumn(),
-        TransferSpeedColumn(),
-        TimeRemainingColumn(),
-    )
-
-    try:
+    def _run_download(target_url: str, verify: bool = True) -> None:
+        """一次完整的进度显示 + 分片下载 (每次尝试全新进度条)."""
+        progress = Progress(
+            # 模板不染色: 样式由 name 字段自带 (单 Progress 共列, 按任务着色)
+            TextColumn("{task.fields[name]}"),
+            BarColumn(),
+            DownloadColumn(),
+            TransferSpeedColumn(),
+            TimeRemainingColumn(),
+        )
         with progress:
             # 主进度条居首行, 分片条在其下按回调逐条显形
             slice_ids, task_id = _create_download_tasks(
@@ -234,38 +235,77 @@ def godot_install(version: str, csharp: bool) -> None:
 
             # 多片并行下载, 服务器不支持 Range 时自动回退单流
             download_file_chunked(
-                url,
+                target_url,
                 engines_dir,
                 filename=filename,
                 on_progress=on_progress,
                 on_slice=on_slice,
                 workers=workers,
+                verify=verify,
             )
 
-    except KeyboardInterrupt:
-        # Ctrl+C: 清理半成品压缩包, 以 130 干净退出 (不打印 Aborted/traceback)
-        if zip_path.exists():
-            zip_path.unlink()
-        console.print("\n[yellow]Cancelled.[/yellow]")
-        raise SystemExit(130) from None
-    except httpx.HTTPStatusError as e:
-        # 保留 404 的友好提示 (版本不存在)
-        if e.response.status_code == 404:
+    def _report_failure(error: Exception) -> None:
+        """下载失败提示 (404 保留版本不存在的友好指引)."""
+        if (
+            isinstance(error, httpx.HTTPStatusError)
+            and error.response.status_code == 404
+        ):
             console.print(
                 f"[red]Error:[/red] Version [cyan]{tag}[/cyan] not found.\n"
                 "  Use [bold]gdpm godot list -r[/bold] "
                 "to see available versions."
             )
         else:
-            console.print(f"[red]Error:[/red] Download failed: {e}")
+            console.print(f"[red]Error:[/red] Download failed: {error}")
+
+    def _abort_download() -> None:
+        """Ctrl+C: 清理半成品压缩包, 以 130 干净退出 (不打印 Aborted/traceback)."""
         if zip_path.exists():
             zip_path.unlink()
-        return
-    except Exception as e:
-        console.print(f"[red]Error:[/red] Download failed: {e}")
-        if zip_path.exists():
-            zip_path.unlink()
-        return
+        console.print("\n[yellow]Cancelled.[/yellow]")
+        raise SystemExit(130) from None
+
+    try:
+        _run_download(url)
+    except KeyboardInterrupt:
+        _abort_download()
+    except Exception as official_error:
+        # 官方通道走不通 (未收录如 1.x/3.0-mac、证书拦截、故障) → 自动切换
+        # 旧 GitHub 方案: 候选按序尝试 (单个仓库 504/失效时自动换下一个)
+        github_urls: list[str] = []
+        try:
+            github_urls = build_github_download_urls(tag, csharp)
+        except Exception:
+            github_urls = []
+        if not github_urls:
+            _report_failure(official_error)
+            if zip_path.exists():
+                zip_path.unlink()
+            return
+        console.print(
+            f"[dim]Official channel failed ({type(official_error).__name__}), "
+            "switching to GitHub download...[/dim]"
+        )
+        last_error: Exception | None = None
+        for github_url in github_urls:
+            try:
+                # 旧方案同款: GitHub 直链放宽证书校验 (本地拦截证书唯一通路)
+                _run_download(github_url, verify=False)
+                last_error = None
+                break
+            except KeyboardInterrupt:
+                _abort_download()
+            except Exception as candidate_error:
+                console.print(
+                    f"[dim]  GitHub candidate failed: "
+                    f"{type(candidate_error).__name__} ({github_url})[/dim]"
+                )
+                last_error = candidate_error
+        if last_error is not None:
+            _report_failure(last_error)
+            if zip_path.exists():
+                zip_path.unlink()
+            return
 
     console.print("Extracting...")
 
