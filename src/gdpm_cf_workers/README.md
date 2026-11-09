@@ -22,6 +22,54 @@ gdpm → godot-download.playereg.top/?version=&flavor=&slug=&platform=
   1 小时、versions 组装缓存 6 小时; 量大时配 token:
   `npx wrangler secret put GITHUB_TOKEN`
 
+## 接口参数
+
+`GET /?version=&flavor=&slug=&platform=` —— 与官方
+`downloads.godotengine.org` 同语义, gdpm 侧由 `_official_asset` 权威生成:
+
+| 参数 | 必填 | 作用 | 可填值 |
+|---|---|---|---|
+| `version` | ✓ | 版本号, 与 flavor 拼成 tag | `4.7.2` / `4.3` / `3.5.3` (X.Y 或 X.Y.Z, **不带通道**) |
+| `flavor` | | 发布通道, 拼成 tag `{version}-{flavor}` | `stable` (默认) / `rc1` / `beta2` / `dev7` … 必须与 GitHub release tag 后缀**逐字一致**, 否则 404 |
+| `slug` | ✓ | 资产文件名主体, 直构 `Godot_v{tag}_{slug}` 试探 | 见下表, **与 platform 成对** |
+| `platform` | | 平台标识, 决定历史候选表与 API 关键词分支 | 见下表, **与 slug 成对** |
+
+### slug × platform 成对取值表
+
+| 场景 | `slug` | `platform` |
+|---|---|---|
+| Windows (全代际) | `win64.exe.zip` | `windows.64` |
+| Windows mono | `mono_win64.zip` | `windows.64` |
+| macOS ≥ 4.8 (架构拆分) | `macos.arm64.zip` / `macos.x86_64.zip` | `macos.arm64` / `macos.x86_64` |
+| macOS 4.4–4.7 | `macos.universal.zip` | `macos.universal` |
+| macOS < 4 | `osx.universal.zip` | `macos.universal` |
+| Linux arm64 | `linux.arm64.zip` | `linux.arm64` |
+| Linux x86 ≥ 4 | `linux.x86_64.zip` | `linux.64` |
+| Linux x86 < 4 (3.x) | `x11.64.zip` | `linux.64` |
+| mono 变体 | 上述 slug 加 `mono_` 前缀 (3.x linux 为 `mono_x11_64.zip` 下划线) | 同上 |
+
+slug 首试未命中时, 按 `platform` 展开**历史命名候选**继续试探 (mono 前缀
+自动镜像到每个候选):
+
+- `macos*` → `osx.fat.zip` `osx.64.zip` `osx64.zip` `osx.universal.zip`
+- `windows*` → `win64.exe.zip` `win32.exe.zip`
+- 其余 (linux) → `x11.64.zip` `x11_64.zip` `linux.64.zip` `linux.x86_64.zip`
+
+再未命中 → GitHub releases API 关键词兜底 (平台关键词 + mono 过滤).
+
+### 响应
+
+| 状态 | 含义 |
+|---|---|
+| `302` + `location: .../gh/...` | 解析成功, 资产走本域中继 (客户端不直连 github.com) |
+| `400` | 缺 `version` 或 `slug` |
+| `404` `asset_not_found` | tag/资产不存在 (含上游本就没有的组合, 如 2.x mono) |
+| `405` | 非 GET/HEAD |
+
+注意: `slug` 与 `platform` **成对使用**, 交叉填写会导向错误的候选表;
+gdpm 客户端只消费 stable 通道 (install 有 stable-only 门禁), 非 stable
+值仅接口层面可用。
+
 ## 部署三步
 
 ```bash
