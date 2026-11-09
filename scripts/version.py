@@ -2,24 +2,26 @@
 """Version management script for gdpm.
 
 Usage:
+    python scripts/version.py --help             # Usage & tag table
     python scripts/version.py                    # Interactive mode
-    python scripts/version.py 0.0.3              # Update version only
+    python scripts/version.py 0.0.3              # Update version only (keeps tag)
     python scripts/version.py 0.0.3 beta         # Update version + tag
     python scripts/version.py 0.0.3 ""           # Update version, clear tag (stable)
     python scripts/version.py 0.0.3 beta-2       # Update version + tag with number
 
 Supported tags (PyPI compatible):
-    ""        → 0.0.3        (stable)
-    "dev"     → 0.0.3.dev1   (development)
-    "alpha"   → 0.0.3a1      (alpha)
-    "beta"    → 0.0.3b1      (beta)
-    "rc"      → 0.0.3rc1     (release candidate)
-    "beta-2"  → 0.0.3b2      (beta 2)
-    "rc3"     → 0.0.3rc3     (rc 3)
+    ""        -> 0.0.3        (stable)
+    "dev"     -> 0.0.3.dev1   (development)
+    "alpha"   -> 0.0.3a1      (alpha)
+    "beta"    -> 0.0.3b1      (beta)
+    "rc"      -> 0.0.3rc1     (release candidate)
+    "beta-2"  -> 0.0.3b2      (beta 2)
+    "rc3"     -> 0.0.3rc3     (rc 3)
 """
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from pathlib import Path
@@ -70,7 +72,7 @@ def read_current() -> tuple[str, str]:
     tag_name = tag_match.group(1) if tag_match else ""
 
     # Extract tag number from PyPI format
-    # "0.1.0b12" → tag_num=12, "0.1.0.dev3" → tag_num=3
+    # "0.1.0b12" -> tag_num=12, "0.1.0.dev3" -> tag_num=3
     tag_num = 1
     num_match = re.search(r"[a-z](\d+)$|\.dev(\d+)$|rc(\d+)$", pypi_version)
     if num_match:
@@ -105,33 +107,42 @@ def get_display_version(version: str, tag: str) -> str:
 
 
 def update_files(version: str, tag: str) -> None:
-    """Update pyproject.toml and __init__.py."""
+    """Update pyproject.toml and __init__.py.
+
+    All pattern substitutions are validated BEFORE any write: a zero-match
+    substitution aborts with a non-zero exit instead of silently reporting
+    success or leaving a half-updated pair of files.
+    """
     tag_name, _ = parse_tag(tag)
     pypi_version = get_pypi_version(version, tag)
 
-    # Update pyproject.toml
-    content = PYPROJECT_FILE.read_text(encoding="utf-8")
-    content = re.sub(
+    # Stage all rewrites first (all-or-nothing on pattern mismatch)
+    new_pyproject, n_project = re.subn(
         r'^version\s*=\s*"[^"]*"',
         f'version = "{pypi_version}"',
-        content,
+        PYPROJECT_FILE.read_text(encoding="utf-8"),
         flags=re.MULTILINE,
     )
-    PYPROJECT_FILE.write_text(content, encoding="utf-8")
-
-    # Update __init__.py
-    content = INIT_FILE.read_text(encoding="utf-8")
-    content = re.sub(
+    new_init = INIT_FILE.read_text(encoding="utf-8")
+    new_init, n_version = re.subn(
         r'__version__\s*=\s*"[^"]*"',
         f'__version__ = "{pypi_version}"',
-        content,
+        new_init,
     )
-    content = re.sub(
+    new_init, n_tag = re.subn(
         r'__tag__\s*=\s*"[^"]*"',
         f'__tag__ = "{tag_name}"',
-        content,
+        new_init,
     )
-    INIT_FILE.write_text(content, encoding="utf-8")
+
+    if n_project == 0:
+        sys.exit("Error: version pattern not found in pyproject.toml")
+    if n_version == 0 or n_tag == 0:
+        sys.exit("Error: __version__/__tag__ pattern not found in src/gdpm/__init__.py")
+
+    # Patterns all matched: commit both files
+    PYPROJECT_FILE.write_text(new_pyproject, encoding="utf-8")
+    INIT_FILE.write_text(new_init, encoding="utf-8")
 
 
 def validate_version(version: str) -> bool:
@@ -147,45 +158,99 @@ def validate_tag(tag_input: str) -> bool:
     return tag_name in VALID_TAGS
 
 
-def main() -> None:
-    current_version, current_tag = read_current()
+def build_parser() -> argparse.ArgumentParser:
+    """Build CLI parser (--help doubles as the usage doc)."""
+    parser = argparse.ArgumentParser(
+        prog="python scripts/version.py",
+        description=(
+            "Update the gdpm version in pyproject.toml and src/gdpm/__init__.py. "
+            "Omit all arguments for interactive mode."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Tags (PyPI compatible):\n"
+            "  (empty)  -> 0.0.3        stable\n"
+            "  dev      -> 0.0.3.dev1\n"
+            "  alpha    -> 0.0.3a1\n"
+            "  beta     -> 0.0.3b1\n"
+            "  rc       -> 0.0.3rc1\n"
+            "  beta-2   -> 0.0.3b2      also accepts beta2\n"
+            "  rc3      -> 0.0.3rc3\n"
+        ),
+    )
+    parser.add_argument(
+        "version",
+        nargs="?",
+        metavar="VERSION",
+        help="new version in x.y.z form; omit for interactive mode",
+    )
+    parser.add_argument(
+        "tag",
+        nargs="?",
+        metavar="TAG",
+        default=None,
+        help="dev/alpha/beta/rc with optional number (beta-2); "
+        'omit to keep the current tag, pass "" for stable',
+    )
+    return parser
 
-    # Interactive mode if no arguments
-    if len(sys.argv) < 2:
-        print(f"Current version: {get_display_version(current_version, current_tag)}")
-        print()
 
-        new_version = input("New version (empty to skip): ").strip()
-        if not new_version:
-            print("No changes.")
-            return
+def _run_interactive(current_version: str, current_tag: str) -> int:
+    """Interactive mode: prompt for version and tag, return exit code."""
+    print(f"Current version: {get_display_version(current_version, current_tag)}")
+    print()
 
-        print(f"Tags: {', '.join(VALID_TAGS)} (empty = stable)")
-        new_tag = input("Tag (empty = stable): ").strip()
-
-        if not validate_tag(new_tag):
-            print(f"Error: Invalid tag '{new_tag}'")
-            sys.exit(1)
-
-        # Empty input means stable (clear tag)
-        update_files(new_version, new_tag)
-        _print_result(current_version, current_tag, new_version, new_tag)
-        return
-
-    # Command-line mode
-    new_version = sys.argv[1]
-    new_tag = sys.argv[2] if len(sys.argv) > 2 else current_tag
-
+    new_version = input("New version (empty to skip): ").strip()
+    if not new_version:
+        print("No changes.")
+        return 0
     if not validate_version(new_version):
         print(f"Error: Invalid version format '{new_version}'. Use x.y.z")
-        sys.exit(1)
+        return 1
+
+    print(f"Tags: {', '.join(VALID_TAGS)} (empty = stable)")
+    new_tag = input("Tag (empty = stable): ").strip().lower()
 
     if not validate_tag(new_tag):
-        print(f"Error: Invalid tag '{new_tag}'. Use: {', '.join(VALID_TAGS)}")
-        sys.exit(1)
+        print(f"Error: Invalid tag '{new_tag}'")
+        return 1
 
     update_files(new_version, new_tag)
     _print_result(current_version, current_tag, new_version, new_tag)
+    return 0
+
+
+def _run_cli(
+    version_arg: str, tag_arg: str | None, current_version: str, current_tag: str
+) -> int:
+    """Command-line mode: validate, update, return exit code."""
+    version = version_arg.strip()
+    if not validate_version(version):
+        print(f"Error: Invalid version format '{version}'. Use x.y.z")
+        return 1
+
+    # No tag argument -> keep current tag (update version only);
+    # explicit "" means stable
+    tag = current_tag if tag_arg is None else tag_arg.strip().lower()
+    if not validate_tag(tag):
+        print(f"Error: Invalid tag '{tag}'. Use: {', '.join(VALID_TAGS)}")
+        return 1
+    if tag_arg is None and current_tag:
+        print(f'Note: keeping current tag "{current_tag}" (pass "" for stable)')
+
+    update_files(version, tag)
+    _print_result(current_version, current_tag, version, tag)
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Entry point: dispatch interactive/CLI mode, return exit code."""
+    args = build_parser().parse_args(argv)
+    current_version, current_tag = read_current()
+
+    if args.version is None:
+        return _run_interactive(current_version, current_tag)
+    return _run_cli(args.version, args.tag, current_version, current_tag)
 
 
 def _print_result(old_ver: str, old_tag: str, new_ver: str, new_tag: str) -> None:
@@ -207,4 +272,4 @@ def _print_result(old_ver: str, old_tag: str, new_ver: str, new_tag: str) -> Non
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
