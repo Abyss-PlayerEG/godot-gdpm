@@ -24,9 +24,7 @@ def _render_with_slice_updates() -> str:
     """用 install 同款结构渲染进度, 返回输出文本 (终端模式触发 Live 刷新)."""
     buf = io.StringIO()
     console = Console(file=buf, force_terminal=True, width=80)
-    with Progress(
-        TextColumn("[bold blue]{task.fields[name]}"), console=console
-    ) as progress:
+    with Progress(TextColumn("{task.fields[name]}"), console=console) as progress:
         slice_ids, task_id = _create_download_tasks(progress, "Godot 4.7-stable")
         handler = _make_slice_handler(progress, slice_ids)
 
@@ -52,9 +50,7 @@ def test_slice_count_follows_constant(monkeypatch) -> None:
     monkeypatch.setattr("gdpm.utils.download.CHUNK_COUNT", 8)
     buf = io.StringIO()
     console = Console(file=buf, force_terminal=False, width=80)
-    with Progress(
-        TextColumn("[bold blue]{task.fields[name]}"), console=console
-    ) as progress:
+    with Progress(TextColumn("{task.fields[name]}"), console=console) as progress:
         slice_ids, _ = _create_download_tasks(progress, "Godot 4.7-stable")
         labels = [progress.tasks[int(tid)].description for tid in slice_ids]
 
@@ -66,9 +62,7 @@ def test_workers_param_controls_task_count() -> None:
     """workers 参数 (parallel_downloads 配置值) 决定进度条分片行数."""
     buf = io.StringIO()
     console = Console(file=buf, force_terminal=False, width=80)
-    with Progress(
-        TextColumn("[bold blue]{task.fields[name]}"), console=console
-    ) as progress:
+    with Progress(TextColumn("{task.fields[name]}"), console=console) as progress:
         slice_ids, _ = _create_download_tasks(progress, "Godot 4.7-stable", workers=6)
         labels = [progress.tasks[int(tid)].description for tid in slice_ids]
 
@@ -80,9 +74,7 @@ def test_fallback_hides_slice_tasks() -> None:
     """回退信号 (index=None) 收起分片条, 输出不再含 Slice 行."""
     buf = io.StringIO()
     console = Console(file=buf, force_terminal=True, width=80)
-    with Progress(
-        TextColumn("[bold blue]{task.fields[name]}"), console=console
-    ) as progress:
+    with Progress(TextColumn("{task.fields[name]}"), console=console) as progress:
         slice_ids, task_id = _create_download_tasks(progress, "Godot 4.7-stable")
         handler = _make_slice_handler(progress, slice_ids)
 
@@ -100,12 +92,31 @@ def test_workers_clamped_to_max_slices() -> None:
     """workers=64 超过硬上限: 进度条仍按 32 片创建, 标签联动."""
     buf = io.StringIO()
     console = Console(file=buf, force_terminal=False, width=80)
-    with Progress(
-        TextColumn("[bold blue]{task.fields[name]}"), console=console
-    ) as progress:
+    with Progress(TextColumn("{task.fields[name]}"), console=console) as progress:
         slice_ids, _ = _create_download_tasks(progress, "Godot 4.7-stable", workers=64)
         labels = [progress.tasks[int(tid)].description for tid in slice_ids]
 
     assert len(slice_ids) == 32
     assert labels[0] == "Slice 1/32"
     assert labels[-1] == "Slice 32/32"
+
+
+def test_task_name_styles() -> None:
+    """样式随字段走: 切片标签灰色, 总条保持 bold blue (模板无色)."""
+    buf = io.StringIO()
+    console = Console(file=buf, force_terminal=False, width=80)
+    with Progress(TextColumn("{task.fields[name]}"), console=console) as progress:
+        slice_ids, task_id = _create_download_tasks(progress, "Godot 4.7-stable")
+
+        assert "[grey50]" in progress.tasks[int(slice_ids[0])].fields["name"]
+        assert "[/grey50]" in progress.tasks[int(slice_ids[-1])].fields["name"]
+        assert "[bold blue]" in progress.tasks[int(task_id)].fields["name"]
+        # description 保持纯文本 (测试与回退逻辑依赖)
+        assert progress.tasks[int(slice_ids[0])].description == "Slice 1/4"
+
+
+def test_total_bar_on_first_row() -> None:
+    """主进度条渲染在首行, 分片条在其下方 (任务按添加顺序渲染)."""
+    out = _render_with_slice_updates()
+
+    assert out.index("Godot 4.7-stable") < out.index("Slice 1/")

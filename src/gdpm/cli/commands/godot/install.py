@@ -50,11 +50,14 @@ def _create_download_tasks(
     progress: Progress, total_name: str, workers: int | None = None
 ) -> tuple[list[TaskID], TaskID]:
     """
-    创建下载进度任务: n 条分片条 (惰性显形) + 总进度条.
+    创建下载进度任务: 总进度条 (居首行) + n 条分片条 (其下方惰性显形).
 
     分片条初始不可见, 由分片回调首次触发时定长显形;
     每个任务必须携带 name 字段 — TextColumn 按 {task.fields[name]} 渲染,
     缺失会在显形渲染时抛 KeyError.
+    样式随字段走: name 自带标记 (切片 [grey50] 灰, 总条 [bold blue] 蓝),
+    TextColumn 模板保持无色 —— 单 Progress 所有任务共列, 这是按任务着色
+    的唯一途径.
 
     ----
 
@@ -74,16 +77,20 @@ def _create_download_tasks(
         (分片任务 ID 列表, 总任务 ID).
     """
     n = clamp_workers(workers)
+    # 样式进字段: 切片标签灰色, 总条保持 bold blue (模板已去色)
+    # 总进度条先添加 → 渲染在首行, 分片条随后在其下方逐条显形
+    task_id = progress.add_task(
+        "download", name=f"[bold blue]{total_name}[/bold blue]", total=None
+    )
     slice_ids = [
         progress.add_task(
             f"Slice {i + 1}/{n}",
-            name=f"Slice {i + 1}/{n}",
+            name=f"[grey50]Slice {i + 1}/{n}[/grey50]",
             total=None,
             visible=False,
         )
         for i in range(n)
     ]
-    task_id = progress.add_task("download", name=total_name, total=None)
     return slice_ids, task_id
 
 
@@ -196,7 +203,8 @@ def godot_install(version: str, csharp: bool) -> None:
     workers = read_global_config().parallel_downloads
 
     progress = Progress(
-        TextColumn("[bold blue]{task.fields[name]}"),
+        # 模板不染色: 样式由 name 字段自带 (单 Progress 共列, 按任务着色)
+        TextColumn("{task.fields[name]}"),
         BarColumn(),
         DownloadColumn(),
         TransferSpeedColumn(),
@@ -205,7 +213,7 @@ def godot_install(version: str, csharp: bool) -> None:
 
     try:
         with progress:
-            # 分片条在上 (首次回调才定长显形), 总进度垫底
+            # 主进度条居首行, 分片条在其下按回调逐条显形
             slice_ids, task_id = _create_download_tasks(
                 progress, f"Godot {tag}{suffix}", workers
             )
