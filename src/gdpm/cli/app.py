@@ -43,14 +43,21 @@ console = Console()
 
 
 def _version_text() -> Text:
-    """构建版本文本: 基础版本 (剥预发布后缀) + 发布标签 + 安装方式与平台."""
+    """构建版本文本: 基础版本 + 带序号的发布标签 (beta3/dev2/rc1) + 平台."""
     import re
 
     from gdpm.utils.install import get_install_type, get_platform
 
     # 去掉 dev/a/b/rc 等预发布后缀得到展示用基础版本
     base_version = re.sub(r"(\.dev\d+|[a-z]\d+|rc\d+)$", "", __version__)
-    tag_display = f" [{__tag__}]" if __tag__ else ""
+    # 标签序号从 __version__ 的预发布后缀提取, 与 __tag__ 拼接展示
+    # ("0.0.1b3" -> [beta3], "0.1.1.dev2" -> [dev2]); 无后缀则只显示标签
+    tag_display = ""
+    if __tag__:
+        suffix = __version__[len(base_version) :]
+        num_match = re.search(r"(\d+)$", suffix)
+        number = num_match.group(1) if num_match else ""
+        tag_display = f" [{__tag__}{number}]"
     install_type = get_install_type()
     platform_info = get_platform()
 
