@@ -1,25 +1,22 @@
 /**
- * godot-download — Godot 官方下载接口仿真 Cloudflare Worker
+ * godot-download — Godot 下载接口仿真 Cloudflare Worker (纯 GitHub 源)
  *
  * 仿 downloads.godotengine.org 的 query 语义:
  *   /?version=4.7.2&flavor=stable&slug=macos.universal.zip&platform=macos.universal
  *
- * 解析链路:
- *   1. 逐候选 slug 探测官方接口 (redirect: manual), 拿 Location 再分发:
- *      - 非 GitHub (对象存储, 如 godot-releases.nbg1...) → 直接 302 给客户端
- *      - github.com → 302 到本域 /gh/... 中继 (客户端只走 CF 边缘)
- *   2. 官方 404 (1.x/2.x/3.0-mac 未收录) → GitHub releases API 按资产名
- *      匹配 (平台关键词 + mono 过滤) → 302 到 /gh/... 中继
- *   3. /gh/ 中继: CF → GitHub 回源 (海外直连, 不经本机网络), 完整 GET 边缘
+ * 解析链路 (不探测官方接口, 全部经 GitHub):
+ *   1. /?query → 直构资产名经 github.com HEAD 试探 (零 API 配额) → 302 本域
+ *      中继; 未命中再走 GitHub releases API 资产匹配 (平台关键词 + mono
+ *      过滤, 按 tag 缓存 1 小时, 覆盖老版本命名差异)
+ *   2. /gh/ 中继: CF → GitHub 回源 (海外直连, 不经本机网络), 完整 GET 边缘
  *      缓存 30 天, Range 分片透传 (206 不缓存, 逐片回源, CF→GitHub 稳定)
- *   4. /versions.json: 仿官方 godotengine.org/versions.json, 经 GitHub
+ *   3. /versions.json: 仿官方 godotengine.org/versions.json, 经 GitHub
  *      releases API 整理两仓库已发布版本 (含 dev/beta 快照), schema 一致;
  *      组装结果缓存 6 小时, GitHub API 不可用时回退上一份
  *
  * 部署与验证见同目录 README.md.
  */
 
-const OFFICIAL_BASE = "https://downloads.godotengine.org/";
 const REPOS = ["godotengine/godot-builds", "godotengine/godot"];
 const API_CACHE_TTL = 3600;
 const ASSET_CACHE_TTL = 30 * 24 * 3600;
@@ -39,7 +36,7 @@ export default {
       if (request.method !== "GET" && request.method !== "HEAD") {
         return json(405, { error: "method_not_allowed" });
       }
-      return resolveAsset(request, url, env, ctx);
+      return resolveAsset(url, env, ctx);
     }
 
     if (url.pathname.startsWith("/gh/godotengine/")) {
@@ -56,11 +53,19 @@ export default {
       return versionsJson(request, env, ctx);
     }
 
+    if (
+      url.pathname === "/debug-probe" ||
+      url.pathname === "/debug-api" ||
+      url.pathname === "/debug-resolve"
+    ) {
+      return debugProbe(url, env);
+    }
+
     return json(404, { error: "not_found" });
   },
 };
 
-async function resolveAsset(request, url, env, ctx) {
+async function resolveAsset(url, env, ctx) {
   const version = url.searchParams.get("version");
   const flavor = url.searchParams.get("flavor") || "stable";
   const slug = url.searchParams.get("slug");
@@ -69,86 +74,45 @@ async function resolveAsset(request, url, env, ctx) {
     return json(400, { error: "bad_request", need: ["version", "slug"] });
   }
 
-  for (const candidate of slugCandidates(slug, platform)) {
-    const target = new URL(OFFICIAL_BASE);
-    target.searchParams.set("version", version);
-    target.searchParams.set("flavor", flavor);
-    target.searchParams.set("slug", candidate);
-    target.searchParams.set("platform", platform);
-
-    let resp;
-    try {
-      resp = await fetch(target, { method: request.method, redirect: "manual" });
-    } catch {
-      continue;
-    }
-
-    const location = resp.headers.get("location");
-    if (resp.status >= 300 && resp.status < 400 && location) {
-      return redirectTo(location, url.origin);
-    }
-    if (resp.ok) {
-      return resp;
-    }
-  }
-
+  // 纯 GitHub 源: releases API 资产名匹配 → 302 到本域中继
   const ghUrl = await resolveFromGitHub(version, flavor, slug, platform, env, ctx);
-  if (ghUrl) {
-    return redirectTo(ghUrl, url.origin);
+  if (!ghUrl) {
+    return json(404, {
+      error: "asset_not_found",
+      version,
+      flavor,
+      slug,
+      platform,
+    });
   }
-  return json(404, {
-    error: "asset_not_found",
-    version,
-    flavor,
-    slug,
-    platform,
-  });
-}
-
-/**
- * slug 容错: 请求 slug 首试, 再按平台试历史命名变体.
- * 官方对 3.0/3.1/3.2 的 mac 资产用 osx.* 而 gdpm 请求 osx.universal 系,
- * 变体试中即跳; 全部落空时上层还有 GitHub 资产名匹配兜底.
- */
-function slugCandidates(slug, platform) {
-  const mono = slug.startsWith("mono_");
-  const base = mono ? slug.slice(5) : slug;
-
-  let alts;
-  if (platform.startsWith("macos")) {
-    alts = ["osx.universal.zip", "osx.64.zip", "osx64.zip", "osx.fat.zip"];
-  } else if (platform.startsWith("windows")) {
-    alts = ["win64.exe.zip", "win32.exe.zip"];
-  } else {
-    alts = ["linux.x86_64.zip", "x11.64.zip", "x11_64.zip", "linux.64.zip"];
+  const target = new URL(ghUrl);
+  if (target.hostname !== "github.com") {
+    // 非 github.com 直链 (异常情况): 原样透传
+    return Response.redirect(target.toString(), 302);
   }
-
-  const out = [slug];
-  for (const alt of alts) {
-    if (alt === base) continue;
-    const candidate = mono ? `mono_${alt}` : alt;
-    if (!out.includes(candidate)) out.push(candidate);
-  }
-  return out;
-}
-
-function redirectTo(location, origin) {
-  let target;
-  try {
-    target = new URL(location, OFFICIAL_BASE);
-  } catch {
-    return json(502, { error: "bad_upstream_location", location });
-  }
-  if (target.hostname === "github.com") {
-    // GitHub 直链改走本域中继, 客户端不再直连 github.com
-    return Response.redirect(`${origin}/gh${target.pathname}${target.search}`, 302);
-  }
-  // 对象存储 (>=4.4): 客户端直连可达, 原样透传官方跳转
-  return Response.redirect(target.toString(), 302);
+  // github 直链改走本域中继, 客户端不再直连 github.com
+  return Response.redirect(
+    `${url.origin}/gh${target.pathname}${target.search}`,
+    302
+  );
 }
 
 async function resolveFromGitHub(version, flavor, slug, platform, env, ctx) {
   const tag = `${version}-${flavor}`;
+
+  // 1) 零 API 直构: Godot_v{tag}_{候选名} 覆盖常规与历史命名 (3.0 的 osx.fat
+  //    等), 经 github.com 直链 HEAD 试探 (302=存在), 不占 API 限流配额;
+  //    试探结果按 tag 缓存 1 小时
+  for (const name of assetNames(slug, platform)) {
+    const assetFile = `Godot_v${tag}_${name}`;
+    for (const repo of REPOS) {
+      if (await assetExists(repo, tag, assetFile)) {
+        return `https://github.com/${repo}/releases/download/${tag}/${assetFile}`;
+      }
+    }
+  }
+
+  // 2) API 兜底: 直构覆盖不了的异形命名 (1.x 的 v1.1_stable 下划线等)
   const mono = slug.startsWith("mono_");
   const keywords = platformKeywords(platform);
 
@@ -165,6 +129,67 @@ async function resolveFromGitHub(version, flavor, slug, platform, env, ctx) {
     }
   }
   return null;
+}
+
+/**
+ * 直构资产名候选: 请求 slug 首试, 再按平台试历史命名变体
+ * (3.0/3.1/3.2 的 osx.*、3.x 的 x11、1.x/2.x 的 win32 等), mono 前缀镜像.
+ */
+function assetNames(slug, platform) {
+  const mono = slug.startsWith("mono_");
+  const base = mono ? slug.slice(5) : slug;
+
+  let alts;
+  if (platform.startsWith("macos")) {
+    alts = ["osx.fat.zip", "osx.64.zip", "osx64.zip", "osx.universal.zip"];
+  } else if (platform.startsWith("windows")) {
+    alts = ["win64.exe.zip", "win32.exe.zip"];
+  } else {
+    alts = ["x11.64.zip", "x11_64.zip", "linux.64.zip", "linux.x86_64.zip"];
+  }
+
+  const out = [slug];
+  for (const alt of alts) {
+    if (alt === base) continue;
+    const candidate = mono ? `mono_${alt}` : alt;
+    if (!out.includes(candidate)) out.push(candidate);
+  }
+  return out;
+}
+
+async function assetExists(repo, tag, name) {
+  // github.com 资产直链 HEAD: 302 (存在) / 404 (不存在), CDN 直链不限流;
+  // 结果缓存 1 小时 (资产名随 tag 不可变), 网络失败不缓存
+  const cacheKey = new Request(
+    `https://gdpm-worker-cache/exists-v2/${repo}/${tag}/${name}`
+  );
+  const hit = await caches.default.match(cacheKey);
+  if (hit) return (await hit.text()) === "1";
+
+  let exists = false;
+  try {
+    const resp = await fetch(
+      `https://github.com/${repo}/releases/download/${tag}/${encodeURIComponent(name)}`,
+      { method: "HEAD", redirect: "manual" }
+    );
+    if (resp.status >= 300 && resp.status < 400) {
+      exists = true;
+    } else if (resp.status !== 404) {
+      // 非确定性状态 (5xx 等): 不缓存, 交由下一候选/仓库
+      return false;
+    }
+  } catch {
+    return false;
+  }
+
+  const store = caches.default.put(
+    cacheKey,
+    new Response(exists ? "1" : "0", {
+      headers: { "cache-control": "public, max-age=3600" },
+    })
+  );
+  await store;
+  return exists;
 }
 
 function platformKeywords(platform) {
@@ -264,6 +289,98 @@ function json(status, body) {
       "cache-control": "no-store",
     },
   });
+}
+
+/* ---------- 诊断端点 (运维用): CF 出口到 github 的真实状态 ---------- */
+
+async function debugProbe(url, env) {
+  if (url.pathname === "/debug-resolve") {
+    // 逐跳追踪解析全过程 (绕过一切缓存), 定位 asset_not_found 的确切环节
+    const version = url.searchParams.get("version");
+    const flavor = url.searchParams.get("flavor") || "stable";
+    const slug = url.searchParams.get("slug");
+    const platform = url.searchParams.get("platform") || "";
+    const tag = `${version}-${flavor}`;
+    const probes = [];
+    for (const name of assetNames(slug, platform)) {
+      for (const repo of REPOS) {
+        const probeUrl = `https://github.com/${repo}/releases/download/${tag}/${encodeURIComponent(name)}`;
+        const t0 = Date.now();
+        try {
+          const resp = await fetch(probeUrl, {
+            method: "HEAD",
+            redirect: "manual",
+          });
+          probes.push({ repo, name, status: resp.status, ms: Date.now() - t0 });
+        } catch (error) {
+          probes.push({ repo, name, error: String(error), ms: Date.now() - t0 });
+        }
+      }
+    }
+    const api = [];
+    for (const repo of REPOS) {
+      const t0 = Date.now();
+      try {
+        const resp = await fetch(
+          `https://api.github.com/repos/${repo}/releases/tags/${tag}`,
+          {
+            headers: {
+              accept: "application/vnd.github+json",
+              "user-agent": "godot-download-worker",
+              ...(env.GITHUB_TOKEN
+                ? { authorization: `Bearer ${env.GITHUB_TOKEN}` }
+                : {}),
+            },
+          }
+        );
+        api.push({ repo, status: resp.status, ms: Date.now() - t0 });
+      } catch (error) {
+        api.push({ repo, error: String(error), ms: Date.now() - t0 });
+      }
+    }
+    return json(200, { tag, slug, probes, api });
+  }
+
+  if (url.pathname === "/debug-api") {
+    // CF 出口调 GitHub API 限流余量 (只允许该固定端点, 防开放代理)
+    const t0 = Date.now();
+    try {
+      const resp = await fetch("https://api.github.com/rate_limit", {
+        headers: {
+          accept: "application/vnd.github+json",
+          "user-agent": "godot-download-worker",
+          ...(env.GITHUB_TOKEN
+            ? { authorization: `Bearer ${env.GITHUB_TOKEN}` }
+            : {}),
+        },
+      });
+      const body = await resp.json();
+      return json(200, {
+        status: resp.status,
+        ms: Date.now() - t0,
+        core: body?.resources?.core,
+      });
+    } catch (error) {
+      return json(200, { error: String(error), ms: Date.now() - t0 });
+    }
+  }
+
+  // HEAD 指定 github.com 直链, 返回原始状态码与耗时
+  const target = url.searchParams.get("target") || "";
+  if (!target.startsWith("https://github.com/")) {
+    return json(400, { error: "target must be https://github.com/..." });
+  }
+  const t0 = Date.now();
+  try {
+    const resp = await fetch(target, { method: "HEAD", redirect: "manual" });
+    return json(200, {
+      status: resp.status,
+      location: (resp.headers.get("location") || "").slice(0, 120),
+      ms: Date.now() - t0,
+    });
+  } catch (error) {
+    return json(200, { error: String(error), ms: Date.now() - t0 });
+  }
 }
 
 /* ---------- /versions.json: 仿官方 schema, 源为 GitHub releases ---------- */

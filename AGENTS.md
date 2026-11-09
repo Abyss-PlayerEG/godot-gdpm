@@ -307,4 +307,4 @@ gh release create v0.1.0 --title "v0.1.0" --notes-file RELEASE_NOTES.md
 - `gdpm cache` for managing download cache
 - `.engines-conf.json` stores per-project Godot engine configuration
 - `~/.gdpm/engines/` stores downloaded Godot binaries
-- Engine downloads and `versions.json` go exclusively through the self-hosted mirror `godot-download.playereg.top` (constant `GODOT_DOWNLOAD_MIRROR`, no config); official URLs are removed from the client — the Worker handles official/GitHub origin fetching server-side
+- Engine downloads and `versions.json` go exclusively through the self-hosted mirror `godot-download.playereg.top` (constant `GODOT_DOWNLOAD_MIRROR`, no config); official URLs are removed from the client — the Worker resolves assets and relays downloads from GitHub server-side

@@ -2,27 +2,25 @@
 
 在自有域名 `godot-download.playereg.top` 上仿真官方下载接口
 `downloads.godotengine.org` 的 query 语义, 治理本机到 GitHub 的
-302↔504 抖动 (加速器/网络环境所致), 并补齐官方接口对老版本的 slug 缺口.
+302↔504 抖动 (加速器/网络环境所致); **解析与回源全部经 GitHub**,
+服务端不探测官方接口.
 
 ## 架构
 
 ```
 gdpm → godot-download.playereg.top/?version=&flavor=&slug=&platform=
-        │ Worker (本目录, CF 边缘执行)
-        ├─ 探测官方接口 (逐候选 slug, redirect: manual)
-        │   ├─ 302 → 对象存储 (≥4.4)      → 直接 302 给客户端 (本机直连可达)
-        │   └─ 302 → github.com (≤4.3)    → 302 到本域 /gh/... 中继
-        ├─ 官方 404 (1.x/2.x/3.0-mac 未收录)
-        │   → GitHub releases API 资产名匹配 (平台关键词 + mono 过滤) → /gh/... 中继
+        │ Worker (本目录, CF 边缘执行, 纯 GitHub 源)
+        ├─ GitHub releases API 资产名匹配 (平台关键词 + mono 过滤,
+        │   按 tag 缓存 1 小时, godot-builds → godot 双仓库)
+        │   → 302 到本域 /gh/... 中继 (客户端只走 CF 边缘)
         └─ /gh/ 中继: CF→GitHub 回源 (海外直连, 不经本机网络)
             ├─ 完整 GET → 边缘缓存 30 天
             └─ Range 206 (gdpm 分片) → 逐片回源透传
 ```
 
-- 服务端 slug 容错: `macos.*` 试 `osx.universal/osx.64/osx64/osx.fat`,
-  `linux.64` 试 `x11.64/x11_64/linux.64`, mono 前缀镜像 —— 试中即跳
-- GitHub API 未认证限流 60/时 (按 CF 出口 IP 计), 结果缓存 1 小时;
-  量大时配 token: `npx wrangler secret put GITHUB_TOKEN`
+- GitHub API 未认证限流 60/时 (按 CF 出口 IP 计), 资产解析按 tag 缓存
+  1 小时、versions 组装缓存 6 小时; 量大时配 token:
+  `npx wrangler secret put GITHUB_TOKEN`
 
 ## 部署三步
 
@@ -39,29 +37,25 @@ npx wrangler deploy                     # routes 自动创建 DNS + 证书
 ```bash
 BASE="https://godot-download.playereg.top"
 
-# 1. ≥4.4: 302 直指官方对象存储 (nbg1)
+# 1. 解析: 任意版本 302 到本域中继 (全部经 GitHub)
 curl -sI "$BASE/?version=4.7.2&flavor=stable&slug=macos.universal.zip&platform=macos.universal"
-#    → HTTP/2 302, location: https://godot-releases.nbg1...
+#    → HTTP/2 302, location: .../gh/godotengine/.../Godot_v4.7.2-stable_macos.universal.zip
 
-# 2. ≤4.3: 302 指向本域中继 (不再直连 github.com)
-curl -sI "$BASE/?version=4.3&flavor=stable&slug=macos.universal.zip&platform=macos.universal"
-#    → HTTP/2 302, location: .../gh/godotengine/...
-
-# 3. 中继跟到底: 200 + 正确字节数
+# 2. 中继跟到底: 200 + 正确字节数
 curl -sIL "$BASE/?version=4.3&flavor=stable&slug=macos.universal.zip&platform=macos.universal" \
   -o /dev/null -w "%{http_code} %{size_download}\n"   # 期望 200 (最终)
 
-# 4. 老版本 slug 缺口 (官方 404 → GitHub 资产匹配兜底)
+# 3. 老版本资产关键词匹配 (3.0 → osx.fat)
 curl -sI "$BASE/?version=3.0&flavor=stable&slug=osx.universal.zip&platform=macos.universal"
 #    → 302 → /gh/godotengine/.../Godot_v3.0-stable_osx.fat.zip
 
-# 5. Range 分片 (gdpm 分片下载依赖)
+# 4. Range 分片 (gdpm 分片下载依赖)
 curl -s -H "Range: bytes=0-1023" -o /dev/null -w "%{http_code}\n" \
   "$BASE/gh/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_macos.universal.zip"
 #    → 206
 
-# 6. 缓存命中判定 (二次请求应命中边缘, cf-cache-status: HIT)
-curl -sI "<同 3 的最终中继 URL>" | grep -i cf-cache-status
+# 5. 缓存命中判定 (二次请求应命中边缘, cf-cache-status: HIT)
+curl -sI "<同 2 的最终中继 URL>" | grep -i cf-cache-status
 ```
 
 ## gdpm 接入
@@ -69,10 +63,10 @@ curl -sI "<同 3 的最终中继 URL>" | grep -i cf-cache-status
 gdpm 侧**只走本镜像, 无任何配置**: 引擎下载与 `versions.json` 均直打
 `godot-download.playereg.top` (常量 `GODOT_DOWNLOAD_MIRROR` 写死在
 `src/gdpm/constants.py`), 官方 URL 已从客户端移除 —— query 语义仍与官方
-逐字一致, 官方回源、GitHub 中继、slug 容错全部由本 Worker 服务端完成:
+逐字一致, GitHub 资产匹配与中继全部由本 Worker 服务端完成:
 
 ```
-gdpm ──> godot-download.playereg.top ──(Worker 内部)──> 官方接口 / GitHub
+gdpm ──> godot-download.playereg.top ──(Worker 内部)──> GitHub (API + 中继)
 ```
 
 换镜像域名时只改 `src/gdpm/constants.py` 的 `GODOT_DOWNLOAD_MIRROR` 一处。
