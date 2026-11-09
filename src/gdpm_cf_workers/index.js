@@ -42,7 +42,7 @@ export default {
       return resolveAsset(request, url, env, ctx);
     }
 
-    if (url.pathname === "/gh/godotengine/") {
+    if (url.pathname.startsWith("/gh/godotengine/")) {
       if (request.method !== "GET" && request.method !== "HEAD") {
         return json(405, { error: "method_not_allowed" });
       }
