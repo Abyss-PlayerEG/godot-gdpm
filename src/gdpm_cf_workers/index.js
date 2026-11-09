@@ -8,8 +8,9 @@
  *   1. /?query → 直构资产名经 github.com HEAD 试探 (零 API 配额) → 302 本域
  *      中继; 未命中再走 GitHub releases API 资产匹配 (平台关键词 + mono
  *      过滤, 按 tag 缓存 1 小时, 覆盖老版本命名差异)
- *   2. /gh/ 中继: CF → GitHub 回源 (海外直连, 不经本机网络), 完整 GET 边缘
- *      缓存 30 天, Range 分片透传 (206 不缓存, 逐片回源, CF→GitHub 稳定)
+ *   2. /gh/ 中继: 仅放行 godotengine 组织的 releases/download 资产路径,
+ *      CF → GitHub 回源 (海外直连, 不经本机网络), 完整 GET 边缘缓存 30 天,
+ *      Range 分片透传 (206 不缓存, 逐片回源, CF→GitHub 稳定)
  *   3. /versions.json: 仿官方 godotengine.org/versions.json, 经 GitHub
  *      releases API 整理两仓库已发布版本 (含 dev/beta 快照), schema 一致;
  *      组装结果缓存 6 小时, GitHub API 不可用时回退上一份
@@ -19,10 +20,13 @@
 
 const REPOS = ["godotengine/godot-builds", "godotengine/godot"];
 const API_CACHE_TTL = 3600;
+const API_MISS_TTL = 300;
 const ASSET_CACHE_TTL = 30 * 24 * 3600;
 const VERSIONS_TTL = 6 * 3600;
 const VERSIONS_BUILT_AT = "x-gdpm-built-at";
 const RELEASE_PAGES_CAP = 8;
+// 中继路径白名单: 仅 godotengine 组织的 release 资产 (防开放代理滥用)
+const GH_RELAY_PATH = /^\/gh\/godotengine\/[^/]+\/releases\/download\//;
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -33,37 +37,26 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/") {
-      if (request.method !== "GET" && request.method !== "HEAD") {
-        return json(405, { error: "method_not_allowed" });
-      }
-      return resolveAsset(url, env, ctx);
+      return methodNotAllowed(request) || resolveAsset(url, env, ctx);
     }
 
-    if (url.pathname.startsWith("/gh/godotengine/")) {
-      if (request.method !== "GET" && request.method !== "HEAD") {
-        return json(405, { error: "method_not_allowed" });
-      }
-      return relayGitHub(request, url, ctx);
+    if (GH_RELAY_PATH.test(url.pathname)) {
+      return methodNotAllowed(request) || relayGitHub(request, url, ctx);
     }
 
     if (url.pathname === "/versions.json") {
-      if (request.method !== "GET" && request.method !== "HEAD") {
-        return json(405, { error: "method_not_allowed" });
-      }
-      return versionsJson(request, env, ctx);
-    }
-
-    if (
-      url.pathname === "/debug-probe" ||
-      url.pathname === "/debug-api" ||
-      url.pathname === "/debug-resolve"
-    ) {
-      return debugProbe(url, env);
+      return methodNotAllowed(request) || versionsJson(request, env, ctx);
     }
 
     return json(404, { error: "not_found" });
   },
 };
+
+function methodNotAllowed(request) {
+  return request.method === "GET" || request.method === "HEAD"
+    ? null
+    : json(405, { error: "method_not_allowed" });
+}
 
 async function resolveAsset(url, env, ctx) {
   const version = url.searchParams.get("version");
@@ -74,7 +67,7 @@ async function resolveAsset(url, env, ctx) {
     return json(400, { error: "bad_request", need: ["version", "slug"] });
   }
 
-  // 纯 GitHub 源: releases API 资产名匹配 → 302 到本域中继
+  // 纯 GitHub 源: 资产匹配 → 302 到本域中继 (客户端不直连 github.com)
   const ghUrl = await resolveFromGitHub(version, flavor, slug, platform, env, ctx);
   if (!ghUrl) {
     return json(404, {
@@ -86,11 +79,6 @@ async function resolveAsset(url, env, ctx) {
     });
   }
   const target = new URL(ghUrl);
-  if (target.hostname !== "github.com") {
-    // 非 github.com 直链 (异常情况): 原样透传
-    return Response.redirect(target.toString(), 302);
-  }
-  // github 直链改走本域中继, 客户端不再直连 github.com
   return Response.redirect(
     `${url.origin}/gh${target.pathname}${target.search}`,
     302
@@ -161,7 +149,7 @@ async function assetExists(repo, tag, name) {
   // github.com 资产直链 HEAD: 302 (存在) / 404 (不存在), CDN 直链不限流;
   // 结果缓存 1 小时 (资产名随 tag 不可变), 网络失败不缓存
   const cacheKey = new Request(
-    `https://gdpm-worker-cache/exists-v2/${repo}/${tag}/${name}`
+    `https://gdpm-worker-cache/exists/${repo}/${tag}/${name}`
   );
   const hit = await caches.default.match(cacheKey);
   if (hit) return (await hit.text()) === "1";
@@ -182,13 +170,12 @@ async function assetExists(repo, tag, name) {
     return false;
   }
 
-  const store = caches.default.put(
+  await caches.default.put(
     cacheKey,
     new Response(exists ? "1" : "0", {
-      headers: { "cache-control": "public, max-age=3600" },
+      headers: { "cache-control": `public, max-age=${API_CACHE_TTL}` },
     })
   );
-  await store;
   return exists;
 }
 
@@ -222,7 +209,22 @@ async function fetchRelease(repo, tag, env, ctx) {
   } catch {
     return null;
   }
-  // 404/限流不缓存 (限流 403 若入缓存会中毒 1 小时)
+  if (resp.status === 404) {
+    // tag 不存在: 短缓存 null —— 防随机版本请求反复消耗 API 配额;
+    // 401/403 (鉴权/限流) 不缓存, 避免中毒
+    ctx.waitUntil(
+      caches.default.put(
+        cacheKey,
+        new Response("null", {
+          headers: {
+            "content-type": "application/json",
+            "cache-control": `public, max-age=${API_MISS_TTL}`,
+          },
+        })
+      )
+    );
+    return null;
+  }
   if (!resp.ok) return null;
 
   const text = await resp.text();
@@ -247,7 +249,7 @@ async function relayGitHub(request, url, ctx) {
 
   if (full) {
     const hit = await caches.default.match(cacheKey);
-    if (hit) return withRelayHeaders(hit);
+    if (hit) return relayResponse(request, hit);
   }
 
   const origin = `https://github.com${url.pathname.slice(3)}`;
@@ -269,15 +271,12 @@ async function relayGitHub(request, url, ctx) {
     // 资产不可变, 完整 GET 缓存 30 天; Range 206 走逐片回源不入缓存
     ctx.waitUntil(caches.default.put(cacheKey, resp.clone()));
   }
-
-  const out = new Response(request.method === "HEAD" ? null : resp.body, resp);
-  return withRelayHeaders(out);
+  return relayResponse(request, resp);
 }
 
-function withRelayHeaders(resp) {
-  const out = new Response(resp.body, resp);
+function relayResponse(request, resp) {
+  const out = new Response(request.method === "HEAD" ? null : resp.body, resp);
   out.headers.set("cache-control", `public, max-age=${ASSET_CACHE_TTL}`);
-  out.headers.set("access-control-allow-origin", "*");
   return out;
 }
 
@@ -289,98 +288,6 @@ function json(status, body) {
       "cache-control": "no-store",
     },
   });
-}
-
-/* ---------- 诊断端点 (运维用): CF 出口到 github 的真实状态 ---------- */
-
-async function debugProbe(url, env) {
-  if (url.pathname === "/debug-resolve") {
-    // 逐跳追踪解析全过程 (绕过一切缓存), 定位 asset_not_found 的确切环节
-    const version = url.searchParams.get("version");
-    const flavor = url.searchParams.get("flavor") || "stable";
-    const slug = url.searchParams.get("slug");
-    const platform = url.searchParams.get("platform") || "";
-    const tag = `${version}-${flavor}`;
-    const probes = [];
-    for (const name of assetNames(slug, platform)) {
-      for (const repo of REPOS) {
-        const probeUrl = `https://github.com/${repo}/releases/download/${tag}/${encodeURIComponent(name)}`;
-        const t0 = Date.now();
-        try {
-          const resp = await fetch(probeUrl, {
-            method: "HEAD",
-            redirect: "manual",
-          });
-          probes.push({ repo, name, status: resp.status, ms: Date.now() - t0 });
-        } catch (error) {
-          probes.push({ repo, name, error: String(error), ms: Date.now() - t0 });
-        }
-      }
-    }
-    const api = [];
-    for (const repo of REPOS) {
-      const t0 = Date.now();
-      try {
-        const resp = await fetch(
-          `https://api.github.com/repos/${repo}/releases/tags/${tag}`,
-          {
-            headers: {
-              accept: "application/vnd.github+json",
-              "user-agent": "godot-download-worker",
-              ...(env.GITHUB_TOKEN
-                ? { authorization: `Bearer ${env.GITHUB_TOKEN}` }
-                : {}),
-            },
-          }
-        );
-        api.push({ repo, status: resp.status, ms: Date.now() - t0 });
-      } catch (error) {
-        api.push({ repo, error: String(error), ms: Date.now() - t0 });
-      }
-    }
-    return json(200, { tag, slug, probes, api });
-  }
-
-  if (url.pathname === "/debug-api") {
-    // CF 出口调 GitHub API 限流余量 (只允许该固定端点, 防开放代理)
-    const t0 = Date.now();
-    try {
-      const resp = await fetch("https://api.github.com/rate_limit", {
-        headers: {
-          accept: "application/vnd.github+json",
-          "user-agent": "godot-download-worker",
-          ...(env.GITHUB_TOKEN
-            ? { authorization: `Bearer ${env.GITHUB_TOKEN}` }
-            : {}),
-        },
-      });
-      const body = await resp.json();
-      return json(200, {
-        status: resp.status,
-        ms: Date.now() - t0,
-        core: body?.resources?.core,
-      });
-    } catch (error) {
-      return json(200, { error: String(error), ms: Date.now() - t0 });
-    }
-  }
-
-  // HEAD 指定 github.com 直链, 返回原始状态码与耗时
-  const target = url.searchParams.get("target") || "";
-  if (!target.startsWith("https://github.com/")) {
-    return json(400, { error: "target must be https://github.com/..." });
-  }
-  const t0 = Date.now();
-  try {
-    const resp = await fetch(target, { method: "HEAD", redirect: "manual" });
-    return json(200, {
-      status: resp.status,
-      location: (resp.headers.get("location") || "").slice(0, 120),
-      ms: Date.now() - t0,
-    });
-  } catch (error) {
-    return json(200, { error: String(error), ms: Date.now() - t0 });
-  }
 }
 
 /* ---------- /versions.json: 仿官方 schema, 源为 GitHub releases ---------- */
@@ -417,7 +324,6 @@ async function versionsJson(request, env, ctx) {
 function versionsResponse(request, body, headers) {
   const out = new Response(request.method === "HEAD" ? null : body, { headers });
   out.headers.set("cache-control", "public, max-age=3600");
-  out.headers.set("access-control-allow-origin", "*");
   return out;
 }
 

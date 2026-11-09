@@ -92,6 +92,12 @@ curl -s https://godot-download.playereg.top/versions.json | head -c 300
 ## 运维备注
 
 - 免费档 10 万请求/天: 单次引擎安装约 40 请求, 余量巨大
+- **滥用防护**: `/gh/` 仅放行 `godotengine/<repo>/releases/download/` 资产
+  路径 (防开放代理, SSRF 不可能 —— 回源主机固定 github.com); 仅 GET/HEAD;
+  无 CORS 头 (gdpm 为 CLI); 不存在 tag 的 API 404 短缓存 5 分钟 (防随机
+  版本消耗配额); 试探/组装结果均有缓存 (1h/6h)
+- 残余风险: Range 分片请求不可缓存, 持续轰击会消耗 Worker 日请求配额 ——
+  若发生可在 CF 面板加 Rate Limiting 规则 (免费档 1 条)
 - `wrangler.toml` 的 `[[routes]]` 绑定裸主机名 (custom_domain), 换域名改
   `pattern` 重部署即可
 - Worker 代码单文件 `index.js`, 无依赖, 无构建步骤
