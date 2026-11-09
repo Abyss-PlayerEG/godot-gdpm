@@ -9,7 +9,7 @@ Notes
 ----
 - get_engines_dir: 获取全局引擎目录.
 - normalize_version: 版本号规范化为 tag 格式.
-- build_download_url: 构造官方下载接口 URL (无网络请求).
+- build_download_url: 构造下载接口 URL (支持镜像 base 覆盖, 无网络请求).
 - build_github_download_urls: 旧 GitHub 方案按资产名构造下载地址候选 (兜底).
 - fetch_remote_versions: 从官方 versions.json 拉取版本.
 - ensure_executable: 确保文件具有执行权限.
@@ -33,6 +33,7 @@ from typing import Any
 import httpx
 
 from gdpm.cli.common import console
+from gdpm.config.global_config import read_global_config
 from gdpm.constants import VERSIONS_JSON_URL, get_github_headers
 from gdpm.utils.install import get_godot_platform
 
@@ -151,9 +152,12 @@ def _official_asset(version: str, csharp: bool = False) -> tuple[str, str]:
 
 def build_download_url(tag: str, csharp: bool = False) -> str:
     """
-    构造官方下载接口 URL (downloads.godotengine.org).
+    构造下载接口 URL (默认官方 downloads.godotengine.org).
 
     纯字符串拼接无网络请求, 302 重定向由下载时的 httpx 跟随.
+    自建镜像 (如自部署的 Cloudflare Worker, 仿官方 query 语义) 按优先级
+    覆盖 base: 环境变量 GDPM_GODOT_MIRROR > 全局配置 godot_mirror >
+    官方地址; 尾部斜杠统一去除, 产出 URL 形态与官方完全一致.
 
     ----
 
@@ -167,14 +171,18 @@ def build_download_url(tag: str, csharp: bool = False) -> str:
     Returns
     ----
     str
-        官方下载接口 URL.
+        下载接口 URL.
     """
     version, _, flavor = tag.partition("-")
     flavor = flavor or "stable"
     slug, platform_id = _official_asset(version, csharp)
+    base = (
+        os.environ.get("GDPM_GODOT_MIRROR", "")
+        or read_global_config().godot_mirror
+        or "https://downloads.godotengine.org"
+    ).rstrip("/")
     return (
-        "https://downloads.godotengine.org/"
-        f"?version={version}&flavor={flavor}&slug={slug}&platform={platform_id}"
+        f"{base}/?version={version}&flavor={flavor}&slug={slug}&platform={platform_id}"
     )
 
 

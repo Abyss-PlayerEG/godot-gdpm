@@ -31,6 +31,7 @@ from gdpm.utils.download import MAX_SLICES
 _KEY_HELP: dict[str, str] = {
     "parallel_downloads": "Parallel download count (1-32, capped at 32)",
     "default_engine": "Global default engine id (empty to clear)",
+    "godot_mirror": "Godot download mirror base URL (empty = official)",
     "cache_dir": "Download cache directory (~ expanded, empty to reset)",
     "language": "Help language: en/zh (empty to reset)",
 }

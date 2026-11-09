@@ -10,7 +10,20 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+import pytest
+
 from gdpm.cli.commands.godot.common import _official_asset, build_download_url
+from gdpm.config.global_config import GlobalConfig
+
+
+@pytest.fixture(autouse=True)
+def _isolated_mirror(monkeypatch) -> None:
+    """URL 断言锁定官方默认: 隔离本机 env/全局配置的镜像设置."""
+    monkeypatch.delenv("GDPM_GODOT_MIRROR", raising=False)
+    monkeypatch.setattr(
+        "gdpm.cli.commands.godot.common.read_global_config",
+        lambda: GlobalConfig(),
+    )
 
 
 def _with_platform(system: str, machine: str):
@@ -81,3 +94,40 @@ def test_mono_linux_keeps_underscore_naming() -> None:
     with sys_p, mach_p:
         slug, _ = _official_asset("4.7.2", csharp=True)
     assert slug == "mono_linux_x86_64.zip"
+
+
+def test_mirror_env_overrides_base(monkeypatch) -> None:
+    """环境变量 GDPM_GODOT_MIRROR 覆盖 base, query 形态与官方一致."""
+    monkeypatch.setenv("GDPM_GODOT_MIRROR", "https://godot-download.playereg.top/")
+    sys_p, mach_p = _with_platform("Linux", "x86_64")
+    with sys_p, mach_p:
+        url = build_download_url("4.7.2-stable")
+    assert url == (
+        "https://godot-download.playereg.top/"
+        "?version=4.7.2&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
+    )
+
+
+def test_mirror_config_used_when_env_absent(monkeypatch) -> None:
+    """env 未设时读全局配置 godot_mirror, 尾斜杠被统一去除."""
+    monkeypatch.setattr(
+        "gdpm.cli.commands.godot.common.read_global_config",
+        lambda: GlobalConfig(godot_mirror="https://mirror.example/"),
+    )
+    sys_p, mach_p = _with_platform("Linux", "x86_64")
+    with sys_p, mach_p:
+        url = build_download_url("4.7.2-stable")
+    assert url.startswith("https://mirror.example/?version=4.7.2&")
+
+
+def test_mirror_env_beats_config(monkeypatch) -> None:
+    """优先级: 环境变量 > 全局配置 > 官方默认."""
+    monkeypatch.setenv("GDPM_GODOT_MIRROR", "https://env-mirror.example")
+    monkeypatch.setattr(
+        "gdpm.cli.commands.godot.common.read_global_config",
+        lambda: GlobalConfig(godot_mirror="https://config-mirror.example"),
+    )
+    sys_p, mach_p = _with_platform("Linux", "x86_64")
+    with sys_p, mach_p:
+        url = build_download_url("4.7.2-stable")
+    assert url.startswith("https://env-mirror.example/?version=")

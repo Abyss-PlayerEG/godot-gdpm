@@ -78,7 +78,13 @@ def test_set_unknown_key_lists_options(tmp_path: Path, monkeypatch) -> None:
 
     assert "Unknown config key" in result.output
     # 只列已实现的可设置键
-    for key in ("default_engine", "parallel_downloads", "cache_dir", "language"):
+    for key in (
+        "default_engine",
+        "parallel_downloads",
+        "godot_mirror",
+        "cache_dir",
+        "language",
+    ):
         assert key in result.output
     # 未实现的键不展示
     for key in ("godot_path", "addons_dir", "store_url"):
@@ -168,6 +174,21 @@ def test_set_integer_capped_at_max(tmp_path: Path, monkeypatch) -> None:
     assert result.exit_code == 0
     assert "parallel_downloads = 32" in config_path.read_text(encoding="utf-8")
     assert "= 32" in result.output
+
+
+def test_set_godot_mirror_roundtrip(tmp_path: Path, monkeypatch) -> None:
+    """godot_mirror 设置 → read_global_config 读回 (build_download_url 消费)."""
+    _patch(tmp_path, monkeypatch)
+
+    result = CliRunner().invoke(
+        config_set, ["godot_mirror", "https://godot-download.playereg.top"]
+    )
+
+    assert result.exit_code == 0
+    assert (
+        global_config.read_global_config().godot_mirror
+        == "https://godot-download.playereg.top"
+    )
 
 
 def test_set_cache_dir_expands_user(tmp_path: Path, monkeypatch) -> None:
