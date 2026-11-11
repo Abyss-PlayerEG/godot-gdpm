@@ -53,7 +53,6 @@ gdpm sync
 
 ## Documentation
 
-- [Documentation](https://abyss-playereg.github.io/godot-gdpm/) — Full documentation
 - [Godot Asset Store](https://store.godotengine.org/) — Official plugin store
 - [Godot Asset Library](https://godotengine.org/asset-library/) — Community asset library
 
