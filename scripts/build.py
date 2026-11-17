@@ -41,7 +41,7 @@ def get_linux_suffix() -> str:
     if not os_release.exists():
         return ""
     values: dict[str, str] = {}
-    for line in os_release.read_text().splitlines():
+    for line in os_release.read_text(encoding="utf-8").splitlines():
         if line and not line.startswith("#") and "=" in line:
             key, _, value = line.partition("=")
             values[key] = value.strip().strip('"')
@@ -55,7 +55,7 @@ def get_linux_suffix() -> str:
 def get_version() -> str:
     """Get version from pyproject.toml."""
     init_file = SRC_DIR / "gdpm" / "__init__.py"
-    content = init_file.read_text()
+    content = init_file.read_text(encoding="utf-8")
     for line in content.splitlines():
         if line.startswith("__version__"):
             return line.split('"')[1]
@@ -113,6 +113,10 @@ def build(tag: str = "") -> None:
     elif plat == "windows":
         shutil.copy(PROJECT_DIR / "installer" / "Windows" / "install.bat", dist_gdpm)
         shutil.copy(PROJECT_DIR / "installer" / "Windows" / "uninstall.bat", dist_gdpm)
+
+    # Ensure shell scripts are executable in the archive (git may not preserve the bit)
+    for script in dist_gdpm.glob("*.sh"):
+        script.chmod(0o755)
 
     # Create archive
     suffix = f"_{plat}_{arch}"

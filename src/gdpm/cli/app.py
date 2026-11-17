@@ -82,12 +82,19 @@ def print_completion(ctx: click.Context, _param: click.Parameter, value: str) ->
 
     import os
     import subprocess
+    import sys
 
     env = os.environ.copy()
     env["_GDPM_COMPLETE"] = f"{value}_source"
 
+    # 冻结版自调用 sys.executable; 源码/pip 版用 python -m gdpm, 均不依赖 PATH
+    if getattr(sys, "frozen", False):
+        cmd = [sys.executable]
+    else:
+        cmd = [sys.executable, "-m", "gdpm"]
+
     result = subprocess.run(
-        ["gdpm"],
+        cmd,
         env=env,
         capture_output=True,
         text=True,
