@@ -44,7 +44,7 @@ build-backend = "hatchling.build"
 packages = ["src/gdpm"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["docs/", "notes/", "installer/", ".github/", "scripts/", "src/gdpm_rust_module/target/", "src/gdpm_cf_workers/"]
+exclude = ["docs/", "notes/", "installer/", ".github/", "scripts/", "src/gdpm_cf_workers/"]
 
 [dependency-groups]
 dev = [
@@ -60,7 +60,6 @@ dev = [
     "pre-commit>=4.0",
     "pylint>=4.0.6",
     "pyinstaller>=6.21.0",
-    "maturin>=1.16.0",
 ]
 
 [tool.mypy]
