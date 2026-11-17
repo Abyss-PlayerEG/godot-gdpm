@@ -56,47 +56,8 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Install PyInstaller
-        run: uv pip install pyinstaller
-
-      - name: Build executable (Linux/macOS)
-        if: matrix.platform != 'windows'
-        run: |
-          uv run pyinstaller \
-            --onedir \
-            --name gdpm \
-            --paths src \
-            --icon icon.png \
-            src/gdpm/__main__.py
-
-      - name: Build executable (Windows)
-        if: matrix.platform == 'windows'
-        run: uv run pyinstaller --onedir --name gdpm --paths src --icon icon.ico src/gdpm/__main__.py
-
-      - name: Create archive (Linux)
-        if: matrix.platform == 'linux'
-        run: |
-          cp installer/Linux/install.sh dist/gdpm/
-          cp installer/Linux/uninstall.sh dist/gdpm/
-          cd dist
-          tar -czf gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}_${{ matrix.suffix }}.tar.gz gdpm
-
-      - name: Create archive (macOS)
-        if: matrix.platform == 'macos'
-        run: |
-          cp installer/macOS/install.sh dist/gdpm/
-          cp installer/macOS/uninstall.sh dist/gdpm/
-          cd dist
-          tar -czf gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.tar.gz gdpm
-
-      - name: Create archive (Windows)
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        run: |
-          Copy-Item -Path "installer/Windows/install.bat" -Destination "dist/gdpm/" -Force
-          Copy-Item -Path "installer/Windows/uninstall.bat" -Destination "dist/gdpm/" -Force
-          cd dist
-          Compress-Archive -Path gdpm -DestinationPath "gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.zip"
+      - name: Build executable
+        run: uv run python scripts/build.py --tag "${{ github.event.release.tag_name || 'dev' }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

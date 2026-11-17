@@ -2,9 +2,8 @@
 """Build script for gdpm.
 
 Usage:
-    python scripts/build.py              # Build for current platform
-    python scripts/build.py --clean      # Clean build artifacts
-    python scripts/build.py --version    # Show version
+    python scripts/build.py                 # Build for current platform
+    python scripts/build.py --tag v0.1.0    # Tag used in archive name
 """
 
 from __future__ import annotations
@@ -18,7 +17,6 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent.parent
 DIST_DIR = PROJECT_DIR / "dist"
-BUILD_DIR = PROJECT_DIR / "build"
 SRC_DIR = PROJECT_DIR / "src"
 ICON_DIR = PROJECT_DIR
 
@@ -31,9 +29,27 @@ def get_platform() -> tuple[str, str]:
     if system == "Darwin":
         return "macos", "arm64" if machine == "arm64" else "x86_64"
     if system == "Windows":
-        arch = platform.architecture()[0]
-        return "windows", "amd64" if "64" in arch else "x86"
-    return "linux", machine
+        arch = "amd64" if machine.upper() in ("AMD64", "X86_64") else machine.lower()
+        return "windows", arch
+    arch = {"x86_64": "amd64", "aarch64": "arm64"}.get(machine, machine)
+    return "linux", arch
+
+
+def get_linux_suffix() -> str:
+    """Build distro suffix from /etc/os-release, e.g. ubuntu2204."""
+    os_release = Path("/etc/os-release")
+    if not os_release.exists():
+        return ""
+    values: dict[str, str] = {}
+    for line in os_release.read_text().splitlines():
+        if line and not line.startswith("#") and "=" in line:
+            key, _, value = line.partition("=")
+            values[key] = value.strip().strip('"')
+    os_id = values.get("ID", "")
+    if not os_id:
+        return ""
+    version = values.get("VERSION_ID", "").replace(".", "")
+    return f"{os_id}{version}" if version else os_id
 
 
 def get_version() -> str:
@@ -46,22 +62,11 @@ def get_version() -> str:
     return "0.0.0"
 
 
-def clean() -> None:
-    """Clean build artifacts."""
-    for d in [DIST_DIR, BUILD_DIR]:
-        if d.exists():
-            shutil.rmtree(d)
-            print(f"  Removed {d.name}/")
-
-    for spec in PROJECT_DIR.glob("*.spec"):
-        spec.unlink()
-        print(f"  Removed {spec.name}")
-
-
-def build() -> None:
+def build(tag: str = "") -> None:
     """Build executable."""
     plat, arch = get_platform()
     version = get_version()
+    tag = tag or f"v{version}"
 
     print(f"  Platform: {plat} {arch}")
     print(f"  Version:  v{version}")
@@ -69,22 +74,23 @@ def build() -> None:
 
     # PyInstaller args
     args = [
-        sys.executable, "-m", "PyInstaller",
+        sys.executable,
+        "-m",
+        "PyInstaller",
         "--onedir",
-        "--name", "gdpm",
-        "--paths", str(SRC_DIR),
+        "--name",
+        "gdpm",
+        "--paths",
+        str(SRC_DIR),
         "--noconfirm",
         "--clean",
     ]
 
-    # Add icon
+    # Icon: PyInstaller only applies it to Windows .exe and macOS .app bundles
     if plat == "windows":
         icon = ICON_DIR / "icon.ico"
-    else:
-        icon = ICON_DIR / "icon.png"
-
-    if icon.exists():
-        args.extend(["--icon", str(icon)])
+        if icon.exists():
+            args.extend(["--icon", str(icon)])
 
     # Entry point
     args.append(str(SRC_DIR / "gdpm" / "__main__.py"))
@@ -111,14 +117,11 @@ def build() -> None:
     # Create archive
     suffix = f"_{plat}_{arch}"
     if plat == "linux":
-        # Detect distro
-        try:
-            import distro
-            suffix += f"_{distro.id()}{distro.version()}"
-        except ImportError:
-            pass
+        distro_suffix = get_linux_suffix()
+        if distro_suffix:
+            suffix += f"_{distro_suffix}"
 
-    archive_name = f"gdpm_v{version}{suffix}"
+    archive_name = f"gdpm_{tag}{suffix}"
     print(f"\n  Creating archive: {archive_name}")
 
     if plat == "windows":
@@ -128,25 +131,16 @@ def build() -> None:
         shutil.make_archive(str(DIST_DIR / archive_name), "gztar", DIST_DIR, "gdpm")
         print(f"  ✓ Created {archive_name}.tar.gz")
 
-    print(f"\n  Build complete! Output in dist/")
+    print("\n  Build complete! Output in dist/")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build gdpm executable")
-    parser.add_argument("--clean", action="store_true", help="Clean build artifacts")
-    parser.add_argument("--version", action="store_true", help="Show version")
+    parser.add_argument("--tag", default="", help="Tag used in archive name")
 
     args = parser.parse_args()
 
-    if args.version:
-        print(f"gdpm v{get_version()}")
-        return
-
-    if args.clean:
-        clean()
-        return
-
-    build()
+    build(tag=args.tag)
 
 
 if __name__ == "__main__":
