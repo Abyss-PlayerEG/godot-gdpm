@@ -1,8 +1,9 @@
 # GitHub API → 官方 API 迁移
 
 > 来源：2026-11 官方下载接口调研（`versions.json` / `downloads.godotengine.org` / `godot-builds` 三源已实测验证）。
-> 目标：Godot 引擎相关请求全部改走官方接口，摆脱 GitHub API 速率限制与关键词猜测。
+> 目标：Godot 引擎相关请求摆脱 GitHub API 速率限制与关键词猜测。
 > 与 [质量与安全加固](质量与安全加固.md) P0-1/P0-2 联动实施。
+> **实施结果（2026-11-19 核实）**：客户端最终采用**自建镜像唯一通道**——`GODOT_DOWNLOAD_MIRROR` 常量指向 `godot-download.playereg.top`，下载 URL 与 `/versions.json` 均由镜像提供，Worker 服务端回源 GitHub 解析资产并中转；官方 URL 不保留在客户端。原"客户端直连官方接口"方案作为历史调研保留。
 
 ## 背景：现状问题
 
@@ -17,7 +18,7 @@
 
 | 位置 | 用途 | 迁移目标 |
 |------|------|---------|
-| `cli/commands/godot/common.py::build_download_url` | 按 tag 查 release → 资产下载 URL | **`downloads.godotengine.org` 302 接口** |
+| `cli/commands/godot/common.py::build_download_url` | 按 tag 查 release → 资产下载 URL | **自建镜像接口**（`GODOT_DOWNLOAD_MIRROR`，Worker 回源 GitHub） |
 | `cli/commands/godot/common.py::get_asset_hash` | 资产 SHA256（当前坏的） | **`godot-builds` 的 `files[].checksum`** |
 | `cli/commands/godot/list.py`（3 处） | `--remote` 远程版本列表 | **`versions.json`**（静态无速率限制） |
 | `cli/app.py:495` `contributors` | `gdpm --about` 展示本仓库贡献者 | **保留 GitHub API**（属 gdpm 自身元数据，非 Godot 下载链） |
@@ -38,6 +39,8 @@
 ③ github.com/godotengine/godot-builds/releases/godot-{tag}.json
    权威元数据: files[].filename + checksum, 用于校验与文件名对正
 ```
+
+> 实施结果：②③ 由自建镜像 Worker 承担（服务端解析资产并中转下载）；客户端仅保留与 ① 同构的镜像 `/versions.json`（`GODOT_DOWNLOAD_MIRROR/versions.json`）。
 
 实测记录（2026-11-07）：
 - `4.8-beta2` / `4.7.2-stable` → 302 到官方 CDN ✅
@@ -66,15 +69,15 @@ mono 规则：slug 加 `mono_` 前缀并去 `.exe`（`win64.exe.zip` → `mono_w
 
 ### Phase 1: 下载 URL 解析（核心收益）
 
-- [x] 新增 `store` 层或 `utils` 模块：`build_download_url(tag, csharp)` 改为官方接口拼接
+- [x] 新增 `store` 层或 `utils` 模块：`build_download_url(tag, csharp)` 改为镜像接口拼接（`_download_query` 的 query 语义与官方逐字一致，纯字符串拼接无网络请求）
 - [x] 内置 slug 表（按主版本代际 + 平台 + mono 规则，`_official_asset` 显式代际规则）
 - [x] 302 由 httpx `follow_redirects=True` 自动跟随（无需显式解析），404 → 友好报错（冒烟 `install 9.9` 验证）
 - [x] 保留现有 `download_file_chunked` 下载链不动（拿到直链后照旧）
-- [x] 单测：`tests/test_official_download.py` 拼接纯逻辑 11 例（含官网链接逐字断言），404 走冒烟
+- [x] 单测：`tests/test_download_url.py` / `tests/test_mirror_download.py` 拼接与下载纯逻辑断言（含镜像 query 逐字断言），404 走冒烟
 
 ### Phase 2: 版本列表
 
-- [x] `gdpm godot list --remote` 改读 `versions.json`（新→旧顺序直接展示，通道名即 flavor）
+- [x] `gdpm godot list --remote` 改读镜像 `/versions.json`（新→旧顺序直接展示，通道名即 flavor；`fetch_remote_versions` 为唯一通道）
 - [x] 评估 `list --remote` 是否还需 GitHub 分页逻辑（已整体删除，改本地分页）
 
 ### Phase 3: 校验和（= P0-2 修复）—— 已决策移除
@@ -91,17 +94,17 @@ mono 规则：slug 加 `mono_` 前缀并去 `.exe`（`win64.exe.zip` → `mono_w
 
 ### Phase 4: 清理与收尾
 
-- [x] `constants.py`：`GODOT_RELEASES_URL` 删除；`GITHUB_API_URL`/token 保留（contributors 用）
-- [x] Godot 链路请求全部 `verify=True`（versions.json/下载 CDN/asset-library 实测 certifi 可过）
-- [ ] `verify=False` 剩余位置逐个评估（已评估：仅剩 2 处 `api.github.com`——本网络流量被重签、certifi 无法验证，系统信任库可过；`grep = 0` 待网络信任方案后再达）
+- [x] `constants.py`：`GODOT_RELEASES_URL` 删除；`GITHUB_API_URL`/token 保留（contributors 用）；新增 `GODOT_DOWNLOAD_MIRROR` 作为引擎下载与 versions.json 唯一入口
+- [x] Godot 链路请求全部 `verify=True`（镜像 versions.json / 下载中转 / asset-library 实测 certifi 可过）
+- [x] `verify=False` 剩余位置逐个评估（已核实：**仅剩 1 处** `app.py` 的 `api.github.com` contributors——本网络流量被重签、certifi 无法验证，系统信任库可过；`grep = 0` 待网络信任方案后再达）
 
 ## 验收
 
-- [ ] `gdpm godot install 4.7` 的**下载 URL 不再走 releases API**（仅 godot-builds 元数据仍走 `api.github.com`，属官方新方案）
+- [x] `gdpm godot install 4.7` 的**下载 URL 不再走 releases API**（镜像唯一通道，客户端不含任何 GitHub/official 下载 URL；`build_download_url` 纯字符串拼接）
 - [x] 3.x `x11.64`/`osx.universal` 代际路径由单测逐字断言（本机 macOS 冒烟走 `osx.universal` 分支）
-- [x] `gdpm godot list --remote` 连续运行不受速率限制（静态文件）
+- [x] `gdpm godot list --remote` 连续运行不受速率限制（镜像静态文件）
 - [x] hash 校验决策闭环（曾实测 `Hash verified ✓` 生效；经五项探测确认无官方哈希接口后按决策移除，见 Phase 3）
-- [x] `python3 scripts/check.py` 全绿 + 新增单测覆盖拼接/解析逻辑（46 例）
+- [x] `python3 scripts/check.py` 全绿 + 单测覆盖拼接/解析逻辑（2026-11-19 核实：177 测试全过；相关：`test_download_url` / `test_mirror_download` / `test_remote_versions`）
 
 ## 不在本期范围
 
