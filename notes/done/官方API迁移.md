@@ -2,7 +2,7 @@
 
 > 来源：2026-11 官方下载接口调研（`versions.json` / `downloads.godotengine.org` / `godot-builds` 三源已实测验证）。
 > 目标：Godot 引擎相关请求摆脱 GitHub API 速率限制与关键词猜测。
-> 与 [质量与安全加固](质量与安全加固.md) P0-1/P0-2 联动实施。
+> 与 [质量与安全加固](../todo/质量与安全加固.md) P0-1/P0-2 联动实施。
 > **实施结果（2026-11-19 核实）**：客户端最终采用**自建镜像唯一通道**——`GODOT_DOWNLOAD_MIRROR` 常量指向 `godot-download.playereg.top`，下载 URL 与 `/versions.json` 均由镜像提供，Worker 服务端回源 GitHub 解析资产并中转；官方 URL 不保留在客户端。原"客户端直连官方接口"方案作为历史调研保留。
 
 ## 背景：现状问题
@@ -90,7 +90,7 @@ mono 规则：slug 加 `mono_` 前缀并去 `.exe`（`win64.exe.zip` → `mono_w
 - [x] ~~`get_asset_hash` 改查 `godot-builds`~~ → 曾实现为 `get_release_asset`，后按决策移除
 - [x] 移除哈希校验分支、`_match_release_file` 与 `sha512_file`
 - [x] 下载文件名回归本地构造（官方 slug 规则保留在 `build_download_url`）
-- [x] 详见 [质量与安全加固](质量与安全加固.md) P0-2
+- [x] 详见 [质量与安全加固](../todo/质量与安全加固.md) P0-2
 
 ### Phase 4: 清理与收尾
 
