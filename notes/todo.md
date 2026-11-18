@@ -25,6 +25,7 @@
 - [ ] [帮助系统重构与多语言](todo/帮助系统重构与多语言.md) — 方案 B（纯函数渲染器 + 数据驱动）+ help 文案 i18n（**Phase 1-4 已实施，待验收提交**）
 - [ ] [CLI 目录结构重构](todo/cli目录结构重构.md) — L1：`commands/` 收拢全部命令 + `base.py` 拆基类，消除命令→入口反向依赖（**Phase 1-4 已实施，待验收提交**）
 - [ ] [API 查询并发化](todo/API查询并发化.md) — lock/status/update 串行查询改 gather（实测 2.2×，10 依赖 lock 目标 <3s）
+- [ ] [远程版本列表缓存](todo/远程版本列表缓存.md) — `godot list -r` 结果缓存到 `cache/metadata/godot_versions.json`（fetched_at/body/url + 24h TTL + 离线降级）（**设计已定，待实现**）
 - [ ] 官方主页 — Vue + Vite 产品宣传页（动画、特性展示、安装指南）
 - [ ] [下载优化](todo/下载优化.md)
 - [ ] [其他待开发功能](todo/其他待开发功能.md)
