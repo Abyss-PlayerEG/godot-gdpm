@@ -30,7 +30,14 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from gdpm.cli.i18n import category_keys, category_name, t
+from gdpm.cli.i18n import (
+    category_keys,
+    category_name,
+    command_help,
+    get_language,
+    option_help,
+    t,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -47,6 +54,9 @@ BANNER = r""" ██████╗ ██████╗ ██████╗ 
 
 # 叶子帮助面板固定宽度 (沿用历史行为: min(80, 90))
 _LEAF_PANEL_WIDTH = 80
+
+# 选项说明的英文原文缓存 (id(param) -> 英文), 支持进程内切换语言
+_OPTION_SOURCE_HELP: dict[int, str] = {}
 
 
 def command_key(ctx: click.Context) -> str:
@@ -76,6 +86,44 @@ def command_key(ctx: click.Context) -> str:
             parts.append(str(node.info_name))
         node = node.parent
     return ".".join(reversed(parts))
+
+
+def apply_runtime_help(root: click.Group) -> None:
+    """
+    按当前语言把词典文案写回 click 命令对象.
+
+    shell 补全在 Tab 时直接读取 Command.short_help 与 Option.help,
+    不会经过自定义帮助渲染器, 因此启动时需同步这两处字段.
+    缺失词条的命令/选项保持原值 (通常已是英文).
+
+    ----
+
+    Parameters
+    ----
+    root : click.Group
+        根命令组 (含全部已挂载子命令).
+    """
+    lang = get_language()
+
+    def walk(group: click.Group, prefix: str) -> None:
+        for name, cmd in group.commands.items():
+            key = f"{prefix}.{name}" if prefix else name
+            text = command_help(key, lang)
+            if text is not None:
+                cmd.short_help = text
+            for param in cmd.params:
+                if not isinstance(param, click.Option) or not param.help:
+                    continue
+                # 记住英文原文, 支持进程内多次切换语言
+                original = _OPTION_SOURCE_HELP.get(id(param))
+                if original is None:
+                    original = param.help
+                    _OPTION_SOURCE_HELP[id(param)] = original
+                param.help = option_help(original, lang)
+            if isinstance(cmd, click.Group):
+                walk(cmd, key)
+
+    walk(root, "")
 
 
 def build_usage(ctx: click.Context) -> str:

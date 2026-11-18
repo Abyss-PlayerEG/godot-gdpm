@@ -35,7 +35,7 @@ from gdpm.cli.commands.search import search as search_cmd
 from gdpm.cli.commands.status import status as status_cmd
 from gdpm.cli.commands.sync import sync as sync_cmd
 from gdpm.cli.commands.update import update as update_cmd
-from gdpm.cli.help import BANNER
+from gdpm.cli.help import BANNER, apply_runtime_help
 from gdpm.cli.i18n import t
 from gdpm.constants import (
     DEVELOPER,
@@ -76,31 +76,19 @@ def _version_text() -> Text:
 
 
 def print_completion(ctx: click.Context, _param: click.Parameter, value: str) -> None:
-    """生成 shell 补全脚本: 设置 _GDPM_COMPLETE 后重调自身 (click 补全协议)."""
+    """生成 shell 补全脚本 (进程内生成, 不依赖自调用)."""
     if not value or ctx.resilient_parsing:
         return
 
-    import os
-    import subprocess
-    import sys
+    from click.shell_completion import get_completion_class
 
-    env = os.environ.copy()
-    env["_GDPM_COMPLETE"] = f"{value}_source"
+    completion_cls = get_completion_class(value)
+    if completion_cls is None:
+        console.print(f"[red]Error:[/red] Unsupported shell: {value}")
+        ctx.exit(1)
 
-    # 冻结版自调用 sys.executable; 源码/pip 版用 python -m gdpm, 均不依赖 PATH
-    if getattr(sys, "frozen", False):
-        cmd = [sys.executable]
-    else:
-        cmd = [sys.executable, "-m", "gdpm"]
-
-    result = subprocess.run(
-        cmd,
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    click.echo(result.stdout)
+    completion = completion_cls(ctx.command, {}, "gdpm", "_GDPM_COMPLETE")
+    click.echo(completion.source())
     ctx.exit()
 
 
@@ -236,3 +224,6 @@ main.add_command(search_cmd, "search")
 main.add_command(status_cmd, "status")
 main.add_command(sync_cmd, "sync")
 main.add_command(update_cmd, "update")
+
+# 按当前语言同步命令/选项说明 (shell 补全描述读取这些字段)
+apply_runtime_help(main)

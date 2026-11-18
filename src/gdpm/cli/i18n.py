@@ -188,6 +188,49 @@ _EXAMPLE_LABELS: dict[str, dict[str, str]] = {
     "Ignore version constraints": {"zh": "忽略版本约束"},
 }
 
+# 选项说明: 键 = 源码中的英文原文, zh 为译文 (英文即原文, 无需重复)
+_OPTION_HELP: dict[str, dict[str, str]] = {
+    "Add as dev dependency": {"zh": "作为开发依赖添加"},
+    "Alias for the engine": {"zh": "引擎别名"},
+    "Also remove unused sub-dependencies": {"zh": "同时移除未使用的子依赖"},
+    "Check for updates without applying": {"zh": "只检查更新, 不应用"},
+    "Check if lock file is up to date": {"zh": "检查锁文件是否最新"},
+    "Don't use local cache": {"zh": "不使用本地缓存"},
+    "Filter by version prefix, e.g. '4.7'": {"zh": "按版本前缀过滤, 例如 '4.7'"},
+    "Generate shell completion script.": {"zh": "生成 shell 补全脚本."},
+    "Ignore version constraints": {"zh": "忽略版本约束"},
+    "Include project templates": {"zh": "包含项目模板"},
+    "Install C# (mono) version": {"zh": "安装 C# (mono) 版本"},
+    "List available versions from official versions.json": {
+        "zh": "从官方 versions.json 列出可用版本"
+    },
+    "Number of results": {"zh": "结果数量"},
+    "Open Godot after create": {"zh": "创建后打开 Godot"},
+    "Output as JSON": {"zh": "以 JSON 输出"},
+    "Output file path": {"zh": "输出文件路径"},
+    "Pack local plugins to gdpm-local/": {"zh": "将本地插件打包到 gdpm-local/"},
+    "Page number for remote list": {"zh": "远程列表页码"},
+    "Preview changes without applying": {"zh": "预览变更, 不实际应用"},
+    "Remove default engine": {"zh": "移除默认引擎"},
+    "Run the project instead of opening editor": {"zh": "直接运行项目而非打开编辑器"},
+    "Show ID column instead of Name and Version": {"zh": "显示 ID 列而非名称与版本"},
+    "Show about information (version, repo, contributors).": {
+        "zh": "显示关于信息 (版本, 仓库, 贡献者)."
+    },
+    "Show all stable versions, no paging (with --remote)": {
+        "zh": "显示全部稳定版本, 不分页 (配合 --remote)"
+    },
+    "Show version and exit.": {"zh": "显示版本并退出."},
+    "Skip confirmation": {"zh": "跳过确认"},
+    "Skip all confirmation prompts.": {"zh": "跳过所有确认提示."},
+    "Sort order: relevance, updated_desc, reviews_desc, created_desc": {
+        "zh": "排序方式: relevance, updated_desc, reviews_desc, created_desc"
+    },
+    "Strict mode for CI": {"zh": "CI 严格模式"},
+    "Uninstall C# (mono) version": {"zh": "卸载 C# (mono) 版本"},
+    "Use defaults, skip prompts": {"zh": "使用默认值, 跳过提示"},
+}
+
 # 渲染标签: 帮助界面的结构性文案 (面板标题/表头/公共选项)
 _UI: dict[str, dict[str, str]] = {
     "ui.commands": {"en": "Commands", "zh": "命令"},
@@ -291,6 +334,56 @@ def t(key: str, lang: str | None = None) -> str:
             text = entry.get(language) or entry.get(DEFAULT_LANGUAGE)
             return text if text else key
     return key
+
+
+def command_help(key: str, lang: str | None = None) -> str | None:
+    """
+    查询命令描述词条 (供 shell 补全与 click 命令对象使用).
+
+    ----
+
+    Parameters
+    ----
+    key : str
+        词典键 (根命令裸名 / 组内点号路径, 如 'godot.list').
+    lang : str | None, optional
+        目标语言, None 时取 get_language().
+
+    Returns
+    ----
+    str | None
+        对应语言文案; 键不存在时返回 None (调用方保留原值).
+    """
+    entry = _COMMANDS.get(key)
+    if entry is None:
+        return None
+    language = lang if lang is not None else get_language()
+    return entry.get(language) or entry.get(DEFAULT_LANGUAGE)
+
+
+def option_help(text: str, lang: str | None = None) -> str:
+    """
+    翻译选项说明 (英文原文为键, 缺失或非中文时原样返回).
+
+    ----
+
+    Parameters
+    ----
+    text : str
+        源码中的选项说明 (英文).
+    lang : str | None, optional
+        目标语言, None 时取 get_language().
+
+    Returns
+    ----
+    str
+        译文; 无词条时返回原文.
+    """
+    entry = _OPTION_HELP.get(text)
+    if entry is None:
+        return text
+    language = lang if lang is not None else get_language()
+    return entry.get(language) or text
 
 
 def category_keys() -> tuple[str, ...]:
