@@ -68,7 +68,7 @@ fi
 
 if [[ "$LANG_CHOICE" == "zh" ]]; then
     T_TITLE="gdpm 卸载程序 (Linux)"
-    T_CONFIRM="确认卸载 gdpm? (是/否): "
+    T_CONFIRM="确认卸载 gdpm? (y/n): "
     T_CANCELLED="已取消."
     T_REMOVED="✓ 已移除 %s"
     T_NOT_FOUND="未在 %s 找到 gdpm"
@@ -79,7 +79,7 @@ if [[ "$LANG_CHOICE" == "zh" ]]; then
     T_DELETE_HINT="如需彻底清理, 请手动删除: rm -rf ~/.gdpm"
 else
     T_TITLE="gdpm Uninstaller (Linux)"
-    T_CONFIRM="Remove gdpm? (yes/no): "
+    T_CONFIRM="Remove gdpm? (y/n): "
     T_CANCELLED="Cancelled."
     T_REMOVED="✓ Removed %s"
     T_NOT_FOUND="gdpm not found in %s"

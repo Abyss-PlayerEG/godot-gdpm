@@ -63,7 +63,7 @@ if not defined LANG_CHOICE (
 
 if /I "!LANG_CHOICE!"=="zh" (
     set "T_TITLE=gdpm 卸载程序 - Windows"
-    set "T_CONFIRM=确认卸载 gdpm? 输入 y 或 是: "
+    set "T_CONFIRM=确认卸载 gdpm? (y/n): "
     set "T_CANCELLED=已取消."
     set "T_REMOVED=✓ 已移除 %INSTALL_DIR%"
     set "T_NOT_FOUND=未在 %INSTALL_DIR% 找到 gdpm"
@@ -73,7 +73,7 @@ if /I "!LANG_CHOICE!"=="zh" (
     set "T_DELETE_HINT=如需彻底清理, 请手动删除: rmdir /S /Q %USERPROFILE%\.gdpm"
 ) else (
     set "T_TITLE=gdpm Uninstaller - Windows"
-    set "T_CONFIRM=Remove gdpm? type y or yes: "
+    set "T_CONFIRM=Remove gdpm? (y/n): "
     set "T_CANCELLED=Cancelled."
     set "T_REMOVED=✓ Removed %INSTALL_DIR%"
     set "T_NOT_FOUND=gdpm not found in %INSTALL_DIR%"
