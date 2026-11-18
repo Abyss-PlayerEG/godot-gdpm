@@ -68,6 +68,15 @@ fi
 
 if [[ "$LANG_CHOICE" == "zh" ]]; then
     T_TITLE="gdpm 卸载程序 (Linux)"
+    T_PLAN="本脚本将执行以下操作:"
+    T_ITEM_1="- 移除 $INSTALL_DIR/$LINK_NAME 符号链接"
+    T_ITEM_2="- 移除 zsh 与 bash 补全文件"
+    T_ITEM_3="- 保留配置目录 ~/.gdpm"
+    T_WHY_HEAD="为什么需要管理员权限:"
+    T_WHY=(
+        "  移除 /usr/local/bin 与系统补全目录中的文件通常需要管理员权限,"
+        "  仅在目录不可写时通过 sudo 执行, 不会授予任何常驻权限."
+    )
     T_CONFIRM="确认卸载 gdpm? (y/n): "
     T_CANCELLED="已取消."
     T_REMOVED="✓ 已移除 %s"
@@ -79,6 +88,17 @@ if [[ "$LANG_CHOICE" == "zh" ]]; then
     T_DELETE_HINT="如需彻底清理, 请手动删除: rm -rf ~/.gdpm"
 else
     T_TITLE="gdpm Uninstaller (Linux)"
+    T_PLAN="This script will:"
+    T_ITEM_1="- Remove the $INSTALL_DIR/$LINK_NAME symlink"
+    T_ITEM_2="- Remove zsh and bash completion files"
+    T_ITEM_3="- Keep the config directory at ~/.gdpm"
+    T_WHY_HEAD="Why administrator privileges may be needed:"
+    T_WHY=(
+        "  Removing files from /usr/local/bin and system completion"
+        "  directories normally requires admin rights. sudo is used only when"
+        "  those directories are not writable, and it grants no persistent"
+        "  privilege."
+    )
     T_CONFIRM="Remove gdpm? (y/n): "
     T_CANCELLED="Cancelled."
     T_REMOVED="✓ Removed %s"
@@ -94,6 +114,16 @@ fi
 echo "========================================"
 echo "  $T_TITLE"
 echo "========================================"
+echo ""
+echo "  $T_PLAN"
+echo "  $T_ITEM_1"
+echo "  $T_ITEM_2"
+echo "  $T_ITEM_3"
+echo ""
+echo "  $T_WHY_HEAD"
+for why_line in "${T_WHY[@]}"; do
+    echo "$why_line"
+done
 echo ""
 
 if [[ "$ASSUME_YES" -ne 1 ]]; then

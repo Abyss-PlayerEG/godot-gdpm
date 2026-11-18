@@ -63,6 +63,13 @@ if not defined LANG_CHOICE (
 
 if /I "!LANG_CHOICE!"=="zh" (
     set "T_TITLE=gdpm 卸载程序 - Windows"
+    set "T_PLAN=本脚本将执行以下操作:"
+    set "T_ITEM1=- 删除 %LOCALAPPDATA%\gdpm 安装目录"
+    set "T_ITEM2=- 从用户 PATH 中移除 gdpm 目录"
+    set "T_ITEM3=- 保留配置目录 ~/.gdpm"
+    set "T_WHY_HEAD=为什么需要移除 PATH:"
+    set "T_WHY1=  安装时已将 gdpm 目录写入用户 PATH,"
+    set "T_WHY2=  不清理会留下失效路径, 影响后续命令查找."
     set "T_CONFIRM=确认卸载 gdpm? (y/n): "
     set "T_CANCELLED=已取消."
     set "T_REMOVED=✓ 已移除 %INSTALL_DIR%"
@@ -73,6 +80,13 @@ if /I "!LANG_CHOICE!"=="zh" (
     set "T_DELETE_HINT=如需彻底清理, 请手动删除: rmdir /S /Q %USERPROFILE%\.gdpm"
 ) else (
     set "T_TITLE=gdpm Uninstaller - Windows"
+    set "T_PLAN=This script will:"
+    set "T_ITEM1=- Remove the install directory at %LOCALAPPDATA%\gdpm"
+    set "T_ITEM2=- Remove the gdpm directory from your user PATH"
+    set "T_ITEM3=- Keep the config directory at ~/.gdpm"
+    set "T_WHY_HEAD=Why PATH must be cleaned:"
+    set "T_WHY1=  The installer added the gdpm directory to your user PATH;"
+    set "T_WHY2=  leaving it behind would keep a dead entry in your environment."
     set "T_CONFIRM=Remove gdpm? (y/n): "
     set "T_CANCELLED=Cancelled."
     set "T_REMOVED=✓ Removed %INSTALL_DIR%"
@@ -86,6 +100,15 @@ if /I "!LANG_CHOICE!"=="zh" (
 echo ============================================
 echo  !T_TITLE!
 echo ============================================
+echo.
+echo   !T_PLAN!
+echo   !T_ITEM1!
+echo   !T_ITEM2!
+echo   !T_ITEM3!
+echo.
+echo   !T_WHY_HEAD!
+echo   !T_WHY1!
+echo   !T_WHY2!
 echo.
 
 if not defined ASSUME_YES (
