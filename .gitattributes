@@ -1,0 +1,10 @@
+# Shell scripts and Python: LF
+*.sh    text eol=lf
+*.py    text eol=lf
+*.toml  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+
+# Windows batch scripts: CRLF (cmd.exe expects CRLF for labels/goto)
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
