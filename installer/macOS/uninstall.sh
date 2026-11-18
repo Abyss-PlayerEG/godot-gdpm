@@ -83,7 +83,6 @@ if [[ "$LANG_CHOICE" == "zh" ]]; then
     T_NOT_FOUND="未在 %s 找到 gdpm"
     T_NOT_LINK="⚠ %s 不是本脚本创建的符号链接, 已跳过 (如为其他方式安装请手动卸载)"
     T_COMPL_REMOVED="✓ 已移除 %s 补全"
-    T_NEED_SUDO="需要管理员权限, 可能要求输入密码."
     T_DONE="卸载完成. 配置目录 ~/.gdpm 已保留."
     T_DELETE_HINT="如需彻底清理, 请手动删除: rm -rf ~/.gdpm"
 else
@@ -106,7 +105,6 @@ else
     T_NOT_LINK="⚠ %s is not a symlink created by this script; skipped."
     T_NOT_LINK="$T_NOT_LINK Remove it manually if installed another way."
     T_COMPL_REMOVED="✓ Removed %s completion"
-    T_NEED_SUDO="Administrator privileges are required; you may be asked for a password."
     T_DONE="Done. Config at ~/.gdpm was preserved."
     T_DELETE_HINT="Delete manually if needed: rm -rf ~/.gdpm"
 fi
@@ -139,7 +137,6 @@ if [[ -L "$INSTALL_DIR/$LINK_NAME" ]]; then
     if [[ -w "$INSTALL_DIR" ]]; then
         rm -f "$INSTALL_DIR/$LINK_NAME"
     else
-        echo "  $T_NEED_SUDO"
         sudo rm -f "$INSTALL_DIR/$LINK_NAME"
     fi
     printf "  $T_REMOVED\n" "$INSTALL_DIR/$LINK_NAME"
@@ -156,7 +153,6 @@ remove_file() {
         if [[ -w "$dir" ]]; then
             rm -f "$file"
         else
-            echo "  $T_NEED_SUDO"
             sudo rm -f "$file"
         fi
         printf "  $T_COMPL_REMOVED\n" "$label"

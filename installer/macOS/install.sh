@@ -98,7 +98,6 @@ if [[ "$LANG_CHOICE" == "zh" ]]; then
     T_ERR_PLATFORM="错误: 该文件不是 macOS 可执行文件, 可能下载了错误平台的安装包."
     T_UPDATING="检测到已安装版本, 正在更新."
     T_LINKING="正在注册命令到 %s ..."
-    T_NEED_SUDO="需要管理员权限, 可能要求输入密码."
     T_COMPL_OK="✓ 已安装 %s 补全: %s"
     T_COMPL_ERR="⚠ 未能安装 %s 补全."
     T_PATH_WARN="⚠ %s 不在 PATH 中. 请执行: export PATH=\"%s:\$PATH\""
@@ -135,7 +134,6 @@ else
     T_ERR_PLATFORM="$T_ERR_PLATFORM the wrong platform package."
     T_UPDATING="Existing installation detected, updating."
     T_LINKING="Registering command at %s ..."
-    T_NEED_SUDO="Administrator privileges are required; you may be asked for a password."
     T_COMPL_OK="✓ Installed %s completion: %s"
     T_COMPL_ERR="⚠ Failed to install %s completion."
     T_PATH_WARN="⚠ %s is not in PATH. Run: export PATH=\"%s:\$PATH\""
@@ -203,14 +201,12 @@ printf "  $T_LINKING\n" "$INSTALL_DIR/$LINK_NAME"
 xattr -cr "$SCRIPT_DIR" 2>/dev/null || true
 
 if [[ ! -d "$INSTALL_DIR" ]]; then
-    echo "  $T_NEED_SUDO"
     sudo mkdir -p "$INSTALL_DIR"
 fi
 
 if [[ -w "$INSTALL_DIR" ]]; then
     ln -sf "$SOURCE" "$INSTALL_DIR/$LINK_NAME"
 else
-    echo "  $T_NEED_SUDO"
     sudo ln -sf "$SOURCE" "$INSTALL_DIR/$LINK_NAME"
 fi
 
