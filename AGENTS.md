@@ -57,4 +57,5 @@ python3 scripts/version.py X.Y.Z [tag]   # 版本升级 —— 永远不要手�
 - 每次提交前：`python3 scripts/check.py` 必须全绿。修复它，绝不跳过。
 - 发布流程：`version.py` → 推送 `dev` → PR → squash 合并 →
   `gh release create vX.Y.Z --title vX.Y.Z --notes-file RELEASE_NOTES.md`
-  （release 触发 PyPI 发布 + 二进制构建）。
+  （release 触发 PyPI 发布 + 二进制构建；PyPI 发布前需先批准 GitHub 的 `pypi` environment）。
+  tag 必须与 pyproject 版本一致、发布流水线会跑全量检查+冒烟测试，不满足会直接失败。

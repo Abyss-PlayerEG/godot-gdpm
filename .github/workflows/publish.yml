@@ -5,23 +5,77 @@ on:
     types: [published]
 
 permissions:
-  id-token: write
+  contents: read
 
 jobs:
-  publish:
+  build-and-test:
     runs-on: ubuntu-latest
-    environment: pypi
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
 
-      - name: Install build tools
-        run: pip install build
+      - name: Install uv
+        run: pip install uv
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Verify release tag matches pyproject version
+        run: |
+          VER=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "  release tag: ${GITHUB_REF_NAME}"
+          echo "  pyproject:   v${VER}"
+          if [ "$TAG" != "$VER" ]; then
+            echo "::error::Tag/version mismatch — run scripts/version.py, commit, then re-release."
+            exit 1
+          fi
+
+      - name: Run all checks
+        run: python3 scripts/check.py
 
       - name: Build package
-        run: python -m build
+        run: uv run python -m build
+
+      - name: Check metadata (twine)
+        run: uv run twine check --strict dist/*
+
+      - name: Smoke test wheel in fresh venv
+        run: |
+          uv venv /tmp/smoke
+          uv pip install --python /tmp/smoke/bin/python dist/*.whl
+          /tmp/smoke/bin/gdpm --version
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package
+          path: dist/*
+
+  publish:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download tested distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package
+          path: dist
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
