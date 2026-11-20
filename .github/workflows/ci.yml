@@ -69,3 +69,18 @@ jobs:
 
       - name: Run tests
         run: python3 scripts/check.py test
+
+      # 覆盖率摘要写入 run 页顶部 Summary（GitHub 原生渲染，零第三方）：
+      # 复用上一步 check.py 生成的 JSON，不重复跑测试；if: always() 保证
+      # 测试失败时也能看到失败前的数据（无数据文件则输出提示）。
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ -f coverage-report/coverage.json ]; then
+            python3 scripts/coverage.py \
+              --from-json coverage-report/coverage.json \
+              --markdown "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No coverage data — pytest did not produce a report." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi

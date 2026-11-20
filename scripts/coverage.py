@@ -8,6 +8,8 @@ Usage:
     python scripts/coverage.py --html          # also write htmlcov/ (gitignored)
     python scripts/coverage.py --lcov          # also write lcov.info (editor gutters)
     python scripts/coverage.py --xml           # also write coverage.xml (CI/Cobertura)
+    python scripts/coverage.py --from-json coverage-report/coverage.json \
+        --markdown "$GITHUB_STEP_SUMMARY"      # render an existing report (no re-run)
 
 Tests run through pytest-cov (dev dependency); the same gate is enforced
 by scripts/check.py. All artifacts (data file, JSON, HTML, LCOV, XML) land
@@ -98,6 +100,43 @@ def parse_report(json_path: Path) -> Report:
     )
 
 
+def render_markdown(report: Report, weak_count: int) -> str:
+    """Render the same summary as a markdown block (for CI job summaries)."""
+    lines = [
+        f"## Coverage: {report.total_pct:.0f}% "
+        f"({report.covered}/{report.stmts} statements)",
+        "",
+        "| Layer | Stmts | Miss | Cover |",
+        "|---|---:|---:|---:|",
+    ]
+    ordered = sorted(
+        report.layers.items(),
+        key=lambda item: (item[1][0] - item[1][1]) / item[1][0],
+    )
+    for key, (stmts, miss) in ordered:
+        pct = 100 * (stmts - miss) / stmts
+        lines.append(f"| `{key}` | {stmts} | {miss} | {pct:.0f}% |")
+
+    if weak_count > 0:
+        lines.extend(
+            [
+                "",
+                f"### Weakest {weak_count} files",
+                "",
+                "| File | Cover | Miss |",
+                "|---|---:|---:|",
+            ]
+        )
+        weakest = sorted(report.files, key=lambda f: (f.pct, -f.miss))
+        for entry in weakest[:weak_count]:
+            short = entry.path.removeprefix("src/gdpm/")
+            lines.append(
+                f"| `{short}` | {entry.pct:.0f}% | {entry.miss}/{entry.stmts} |"
+            )
+
+    return "\n".join(lines) + "\n"
+
+
 def print_report(report: Report, weak_count: int) -> None:
     print(
         f"\nCoverage: {report.total_pct:.0f}%  "
@@ -147,48 +186,73 @@ def main() -> int:
         action="store_true",
         help="also write coverage.xml (Cobertura, CI dashboards)",
     )
+    parser.add_argument(
+        "--from-json",
+        default="",
+        metavar="PATH",
+        help="render an existing coverage.json without running tests",
+    )
+    parser.add_argument(
+        "--markdown",
+        default="",
+        metavar="PATH",
+        help="append a markdown summary to PATH (e.g. GITHUB_STEP_SUMMARY)",
+    )
     args = parser.parse_args()
 
     REPORT_DIR.mkdir(exist_ok=True)
-    json_path = REPORT_DIR / "coverage.json"
+    json_path = Path(args.from_json) if args.from_json else REPORT_DIR / "coverage.json"
 
-    env = os.environ.copy()
-    env["COVERAGE_FILE"] = str(REPORT_DIR / ".coverage")
+    if args.from_json:
+        if not json_path.exists():
+            print(f"Coverage JSON not found: {json_path}")
+            return 1
+        report = parse_report(json_path)
+        rc = 0
+    else:
+        env = os.environ.copy()
+        env["COVERAGE_FILE"] = str(REPORT_DIR / ".coverage")
 
-    cmd = [
-        "uv",
-        "run",
-        "pytest",
-        "tests/",
-        "-q",
-        f"--cov={COV_SOURCE}",
-        f"--cov-report=json:{json_path}",
-    ]
-    if args.html:
-        cmd.append(f"--cov-report=html:{REPORT_DIR / 'html'}")
-    if args.lcov:
-        cmd.append(f"--cov-report=lcov:{REPORT_DIR / 'lcov.info'}")
-    if args.xml:
-        cmd.append(f"--cov-report=xml:{REPORT_DIR / 'coverage.xml'}")
+        cmd = [
+            "uv",
+            "run",
+            "pytest",
+            "tests/",
+            "-q",
+            f"--cov={COV_SOURCE}",
+            f"--cov-report=json:{json_path}",
+        ]
+        if args.html:
+            cmd.append(f"--cov-report=html:{REPORT_DIR / 'html'}")
+        if args.lcov:
+            cmd.append(f"--cov-report=lcov:{REPORT_DIR / 'lcov.info'}")
+        if args.xml:
+            cmd.append(f"--cov-report=xml:{REPORT_DIR / 'coverage.xml'}")
 
-    print("Running tests with coverage...")
-    rc = run(cmd, env=env)
+        print("Running tests with coverage...")
+        rc = run(cmd, env=env)
 
-    if not json_path.exists():
-        print("No coverage data produced (pytest failed before reporting?).")
-        return rc or 1
-
-    report = parse_report(json_path)
+        if not json_path.exists():
+            print("No coverage data produced (pytest failed before reporting?).")
+            return rc or 1
+        report = parse_report(json_path)
 
     print_report(report, args.weak)
-    print("\nReports in coverage-report/ (gitignored):")
-    print("  coverage.json  coverage-report/.coverage")
-    if args.html:
-        print("  html           coverage-report/html/index.html")
-    if args.lcov:
-        print("  lcov.info      coverage-report/lcov.info")
-    if args.xml:
-        print("  coverage.xml   coverage-report/coverage.xml")
+
+    if args.markdown:
+        with open(args.markdown, "a", encoding="utf-8") as handle:
+            handle.write(render_markdown(report, args.weak))
+        print(f"\nMarkdown summary appended to {args.markdown}")
+
+    if not args.from_json:
+        print("\nReports in coverage-report/ (gitignored):")
+        print("  coverage.json  coverage-report/.coverage")
+        if args.html:
+            print("  html           coverage-report/html/index.html")
+        if args.lcov:
+            print("  lcov.info      coverage-report/lcov.info")
+        if args.xml:
+            print("  coverage.xml   coverage-report/coverage.xml")
 
     if rc != 0:
         print("\nTests failed — see pytest output above.")

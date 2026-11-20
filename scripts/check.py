@@ -31,6 +31,7 @@ PROJECT_DIR = Path(__file__).parent.parent
 SRC_DIR = PROJECT_DIR / "src"
 SCRIPTS_DIR = PROJECT_DIR / "scripts"
 TESTS_DIR = PROJECT_DIR / "tests"
+REPORT_DIR = PROJECT_DIR / "coverage-report"
 COVERAGE_MIN = 45
 
 
@@ -77,6 +78,7 @@ def check_test() -> bool:
     if not list(TESTS_DIR.rglob("test_*.py")):
         print("  No test files found, skipping.")
         return True
+    REPORT_DIR.mkdir(exist_ok=True)
     return (
         run(
             [
@@ -88,6 +90,7 @@ def check_test() -> bool:
                 f"--cov={SRC_DIR.name}/gdpm",
                 f"--cov-fail-under={COVERAGE_MIN}",
                 "--cov-report=term",
+                f"--cov-report=json:{REPORT_DIR / 'coverage.json'}",
             ]
         )
         == 0
