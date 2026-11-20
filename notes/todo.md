@@ -18,17 +18,17 @@
 - [x] [CLI 目录结构重构](done/cli目录结构重构.md) — `commands/` 收拢 + `base.py` 拆基类
 - [x] [下载优化](done/下载优化.md) — 并行下载 + 分片下载
 - [x] [测试覆盖度提升](done/测试覆盖度提升.md) — 总覆盖 43% → 58%（291 例）；version/zip/path/platform/manager/add 补测 + zip-slip 修复 + coverage gate 45%
+- [x] [引擎查找与创建命令修复](done/引擎查找与创建命令修复.md) — find_engine_binary 三平台统一 + create 平台查找/版本排序/匹配修复
 
-## 发布前必修 P0
+## 发布前应修（P1/P2）
 
-- [ ] [质量与安全加固](todo/质量与安全加固.md) — 剩余：错误处理规范化（TLS/SHA256/zip-slip 与核心测试均已闭环）
+- [ ] [质量与安全加固](todo/质量与安全加固.md) — 剩余：1 处 verify=False（阻塞）、3 个低覆盖文件、错误处理规范化、依赖解析器（P0 主体见 [done/安全加固P0闭环](done/安全加固P0闭环.md)）
 
 ## 待开发
 
-- [ ] [引擎查找与创建命令修复](todo/引擎查找与创建命令修复.md) — 主体已完成，剩硬编码默认版本评估 + `create --open` 手动验收
 - [ ] [API 查询并发化](todo/API查询并发化.md) — lock/status/update 串行查询改 gather（目标 10 依赖 lock <3s）
 - [ ] [远程版本列表缓存](todo/远程版本列表缓存.md) — `godot list -r` 结果缓存到 `cache/metadata/godot_versions.json`（fetched_at/body/url + 24h TTL + 离线降级）（**设计已定，待实现**）
-- [ ] tests/ 纳入 mypy — 97 个未标注的测试函数参数（18 个文件），需逐个补 fixture 类型（`pytest.MonkeyPatch`、`Path` 等）；测试现由 ruff/format/pytest/pylint 覆盖
+- [ ] tests/ 纳入 mypy — 163 个未标注的测试函数参数（24 个文件），需逐个补 fixture 类型（`pytest.MonkeyPatch`、`Path` 等）；测试现由 ruff/format/pytest/pylint 覆盖
 - [ ] 官方主页 — Vue + Vite 产品宣传页（动画、特性展示、安装指南）
 - [ ] [其他待开发功能](todo/其他待开发功能.md)
 - [ ] [Godot Asset Library 支持](todo/asset-library.md)
