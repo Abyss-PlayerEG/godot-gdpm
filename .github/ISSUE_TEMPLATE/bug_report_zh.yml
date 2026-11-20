@@ -1,0 +1,94 @@
+name: Bug 报告（中文）
+description: 报告崩溃、行为异常或安装问题。
+title: "[Bug/中文] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！本项目多数问题与平台相关，请务必填写下面的环境信息。
+
+        **English users**: please use [Bug report (English)](?template=bug_report_en.yml).
+
+  - type: textarea
+    id: version
+    attributes:
+      label: gdpm 版本
+      description: 粘贴 `gdpm -i` 的输出（若该命令失败，用 `gdpm --version`）。
+      placeholder: gdpm v0.1.0b1 (binary | Windows x86_64)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      options:
+        - Windows 10/11 (x86_64)
+        - macOS（Apple Silicon / arm64）
+        - macOS（Intel / x86_64）
+        - Linux (x86_64)
+        - 其他（请在下方说明）
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: 安装方式
+      options:
+        - GitHub Release 压缩包（install-windows-gdpm.bat / install.sh）
+        - pip install godot-gdpm
+        - 源码运行（uv run gdpm）
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: godot_version
+    attributes:
+      label: Godot 版本（如相关）
+      placeholder: 4.7-stable
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 执行的命令与复现步骤
+      description: 请按顺序写出完整命令。
+      placeholder: |
+        gdpm init
+        gdpm add limbo-ai
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为 / 报错输出
+      description: 完整 traceback 或控制台输出会非常有帮助。
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 截图、project.godot 片段、网络环境等。
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 自查
+      options:
+        - label: 我已搜索现有 Issue，确认不是重复问题。
+          required: true
+        - label: 使用最新 Release 或 dev 构建仍能复现。
