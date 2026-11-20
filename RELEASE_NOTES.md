@@ -41,7 +41,7 @@ cd gdpm
 ./install.sh
 
 # Windows
-# Extract zip, run install.bat
+# Extract zip, run install-windows-gdpm.bat
 ```
 
 ### Improvements
@@ -124,7 +124,7 @@ cd gdpm
 ./install.sh
 
 # Windows
-# 解压 zip，运行 install.bat
+# 解压 zip，运行 install-windows-gdpm.bat
 ```
 
 ### 改进

@@ -8,14 +8,24 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent.parent
 
-# Directories to remove
+# Directories to remove (regenerable junk only)
+#
+# Never add here:
+#   .venv/                 -> owned by scripts/env.py
+#   .idea/ .vscode/        -> live IDE config, deleting disrupts the editor
+#   .vulture_whitelist.py  -> tracked source file (despite the .gitignore line)
+#   gdpm-local/            -> committed data (packed local plugins)
 DIRS = [
     "dist",
     "build",
-    "site",
+    "wheels",
+    "coverage-report",
+    "htmlcov",
     ".mypy_cache",
     ".ruff_cache",
     ".pytest_cache",
+    ".pylint.d",
+    ".deptry",
     "__pycache__",
 ]
 
@@ -25,6 +35,13 @@ PATTERNS = [
     "*.pyo",
     "*.egg-info",
     "*.spec",
+    ".coverage",
+    ".coverage.*",
+    "coverage.xml",
+    "*.swp",
+    "*.swo",
+    ".DS_Store",
+    "Thumbs.db",
 ]
 
 

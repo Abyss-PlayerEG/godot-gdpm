@@ -1,19 +1,33 @@
+# CI —— 质量门禁
+#
+# 触发：push 到 main/dev、PR 到 main。
+# 7 个检查步骤全部调用 scripts/check.py 的子命令 —— 检查范围只定义在
+# check.py 一处（单一事实源），CI 只负责分步展示，哪步红了一目了然。
+# 本地提交前跑的是同一套：python3 scripts/check.py
 name: CI
 
 on:
   push:
     branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
+
+# 同一分支的旧运行自动取消：连续 push 只保留最新一次（省排队时间，
+# 也避免旧提交的绿色状态误导）。PR 的 ref 唯一，每次新提交同样生效。
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        # 与 pyproject 的 requires-python 对齐；单值矩阵只为保留多版本扩展位
         python-version: ["3.14"]
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -21,6 +35,7 @@ jobs:
       - name: Install uv
         run: pip install uv
 
+      # uv 依赖缓存：按 uv.lock 哈希命中，锁文件不变就复用，省下载时间
       - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
@@ -32,11 +47,46 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      # ---- 七项门禁（任一步非零退出 → 本 job 失败 → PR 不可合） ----
+      # mypy   严格类型检查（src/ + scripts/）
+      # ruff   lint（整仓）
+      # format 格式校验（整仓，仅检查不修改）
+      # pylint 静态分析（src/gdpm/ + scripts/ + tests/）
+      # vulture 死代码探测
+      # deptry 依赖问题（缺失/未用/错位）
+      # test   pytest 全量测试
       - name: Run mypy
-        run: uv run mypy src/
+        run: python3 scripts/check.py mypy
 
       - name: Run ruff
-        run: uv run ruff check src/
+        run: python3 scripts/check.py ruff
+
+      - name: Run format
+        run: python3 scripts/check.py format
 
       - name: Run pylint
-        run: uv run pylint src/gdpm/
+        run: python3 scripts/check.py pylint
+
+      - name: Run vulture
+        run: python3 scripts/check.py vulture
+
+      - name: Run deptry
+        run: python3 scripts/check.py deptry
+
+      - name: Run tests
+        run: python3 scripts/check.py test
+
+      # 覆盖率摘要写入 run 页顶部 Summary（GitHub 原生渲染，零第三方）：
+      # 复用上一步 check.py 生成的 JSON，不重复跑测试；if: always() 保证
+      # 测试失败时也能看到失败前的数据（无数据文件则输出提示）。
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ -f coverage-report/coverage.json ]; then
+            python3 scripts/coverage.py \
+              --from-json coverage-report/coverage.json \
+              --markdown "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No coverage data — pytest did not produce a report." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi

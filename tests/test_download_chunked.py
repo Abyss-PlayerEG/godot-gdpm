@@ -10,7 +10,7 @@ from __future__ import annotations
 import threading
 from concurrent.futures import ThreadPoolExecutor as _RealExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 import pytest
 
@@ -193,6 +193,7 @@ def test_workers_param_overrides_default(tmp_path: Path) -> None:
 def test_keyboard_interrupt_cleans_partial(tmp_path: Path, monkeypatch) -> None:
     """Ctrl+C: 主线程取消时半成品即删, KeyboardInterrupt 原样上抛."""
 
+    # pylint: disable-next=too-few-public-methods
     class _KIResult:
         def __init__(self, fut: object) -> None:
             self._fut = fut
@@ -206,7 +207,7 @@ def test_keyboard_interrupt_cleans_partial(tmp_path: Path, monkeypatch) -> None:
         def __init__(self, max_workers: int | None = None) -> None:
             self._pool = _RealExecutor(max_workers=max_workers)
 
-        def __enter__(self) -> _InterruptingExecutor:
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *exc: object) -> None:

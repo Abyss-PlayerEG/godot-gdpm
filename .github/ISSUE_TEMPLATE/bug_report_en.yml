@@ -1,0 +1,95 @@
+name: Bug report
+description: Report a crash, wrong behavior, or installation problem.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Most bugs are platform-specific, so the environment
+        fields below are required.
+
+        **中文用户**：请改用 [Bug report（中文）](?template=bug_report_zh.yml)。
+
+  - type: textarea
+    id: version
+    attributes:
+      label: gdpm version
+      description: Paste the output of `gdpm -i` (or `gdpm --version` if that fails).
+      placeholder: gdpm v0.1.0b1 (binary | Windows x86_64)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 10/11 (x86_64)
+        - macOS (Apple Silicon / arm64)
+        - macOS (Intel / x86_64)
+        - Linux (x86_64)
+        - Other (describe below)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: How did you install gdpm?
+      options:
+        - GitHub Release archive (install-windows-gdpm.bat / install.sh)
+        - pip install godot-gdpm
+        - From source (uv run gdpm)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: godot_version
+    attributes:
+      label: Godot version (if relevant)
+      placeholder: 4.7-stable
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Command(s) and steps to reproduce
+      description: Exact commands you ran, in order.
+      placeholder: |
+        gdpm init
+        gdpm add limbo-ai
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior / error output
+      description: Full traceback or console output helps a lot.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Screenshots, project.godot excerpts, network environment, etc.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I can reproduce this with the latest release or dev build.

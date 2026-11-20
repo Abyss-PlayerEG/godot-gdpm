@@ -1,3 +1,9 @@
+# Build Executables —— 发布三端（四矩阵）二进制
+#
+# 触发：release 发布（或手动 workflow_dispatch 演练）。
+# 流水线：tag 校验 → build.py 构建归档 → smoke.py 冒烟 → 上传 artifact
+#        → 汇总生成 sha256 → （仅 release 事件）挂到 Release 附件。
+# 关键设计：冒烟卡在上传之前 —— 坏归档永远成不了发布附件。
 name: Build Executables
 
 on:
@@ -6,21 +12,24 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write # 仅 upload job 需要（挂附件）；最小权限声明
 
 jobs:
   build:
     strategy:
       matrix:
         include:
+          # 两个 Ubuntu 版本各出一份：二进制绑定构建机 glibc，
+          # 22.04 产物兼容更老的发行版，24.04 产物适配新发行版
           - os: ubuntu-22.04
             platform: linux
             arch: amd64
-            suffix: ubuntu2204
+            suffix: ubuntu2204 # 与 build.py 解析 /etc/os-release 的结果一致
           - os: ubuntu-24.04
             platform: linux
             arch: amd64
             suffix: ubuntu2404
+          # macOS 当前 runner 即 arm64；Windows 仅 amd64（无签名校验，见 docs）
           - os: macos-latest
             platform: macos
             arch: arm64
@@ -42,6 +51,7 @@ jobs:
       - name: Install uv
         run: pip install uv
 
+      # uv 依赖缓存：三个路径覆盖 Linux/macOS/Windows 的 uv 缓存位置
       - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
@@ -56,54 +66,54 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Install PyInstaller
-        run: uv pip install pyinstaller
-
-      - name: Build executable (Linux/macOS)
-        if: matrix.platform != 'windows'
+      # tag == pyproject 版本校验：防"忘跑 version.py 就打 release"。
+      # PyPI 版本不可覆盖、归档名也带 tag，不一致必须当场失败。
+      # 仅 release 事件执行（手动 dispatch 时 GITHUB_REF_NAME 是分支名，跳过）。
+      - name: Verify release tag matches pyproject version
+        if: github.event_name == 'release'
         run: |
-          uv run pyinstaller \
-            --onedir \
-            --name gdpm \
-            --paths src \
-            --icon icon.png \
-            src/gdpm/__main__.py
+          VER=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "  release tag: ${GITHUB_REF_NAME}"
+          echo "  pyproject:   v${VER}"
+          if [ "$TAG" != "$VER" ]; then
+            echo "::error::Tag/version mismatch — run scripts/version.py, commit, then re-release."
+            exit 1
+          fi
 
-      - name: Build executable (Windows)
-        if: matrix.platform == 'windows'
-        run: uv run pyinstaller --onedir --name gdpm --paths src --icon icon.ico src/gdpm/__main__.py
-
-      - name: Create archive (Linux)
-        if: matrix.platform == 'linux'
+      # 构建 + 打归档（PyInstaller onedir + 拷安装脚本），本地同款命令：
+      #   uv run python scripts/build.py --tag vX.Y.Z
+      # 归档名 = gdpm_{tag}_{plat}_{arch}[_{distro}]：release 事件用真实
+      # tag（vX.Y.Z），手动构建用 dev-<sha前7位> 以区分是哪次构建。
+      # Windows runner 默认 shell 是 pwsh，${VAR:0:7} 参数展开只在 bash 有，
+      # 显式指定 shell。
+      - name: Build executable
+        shell: bash
         run: |
-          cp installer/Linux/install.sh dist/gdpm/
-          cp installer/Linux/uninstall.sh dist/gdpm/
-          cd dist
-          tar -czf gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}_${{ matrix.suffix }}.tar.gz gdpm
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="dev-${GITHUB_SHA:0:7}"
+          fi
+          uv run python scripts/build.py --tag "$TAG"
 
-      - name: Create archive (macOS)
-        if: matrix.platform == 'macos'
-        run: |
-          cp installer/macOS/install.sh dist/gdpm/
-          cp installer/macOS/uninstall.sh dist/gdpm/
-          cd dist
-          tar -czf gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.tar.gz gdpm
+      # 冒烟：解压归档跑 --version/--help/--completion、断言执行位
+      # （等价于本地 python3 scripts/smoke.py --scripts）；不通过则后续步骤不会执行
+      # --scripts: Windows 腿额外真跑 install→uninstall 往返（PATH 快照→写入→移除→逐字还原）
+      - name: Smoke test archive
+        run: uv run python scripts/smoke.py --scripts
 
-      - name: Create archive (Windows)
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        run: |
-          Copy-Item -Path "installer/Windows/install.bat" -Destination "dist/gdpm/" -Force
-          Copy-Item -Path "installer/Windows/uninstall.bat" -Destination "dist/gdpm/" -Force
-          cd dist
-          Compress-Archive -Path gdpm -DestinationPath "gdpm_${{ github.event.release.tag_name || 'dev' }}_${{ matrix.platform }}_${{ matrix.arch }}.zip"
-
+      # artifact 必然是"zip 套一层"：upload-artifact 的存储格式就是 zip，
+      # 无法绕过。内层保持 build.py 的 tar.gz/zip 是刻意的——v4 不保留文件
+      # 权限，直接传文件夹会丢 install.sh 执行位；实测外层 deflate 还能把
+      # gzip 流再挤小 ~1%。正式用户走 Release 附件（单层），这里只是测试通道。
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: gdpm-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.suffix || 'default' }}
           path: dist/gdpm_*
 
+  # 汇总作业：下载四条腿的全部产物，统一生成 sha256 校验清单
   checksums:
     needs: build
     runs-on: ubuntu-latest
@@ -126,6 +136,8 @@ jobs:
           name: checksums
           path: checksums.txt
 
+  # 发布作业：把归档 + 校验清单挂到 Release 资产。
+  # 仅 release 事件（手动 dispatch 只留 artifact 供检查，不发附件）。
   upload:
     needs: [build, checksums]
     runs-on: ubuntu-latest

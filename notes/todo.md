@@ -13,21 +13,23 @@
 - [x] [Godot 自定义引擎](done/Godot自定义引擎.md)
 - [x] [Godot 移除命令](done/godot-remove.md)
 - [x] [安装类型检测](done/安装类型检测.md)
+- [x] [GitHub API → 官方 API 迁移](done/官方API迁移.md) — 最终落地为自建镜像唯一通道（versions.json + 下载中转）
+- [x] [帮助系统重构与多语言](done/帮助系统重构与多语言.md) — 纯函数渲染器 + 数据驱动 + help i18n
+- [x] [CLI 目录结构重构](done/cli目录结构重构.md) — `commands/` 收拢 + `base.py` 拆基类
+- [x] [下载优化](done/下载优化.md) — 并行下载 + 分片下载
+- [x] [测试覆盖度提升](done/测试覆盖度提升.md) — 总覆盖 43% → 58%（291 例）；version/zip/path/platform/manager/add 补测 + zip-slip 修复 + coverage gate 45%
+- [x] [引擎查找与创建命令修复](done/引擎查找与创建命令修复.md) — find_engine_binary 三平台统一 + create 平台查找/版本排序/匹配修复
 
-## 发布前必修 P0
+## 发布前应修（P1/P2）
 
-- [ ] [质量与安全加固](todo/质量与安全加固.md) — TLS 关闭校验、SHA256 校验失效、zip-slip、零测试（2026-11 代码评审核实）
+- [ ] [质量与安全加固](todo/质量与安全加固.md) — 剩余：1 处 verify=False（阻塞）、3 个低覆盖文件、错误处理规范化、依赖解析器（P0 主体见 [done/安全加固P0闭环](done/安全加固P0闭环.md)）
 
 ## 待开发
 
-- [ ] [引擎查找与创建命令修复](todo/引擎查找与创建命令修复.md) — find_engine_binary 兼容性 + create 命令平台/逻辑 bug（主体已完成，剩手动验收项）
-- [ ] [GitHub API → 官方 API 迁移](todo/官方API迁移.md) — versions.json / downloads.godotengine.org / godot-builds 三件套替换（Phase 1-3 完成，Phase 4 收尾中）
-- [ ] [帮助系统重构与多语言](todo/帮助系统重构与多语言.md) — 方案 B（纯函数渲染器 + 数据驱动）+ help 文案 i18n（**Phase 1-4 已实施，待验收提交**）
-- [ ] [CLI 目录结构重构](todo/cli目录结构重构.md) — L1：`commands/` 收拢全部命令 + `base.py` 拆基类，消除命令→入口反向依赖（**Phase 1-4 已实施，待验收提交**）
-- [ ] [全盘引擎扫描模块](todo/全盘引擎扫描模块.md) — Rust 扫描引擎（quick/full 两档 + 三层漏斗识别）（**已入计划，待评审**）
-- [ ] [API 查询并发化](todo/API查询并发化.md) — lock/status/update 串行查询改 gather（实测 2.2×，10 依赖 lock 目标 <3s）
+- [ ] [API 查询并发化](todo/API查询并发化.md) — lock/status/update 串行查询改 gather（目标 10 依赖 lock <3s）
+- [ ] [远程版本列表缓存](todo/远程版本列表缓存.md) — `godot list -r` 结果缓存到 `cache/metadata/godot_versions.json`（fetched_at/body/url + 24h TTL + 离线降级）（**设计已定，待实现**）
+- [ ] tests/ 纳入 mypy — 163 个未标注的测试函数参数（24 个文件），需逐个补 fixture 类型（`pytest.MonkeyPatch`、`Path` 等）；测试现由 ruff/format/pytest/pylint 覆盖
 - [ ] 官方主页 — Vue + Vite 产品宣传页（动画、特性展示、安装指南）
-- [ ] [下载优化](todo/下载优化.md)
 - [ ] [其他待开发功能](todo/其他待开发功能.md)
 - [ ] [Godot Asset Library 支持](todo/asset-library.md)
 - [ ] 加载动画（Rich spinner，解决 console.status 与 console.print 冲突问题）

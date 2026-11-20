@@ -19,6 +19,24 @@ from pathlib import Path
 from rich.console import Console
 
 
+def _ansi_safe(text: object) -> object:
+    """
+    把 Windows ANSI 码页 (mbcs, 中文区=GBK) 编不出的字符降级为 '?'.
+
+    Rich 在 Windows 走控制台渲染时使用 mbcs 编码, ✓ 等符号无法编码,
+    会让整个命令以 UnicodeEncodeError 崩溃 (退出码 1) — 即使业务已成功.
+    对 mbcs 做一次 encode/decode 往返, 结果必然可被 Rich 再次编码.
+    """
+    if not isinstance(text, str):
+        return text
+    for encoding in ("mbcs", "utf-8"):
+        try:
+            return text.encode(encoding, "replace").decode(encoding)
+        except LookupError:  # mbcs 在非 Windows 平台不存在
+            continue
+    return text
+
+
 class GdpmConsole(Console):
     """
     在首次输出前和每次输出后补空行的控制台
@@ -50,7 +68,15 @@ class GdpmConsole(Console):
             # 仅在第一次实质输出前补一个空行
             super().print()
             self._first_print = False
-        super().print(*args, **kwargs)  # type: ignore[arg-type]
+        try:
+            super().print(*args, **kwargs)  # type: ignore[arg-type]
+        except UnicodeEncodeError:
+            # 中文 Windows: Rich 以 mbcs 编码渲染, 编不出的字符降级后重试,
+            # 避免 "配置已写入却以退出码 1 崩溃" 误导调用方 (如安装脚本)
+            super().print(
+                *(_ansi_safe(a) for a in args),
+                **kwargs,  # type: ignore[arg-type]
+            )
         super().print()
 
 

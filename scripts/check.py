@@ -2,37 +2,46 @@
 """Code quality check script for gdpm.
 
 Usage:
-    python scripts/check.py          # Run all checks
-    python scripts/check.py mypy     # Run mypy only
-    python scripts/check.py ruff     # Run ruff only
-    python scripts/check.py format   # Check formatting only
-    python scripts/check.py pylint   # Run pylint only
-    python scripts/check.py vulture  # Run vulture only
-    python scripts/check.py legacy   # Check legacy syntax
-    python scripts/check.py deptry   # Run deptry only
-    python scripts/check.py test     # Run tests only
-    python scripts/check.py fix      # Auto-fix issues
+    python scripts/check.py            # Run all checks
+    python scripts/check.py <check>    # Run a single check
+    python scripts/check.py fix        # Auto-fix lint & format issues
+    python scripts/check.py --help     # Show this help
+
+Checks: mypy ruff format pylint vulture deptry test (pytest + coverage gate)
 """
 
 from __future__ import annotations
 
-import re
+import io
 import subprocess
 import sys
-from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+# Windows pipes default to cp1252 — keep ✓/✗ output printable everywhere
+if isinstance(sys.stdout, io.TextIOWrapper):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if isinstance(sys.stderr, io.TextIOWrapper):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 PROJECT_DIR = Path(__file__).parent.parent
 SRC_DIR = PROJECT_DIR / "src"
+SCRIPTS_DIR = PROJECT_DIR / "scripts"
+TESTS_DIR = PROJECT_DIR / "tests"
+REPORT_DIR = PROJECT_DIR / "coverage-report"
+COVERAGE_MIN = 45
 
 
-def run(cmd: list[str], cwd: Path | None = None) -> int:
-    """Run a command and return exit code."""
-    result = subprocess.run(
-        cmd,
-        cwd=cwd or PROJECT_DIR,
-        capture_output=False,
-    )
+def run(cmd: list[str]) -> int:
+    """Run a command from the project root and return its exit code."""
+    try:
+        result = subprocess.run(cmd, cwd=PROJECT_DIR, check=False)
+    except FileNotFoundError:
+        print(f"  Command not found: {cmd[0]!r} (is it installed and on PATH?)")
+        return 127
     return result.returncode
 
 
@@ -52,110 +61,113 @@ def _run(name: str, cmd: list[str]) -> bool:
 def check_vulture() -> bool:
     """Run vulture dead code detector."""
     header("vulture (dead code)")
+    paths = [str(SRC_DIR), str(SCRIPTS_DIR)]
     whitelist = PROJECT_DIR / ".vulture_whitelist.py"
-    paths = [str(SRC_DIR)]
     if whitelist.exists():
         paths.append(str(whitelist))
-    cmd = ["uv", "run", "vulture", "--min-confidence", "80", *paths]
-    return run(cmd) == 0
-
-
-def check_legacy_syntax() -> bool:
-    """Check for legacy Python 2 syntax patterns."""
-    header("legacy syntax check")
-    # Python 2 style: except A, B: where A and B are simple names
-    # This is different from Python 3: except (A, B): or except A as B:
-    # Note: ruff format may remove parentheses, so we check for the actual syntax
-    pattern = re.compile(r"except\s+[\w.]+\s*,\s*[\w.]+\s*:")
-    found = False
-    for py_file in SRC_DIR.rglob("*.py"):
-        for i, line in enumerate(py_file.read_text(encoding="utf-8").splitlines(), 1):
-            if pattern.search(line):
-                # Check if this is actually Python 2 syntax (no parentheses)
-                # by looking at the original source (before ruff format)
-                # For now, we accept both syntaxes as valid Python 3
-                continue
-    if found:
-        print("\n  Use 'except (A, B):' or 'except A as B:' instead of 'except A, B:'")
-        return False
-    print("  No legacy syntax found.")
-    return True
+    return run(["uv", "run", "vulture", "--min-confidence", "80", *paths]) == 0
 
 
 def check_test() -> bool:
-    """Run pytest."""
-    header("pytest (tests)")
-    if not (PROJECT_DIR / "tests").exists():
+    """Run pytest with the coverage gate."""
+    header(f"pytest (tests + coverage ≥{COVERAGE_MIN}%)")
+    if not TESTS_DIR.exists():
         print("  No tests directory found, skipping.")
         return True
-    # Check if there are any test files
-    test_files = list((PROJECT_DIR / "tests").rglob("test_*.py"))
-    if not test_files:
+    # pytest exits 5 (failure) when no tests are collected — skip instead
+    if not list(TESTS_DIR.rglob("test_*.py")):
         print("  No test files found, skipping.")
         return True
-    return run(["uv", "run", "pytest", "tests/", "-v"]) == 0
+    REPORT_DIR.mkdir(exist_ok=True)
+    return (
+        run(
+            [
+                "uv",
+                "run",
+                "pytest",
+                "tests/",
+                "-v",
+                f"--cov={SRC_DIR.name}/gdpm",
+                f"--cov-fail-under={COVERAGE_MIN}",
+                "--cov-report=term",
+                f"--cov-report=json:{REPORT_DIR / 'coverage.json'}",
+            ]
+        )
+        == 0
+    )
 
 
-def fix() -> None:
-    """Auto-fix issues."""
+def fix() -> bool:
+    """Auto-fix lint & format issues (whole repo)."""
     header("Auto-fixing issues")
 
     print("Running ruff fix...")
-    run(["uv", "run", "ruff", "check", "src/", "--fix"])
+    rc1 = run(["uv", "run", "ruff", "check", "--fix"])
 
     print("\nRunning ruff format...")
-    run(["uv", "run", "ruff", "format", "src/"])
+    rc2 = run(["uv", "run", "ruff", "format"])
 
+    if rc1 or rc2:
+        print("\nFix incomplete (unfixable issues or command error — see above).")
+        print("Run 'python scripts/check.py' for details.")
+        return False
     print("\nDone. Run 'python scripts/check.py' to verify.")
+    return True
 
 
 CHECKS: dict[str, Callable[[], bool]] = {
-    "mypy": lambda: _run("mypy (type checking)", ["uv", "run", "mypy", "src/"]),
-    "ruff": lambda: _run("ruff (linting)", ["uv", "run", "ruff", "check", "src/"]),
-    "format": lambda: _run("ruff format (formatting)", ["uv", "run", "ruff", "format", "--check", "src/"]),
-    "pylint": lambda: _run("pylint (static analysis)", ["uv", "run", "pylint", "src/gdpm/"]),
-    "legacy": check_legacy_syntax,
+    "mypy": lambda: _run(
+        "mypy (type checking)", ["uv", "run", "mypy", "src/", "scripts/"]
+    ),
+    "ruff": lambda: _run("ruff (linting)", ["uv", "run", "ruff", "check"]),
+    "format": lambda: _run(
+        "ruff format (formatting)", ["uv", "run", "ruff", "format", "--check"]
+    ),
+    "pylint": lambda: _run(
+        "pylint (static analysis)",
+        ["uv", "run", "pylint", "src/", "scripts/", "tests/"],
+    ),
     "vulture": check_vulture,
     "deptry": lambda: _run("deptry (dependencies)", ["uv", "run", "deptry", "."]),
     "test": check_test,
 }
-COMMANDS = {**CHECKS, "fix": fix}
+COMMANDS: dict[str, Callable[[], bool]] = {**CHECKS, "fix": fix}
 
 
 def main() -> None:
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
 
+        if cmd in ("-h", "--help"):
+            print(__doc__)
+            return
+
         if cmd not in COMMANDS:
             print(f"Unknown command: {cmd}")
             print(f"Available: {', '.join(COMMANDS)}")
             sys.exit(1)
 
-        if cmd == "fix":
-            fix()
-        else:
-            success = COMMANDS[cmd]()
-            sys.exit(0 if success else 1)
-        return
+        sys.exit(0 if COMMANDS[cmd]() else 1)
 
     # Run all checks
     results = {name: func() for name, func in CHECKS.items()}
 
     # Summary
     header("Summary")
-    all_passed = True
-    for name, passed in results.items():
-        status = "✓" if passed else "✗"
-        print(f"  {status} {name}")
-        if not passed:
-            all_passed = False
+    failed = [name for name, passed in results.items() if not passed]
+    for name in CHECKS:
+        print(f"  {'✗' if name in failed else '✓'} {name}")
 
     print()
-    if all_passed:
+    if not failed:
         print("  All checks passed!")
-    else:
-        print("  Some checks failed. Run 'python scripts/check.py fix' to auto-fix.")
-        sys.exit(1)
+        return
+
+    print(f"  Failed: {', '.join(failed)}")
+    if {"ruff", "format"} & set(failed):
+        print("  Lint/format issues can be auto-fixed:")
+        print("    python scripts/check.py fix")
+    sys.exit(1)
 
 
 if __name__ == "__main__":

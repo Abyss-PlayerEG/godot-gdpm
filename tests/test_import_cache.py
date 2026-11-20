@@ -25,6 +25,6 @@ def test_store_import_cache_default(monkeypatch) -> None:
     """未配置时回退默认目录 (不依赖真实用户配置)."""
     monkeypatch.setattr(
         "gdpm.cli.commands.import_cmd.read_global_config",
-        lambda: GlobalConfig(),
+        GlobalConfig,
     )
     assert _store_import_cache().path == Path.home() / ".gdpm" / "cache" / "downloads"

@@ -37,14 +37,16 @@ Repository = "https://github.com/playereg/godot-gdpm"
 Issues = "https://github.com/playereg/godot-gdpm/issues"
 
 [build-system]
-requires = ["hatchling"]
+# pin: hatchling 1.30+ emits Core-Metadata 2.5, which twine/packaging reject (pypa/hatch#2292)
+requires = ["hatchling<1.30"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/gdpm"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["docs/", "notes/", "installer/", ".github/", "scripts/", "src/gdpm_rust_module/target/", "src/gdpm_cf_workers/"]
+# leading / anchors to repo root — without it "installer/" also excludes src/gdpm/installer/
+exclude = ["/docs/", "/notes/", "/installer/", "/.github/", "/scripts/", "/src/gdpm_cf_workers/"]
 
 [dependency-groups]
 dev = [
@@ -60,7 +62,7 @@ dev = [
     "pre-commit>=4.0",
     "pylint>=4.0.6",
     "pyinstaller>=6.21.0",
-    "maturin>=1.16.0",
+    "pytest-cov>=7.1.0",
 ]
 
 [tool.mypy]
@@ -112,6 +114,7 @@ disable = [
     "too-many-locals",
     "too-many-branches",
     "too-many-statements",
+    "too-many-return-statements",
     "too-many-nested-blocks",
     # 延迟导入（避免循环依赖）
     "import-outside-toplevel",
@@ -122,6 +125,8 @@ disable = [
     # 与 ruff 重叠的风格检查
     "no-else-return",
     "use-implicit-booleaness-not-comparison-to-zero",
+    # 断言用 == () / == [] 保留类型信息 (not x 会放行 None)
+    "use-implicit-booleaness-not-comparison",
     # 项目设计选择
     "broad-exception-caught",
     "unused-argument",
@@ -136,6 +141,10 @@ disable = [
 
 [tool.pylint.format]
 max-line-length = 88
+
+[tool.pylint.basic]
+# i/j/k/ex/Run/_ 为 pylint 默认项; do_GET/do_HEAD 为 http.server 协议要求的方法名
+good-names = ["i", "j", "k", "ex", "Run", "_", "do_GET", "do_HEAD"]
 
 [tool.pylint."MESSAGES CONTROL"]
 max-module-lines = 1100

@@ -16,6 +16,13 @@ wheels/
 # pytest
 .pytest_cache/
 
+# coverage (reports land in coverage-report/, legacy patterns kept as safety net)
+coverage-report/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
 # pylint
 .pylint.d/
 
@@ -45,8 +52,6 @@ site/
 # PyInstaller
 *.spec
 
-# Rust (gdpm_rust_module)
-src/gdpm_rust_module/target/
 
 # Cloudflare Worker (gdpm_cf_workers)
 src/gdpm_cf_workers/.wrangler/
