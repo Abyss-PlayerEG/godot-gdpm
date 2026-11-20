@@ -1,3 +1,9 @@
+# CI —— 质量门禁
+#
+# 触发：push 到 main/dev、PR 到 main。
+# 7 个检查步骤全部调用 scripts/check.py 的子命令 —— 检查范围只定义在
+# check.py 一处（单一事实源），CI 只负责分步展示，哪步红了一目了然。
+# 本地提交前跑的是同一套：python3 scripts/check.py
 name: CI
 
 on:
@@ -11,9 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        # 与 pyproject 的 requires-python 对齐；单值矩阵只为保留多版本扩展位
         python-version: ["3.14"]
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -21,6 +29,7 @@ jobs:
       - name: Install uv
         run: pip install uv
 
+      # uv 依赖缓存：按 uv.lock 哈希命中，锁文件不变就复用，省下载时间
       - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
@@ -32,6 +41,14 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      # ---- 七项门禁（任一步非零退出 → 本 job 失败 → PR 不可合） ----
+      # mypy   严格类型检查（src/ + scripts/）
+      # ruff   lint（整仓）
+      # format 格式校验（整仓，仅检查不修改）
+      # pylint 静态分析（src/gdpm/ + scripts/ + tests/）
+      # vulture 死代码探测
+      # deptry 依赖问题（缺失/未用/错位）
+      # test   pytest 全量测试
       - name: Run mypy
         run: python3 scripts/check.py mypy
 

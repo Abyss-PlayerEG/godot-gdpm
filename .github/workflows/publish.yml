@@ -1,3 +1,13 @@
+# Publish to PyPI —— 发布 Python 包
+#
+# 触发：release 发布（正式版与预发布版都会触发 —— 预发布照发 PyPI，
+#       pip 默认不装，需 --pre 或指定版本才拿到）。
+# 双 job 设计：
+#   build-and-test —— 全自动先干活：tag 校验 → 8 项门禁 → 构建 →
+#                     twine 元数据检查 → 新 venv 装 wheel 冒烟 → 上传产物
+#   publish        —— 等人工批准（pypi environment 的 required reviewer）
+#                     后，用 OIDC 免密发布"刚测试过的同一份产物"
+# 认证：Trusted Publishing（OIDC）—— 仓库不存 PyPI token。
 name: Publish to PyPI
 
 on:
@@ -5,9 +15,10 @@ on:
     types: [published]
 
 permissions:
-  contents: read
+  contents: read # 默认最小权限；发布 job 单独申请 id-token
 
 jobs:
+  # 第一阶段：构建 + 全部防护（全自动，无需人工介入）
   build-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -20,6 +31,7 @@ jobs:
       - name: Install uv
         run: pip install uv
 
+      # uv 依赖缓存：按 uv.lock 哈希命中
       - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
@@ -32,6 +44,9 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      # 防护①：tag == pyproject 版本。
+      # 上传的版本号来自 pyproject 而非 tag；忘了跑 version.py 会让
+      # 错误版本永久占用 PyPI（不可覆盖），必须在第一步拦下。
       - name: Verify release tag matches pyproject version
         run: |
           VER=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
@@ -43,33 +58,46 @@ jobs:
             exit 1
           fi
 
+      # 防护②：发布前跑全量 8 项门禁 —— 防 release 打在未过 CI 的提交上
+      # （与 ci.yml 同源，都是 check.py 的子命令）
       - name: Run all checks
         run: python3 scripts/check.py
 
+      # 构建 sdist + wheel（wheel 由 sdist 构建，顺带验证源码包完整）
       - name: Build package
         run: uv run python -m build
 
+      # 防护③：元数据/README 渲染检查。
+      # 曾在此拦下 hatchling 1.30+ 发出的 Core-Metadata 2.5（twine 不认）
       - name: Check metadata (twine)
         run: uv run twine check --strict dist/*
 
+      # 防护④：冒烟 —— 全新 venv 视角执行 pip install，等价于用户首装。
+      # 曾在此抓到 wheel 缺 gdpm.installer（装完一跑就 ModuleNotFoundError）
       - name: Smoke test wheel in fresh venv
         run: |
           uv venv /tmp/smoke
           uv pip install --python /tmp/smoke/bin/python dist/*.whl
           /tmp/smoke/bin/gdpm --version
 
+      # 测试通过的产物以 artifact 传递给 publish job —— 保证
+      # "发出去的就是测过的那一份"（字节一致，不重新构建）
       - name: Upload distributions
         uses: actions/upload-artifact@v4
         with:
           name: python-package
           path: dist/*
 
+  # 第二阶段：人工批准 + 发布。
+  # environment: pypi 挂了 required reviewer —— 前一 job 全绿后暂停，
+  # 等你在 GitHub 上点批准（Settings → Environments → pypi）才继续。
+  # 防止自批卡死：prevent_self_review 已关闭（单人仓库必须允许自批）。
   publish:
     needs: build-and-test
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      id-token: write
+      id-token: write # OIDC 令牌：Trusted Publishing 免 token 认证
     steps:
       - name: Download tested distributions
         uses: actions/download-artifact@v4
@@ -77,5 +105,6 @@ jobs:
           name: python-package
           path: dist
 
+      # 官方发布 action：自动发现 dist/*，用 OIDC 向 PyPI 换上传凭证
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
