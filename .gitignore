@@ -16,6 +16,12 @@ wheels/
 # pytest
 .pytest_cache/
 
+# coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
 # pylint
 .pylint.d/
 
