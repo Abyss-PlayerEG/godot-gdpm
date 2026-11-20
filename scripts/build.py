@@ -136,6 +136,7 @@ def build(tag: str = "") -> None:
         print(f"  ✓ Created {archive_name}.tar.gz")
 
     print("\n  Build complete! Output in dist/")
+    print("  Verify with: python3 scripts/smoke.py")
 
 
 def main() -> None:

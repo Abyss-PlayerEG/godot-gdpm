@@ -71,33 +71,8 @@ jobs:
       - name: Build executable
         run: uv run python scripts/build.py --tag "${{ github.event.release.tag_name || 'dev' }}"
 
-      - name: Smoke test archive (Linux/macOS)
-        if: matrix.platform != 'windows'
-        run: |
-          mkdir -p "$RUNNER_TEMP/smoke"
-          tar -xzf dist/gdpm_*.tar.gz -C "$RUNNER_TEMP/smoke"
-          BIN="$RUNNER_TEMP/smoke/gdpm/gdpm"
-          "$BIN" --version
-          "$BIN" --help > /dev/null
-          "$BIN" --completion zsh > "$RUNNER_TEMP/comp.zsh"
-          head -1 "$RUNNER_TEMP/comp.zsh"
-          test -x "$RUNNER_TEMP/smoke/gdpm/install.sh"
-          test -x "$RUNNER_TEMP/smoke/gdpm/uninstall.sh"
-
-      - name: Smoke test archive (Windows)
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        run: |
-          $zip = (Get-Item dist/gdpm_*.zip).FullName
-          $dest = Join-Path $env:RUNNER_TEMP "smoke"
-          Expand-Archive -Path $zip -DestinationPath $dest -Force
-          & "$dest\gdpm\gdpm.exe" --version
-          if ($LASTEXITCODE -ne 0) { throw "gdpm.exe --version failed" }
-          & "$dest\gdpm\gdpm.exe" --help > $null
-          if ($LASTEXITCODE -ne 0) { throw "gdpm.exe --help failed" }
-          foreach ($f in @("install.bat", "uninstall.bat")) {
-            if (-not (Test-Path "$dest\gdpm\$f")) { throw "$f missing from archive" }
-          }
+      - name: Smoke test archive
+        run: uv run python scripts/smoke.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
