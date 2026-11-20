@@ -8,20 +8,22 @@ Usage:
     python scripts/coverage.py --html          # also write htmlcov/ (gitignored)
 
 Tests run via `uv run --with pytest-cov` — no project dependency changes.
+All artifacts (data file, JSON, HTML) land in coverage-report/ (gitignored).
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent.parent
 COV_SOURCE = "src/gdpm"
+REPORT_DIR = PROJECT_DIR / "coverage-report"
 
 
 @dataclass
@@ -45,10 +47,10 @@ class Report:
     files: list[FileCov]
 
 
-def run(cmd: list[str]) -> int:
+def run(cmd: list[str], env: dict[str, str] | None = None) -> int:
     """Run a command from the project root and return its exit code."""
     try:
-        result = subprocess.run(cmd, cwd=PROJECT_DIR, check=False)
+        result = subprocess.run(cmd, cwd=PROJECT_DIR, env=env, check=False)
     except FileNotFoundError:
         print(f"  Command not found: {cmd[0]!r} (is it installed and on PATH?)")
         return 127
@@ -134,34 +136,40 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    with tempfile.TemporaryDirectory(prefix="gdpm-cov-") as tmp:
-        json_path = Path(tmp) / "coverage.json"
-        cmd = [
-            "uv",
-            "run",
-            "--with",
-            "pytest-cov",
-            "pytest",
-            "tests/",
-            "-q",
-            f"--cov={COV_SOURCE}",
-            f"--cov-report=json:{json_path}",
-        ]
-        if args.html:
-            cmd.append("--cov-report=html")
+    REPORT_DIR.mkdir(exist_ok=True)
+    json_path = REPORT_DIR / "coverage.json"
 
-        print("Running tests with coverage...")
-        rc = run(cmd)
+    env = os.environ.copy()
+    env["COVERAGE_FILE"] = str(REPORT_DIR / ".coverage")
 
-        if not json_path.exists():
-            print("No coverage data produced (pytest failed before reporting?).")
-            return rc or 1
+    cmd = [
+        "uv",
+        "run",
+        "--with",
+        "pytest-cov",
+        "pytest",
+        "tests/",
+        "-q",
+        f"--cov={COV_SOURCE}",
+        f"--cov-report=json:{json_path}",
+    ]
+    if args.html:
+        cmd.append(f"--cov-report=html:{REPORT_DIR / 'html'}")
 
-        report = parse_report(json_path)
+    print("Running tests with coverage...")
+    rc = run(cmd, env=env)
+
+    if not json_path.exists():
+        print("No coverage data produced (pytest failed before reporting?).")
+        return rc or 1
+
+    report = parse_report(json_path)
 
     print_report(report, args.weak)
+    print("\nReports in coverage-report/ (gitignored):")
+    print("  coverage.json  coverage-report/.coverage")
     if args.html:
-        print("\nHTML report: htmlcov/index.html")
+        print("  html           coverage-report/html/index.html")
 
     if rc != 0:
         print("\nTests failed — see pytest output above.")

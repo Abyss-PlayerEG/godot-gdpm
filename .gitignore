@@ -16,7 +16,8 @@ wheels/
 # pytest
 .pytest_cache/
 
-# coverage
+# coverage (reports land in coverage-report/, legacy patterns kept as safety net)
+coverage-report/
 .coverage
 .coverage.*
 coverage.xml
