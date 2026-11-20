@@ -26,7 +26,7 @@ Download from [Releases](https://github.com/Abyss-PlayerEG/godot-gdpm/releases).
 
 === "Windows"
 
-    Extract the zip and run `install.bat`.
+    Extract the zip and run `install-windows-gdpm.bat`.
 
 !!! note "Unsigned binaries"
     Release binaries use ad-hoc code signing (no Apple Developer ID / not notarized).

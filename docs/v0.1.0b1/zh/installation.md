@@ -26,7 +26,7 @@ pip install godot-gdpm==0.1.0b12
 
 === "Windows"
 
-    解压 zip 并运行 `install.bat`。
+    解压 zip 并运行 `install-windows-gdpm.bat`。
 
 !!! note "未签名的二进制"
     发布的二进制使用 ad-hoc 签名（无 Apple Developer ID / 未公证）。

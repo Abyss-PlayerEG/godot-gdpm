@@ -121,7 +121,7 @@ if /I "!LANG_CHOICE!"=="zh" (
     set "T_LANG_SET=  ✓ 已将 gdpm 界面语言设置为中文."
     set "T_LANG_ERR=  ⚠ 未能写入语言设置, 可稍后手动执行: gdpm config set language zh"
     set "T_DONE=安装完成!"
-    set "T_KEEP=  ⚠ 请勿删除或移动本目录 (gdpm 从此处运行). 卸载请运行 uninstall."
+    set "T_KEEP=  ⚠ 请勿删除或移动本目录 (gdpm 从此处运行). 卸载请运行 uninstall-windows-gdpm."
     set "T_RESTART=请重新打开终端, 然后运行:"
 ) else (
     set "T_TITLE=gdpm Installer - Windows"
@@ -150,7 +150,7 @@ if /I "!LANG_CHOICE!"=="zh" (
     set "T_LANG_SET="
     set "T_LANG_ERR="
     set "T_DONE=Installation complete!"
-    set "T_KEEP=  ⚠ Do NOT delete or move this folder (gdpm runs from here). Run uninstall to remove."
+    set "T_KEEP=  ⚠ Do NOT delete or move this folder (gdpm runs from here). Run uninstall-windows-gdpm to remove."
     set "T_RESTART=Restart your terminal, then run:"
 )
 
@@ -269,18 +269,18 @@ echo  !T_DONE!
 echo  !T_KEEP!
 echo  !T_RESTART!
 echo    gdpm --help
-echo    uninstall
+echo    uninstall-windows-gdpm
 echo ============================================
 goto finish
 
 :usage
-echo Usage:   install.bat [--lang en^|zh] [-y^|--yes]
-echo 用法:    install.bat [--lang en^|zh] [-y^|--yes]
+echo Usage:   install-windows-gdpm.bat [--lang en^|zh] [-y^|--yes]
+echo 用法:    install-windows-gdpm.bat [--lang en^|zh] [-y^|--yes]
 exit /b 0
 
 :usage_error
-echo Usage:   install.bat [--lang en^|zh] [-y^|--yes]
-echo 用法:    install.bat [--lang en^|zh] [-y^|--yes]
+echo Usage:   install-windows-gdpm.bat [--lang en^|zh] [-y^|--yes]
+echo 用法:    install-windows-gdpm.bat [--lang en^|zh] [-y^|--yes]
 exit /b 1
 
 :fail

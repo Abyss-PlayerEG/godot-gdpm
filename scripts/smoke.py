@@ -113,7 +113,7 @@ def smoke_archive(archive: Path, pyver: str) -> None:
     is_windows = plat_token() == "windows"
     binary_name = "gdpm.exe" if is_windows else "gdpm"
     installer_names = (
-        ("install.bat", "uninstall.bat")
+        ("install-windows-gdpm.bat", "uninstall-windows-gdpm.bat")
         if is_windows
         else (
             "install.sh",

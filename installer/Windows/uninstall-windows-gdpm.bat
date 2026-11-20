@@ -207,13 +207,13 @@ echo   !T_DELETE_HINT!
 goto finish
 
 :usage
-echo Usage:   uninstall.bat [--lang en^|zh] [-y^|--yes]
-echo 用法:    uninstall.bat [--lang en^|zh] [-y^|--yes]
+echo Usage:   uninstall-windows-gdpm.bat [--lang en^|zh] [-y^|--yes]
+echo 用法:    uninstall-windows-gdpm.bat [--lang en^|zh] [-y^|--yes]
 exit /b 0
 
 :usage_error
-echo Usage:   uninstall.bat [--lang en^|zh] [-y^|--yes]
-echo 用法:    uninstall.bat [--lang en^|zh] [-y^|--yes]
+echo Usage:   uninstall-windows-gdpm.bat [--lang en^|zh] [-y^|--yes]
+echo 用法:    uninstall-windows-gdpm.bat [--lang en^|zh] [-y^|--yes]
 exit /b 1
 
 :finish

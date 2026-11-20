@@ -118,8 +118,14 @@ def build(tag: str = "") -> None:
         shutil.copy(PROJECT_DIR / "installer" / "macOS" / "install.sh", dist_gdpm)
         shutil.copy(PROJECT_DIR / "installer" / "macOS" / "uninstall.sh", dist_gdpm)
     elif plat == "windows":
-        shutil.copy(PROJECT_DIR / "installer" / "Windows" / "install.bat", dist_gdpm)
-        shutil.copy(PROJECT_DIR / "installer" / "Windows" / "uninstall.bat", dist_gdpm)
+        shutil.copy(
+            PROJECT_DIR / "installer" / "Windows" / "install-windows-gdpm.bat",
+            dist_gdpm,
+        )
+        shutil.copy(
+            PROJECT_DIR / "installer" / "Windows" / "uninstall-windows-gdpm.bat",
+            dist_gdpm,
+        )
 
     # Ensure shell scripts are executable in the archive (git may not preserve the bit)
     for script in dist_gdpm.glob("*.sh"):
