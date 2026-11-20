@@ -83,8 +83,19 @@ jobs:
 
       # 构建 + 打归档（PyInstaller onedir + 拷安装脚本），本地同款命令：
       #   uv run python scripts/build.py --tag vX.Y.Z
+      # 归档名 = gdpm_{tag}_{plat}_{arch}[_{distro}]：release 事件用真实
+      # tag（vX.Y.Z），手动构建用 dev-<sha前7位> 以区分是哪次构建。
+      # Windows runner 默认 shell 是 pwsh，${VAR:0:7} 参数展开只在 bash 有，
+      # 显式指定 shell。
       - name: Build executable
-        run: uv run python scripts/build.py --tag "${{ github.event.release.tag_name || 'dev' }}"
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="dev-${GITHUB_SHA:0:7}"
+          fi
+          uv run python scripts/build.py --tag "$TAG"
 
       # 冒烟：解压归档跑 --version/--help/--completion、断言执行位
       # （等价于本地 python3 scripts/smoke.py --scripts）；不通过则后续步骤不会执行
