@@ -92,6 +92,10 @@ jobs:
       - name: Smoke test archive
         run: uv run python scripts/smoke.py --scripts
 
+      # artifact 必然是"zip 套一层"：upload-artifact 的存储格式就是 zip，
+      # 无法绕过。内层保持 build.py 的 tar.gz/zip 是刻意的——v4 不保留文件
+      # 权限，直接传文件夹会丢 install.sh 执行位；实测外层 deflate 还能把
+      # gzip 流再挤小 ~1%。正式用户走 Release 附件（单层），这里只是测试通道。
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
