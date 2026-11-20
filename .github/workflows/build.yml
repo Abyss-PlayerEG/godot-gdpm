@@ -87,9 +87,10 @@ jobs:
         run: uv run python scripts/build.py --tag "${{ github.event.release.tag_name || 'dev' }}"
 
       # 冒烟：解压归档跑 --version/--help/--completion、断言执行位
-      # （等价于本地 python3 scripts/smoke.py）；不通过则后续步骤不会执行
+      # （等价于本地 python3 scripts/smoke.py --scripts）；不通过则后续步骤不会执行
+      # --scripts: Windows 腿额外真跑 install→uninstall 往返（PATH 快照→写入→移除→逐字还原）
       - name: Smoke test archive
-        run: uv run python scripts/smoke.py
+        run: uv run python scripts/smoke.py --scripts
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

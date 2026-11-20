@@ -5,10 +5,13 @@ Usage:
     python scripts/smoke.py                # test newest dist/ archive (this platform)
     python scripts/smoke.py --archive FILE  # test one specific archive
     python scripts/smoke.py --dev           # test source install via `uv run gdpm`
+    python scripts/smoke.py --scripts       # + install->uninstall roundtrip (Windows)
 
 Mirrors what a user does after download: extract, run --version/--help
 /--completion, and verify installer scripts carry the exec bit.
-CI (build.yml) runs this same script against release archives.
+--scripts additionally executes the installer pair end-to-end (PATH
+write -> removal -> byte-identical restore). CI (build.yml) runs this
+script with --scripts against release archives.
 """
 
 from __future__ import annotations
@@ -99,7 +102,96 @@ def run_cli_checks(cmd: list[str], pyver: str) -> None:
     check(rc == 0 and out.lstrip().startswith("#compdef"), "--completion zsh")
 
 
-def smoke_archive(archive: Path, pyver: str) -> None:
+def run_installer_roundtrip(root: Path) -> None:
+    """Execute install -> uninstall inside the extracted dir and verify the
+    user PATH round-trips byte-identical (native Windows only).
+
+    PATH and marker are snapshotted up front; any mismatch is restored
+    best-effort so a local run can never leave the machine polluted.
+    Reads/writes the registry via reg.exe — same channel the bats use,
+    and avoids winreg (typeshed stubs are platform-conditional).
+    """
+
+    def read_path() -> tuple[str, str]:
+        proc = subprocess.run(
+            ["reg", "query", r"HKCU\Environment", "/v", "Path"],
+            capture_output=True,
+            text=True,
+            encoding="mbcs",
+            errors="replace",
+            check=False,
+        )
+        for line in proc.stdout.splitlines():
+            parts = line.split(None, 2)
+            if len(parts) == 3 and parts[0] == "Path":
+                return parts[2], parts[1]  # value, REG_SZ|REG_EXPAND_SZ
+        return "", "REG_SZ"
+
+    def write_path(value: str, reg_type: str) -> None:
+        subprocess.run(
+            [
+                "reg",
+                "add",
+                r"HKCU\Environment",
+                "/v",
+                "Path",
+                "/t",
+                reg_type,
+                "/d",
+                value,
+                "/f",
+            ],
+            capture_output=True,
+            check=False,
+        )
+
+    marker = Path(os.environ["LOCALAPPDATA"]) / "gdpm-install.txt"
+    path_before, path_type = read_path()
+    marker_before = marker.read_bytes() if marker.exists() else None
+
+    def run_bat(bat: str) -> tuple[int, str]:
+        try:
+            proc = subprocess.run(
+                ["cmd", "/c", bat, "-y", "--lang", "zh"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+                timeout=180,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return 1, str(exc)
+        return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
+
+    rc, out = run_bat("install-windows-gdpm.bat")
+    check(rc == 0, "installer exit code", f"rc={rc}")
+    in_path = str(root).lower() in read_path()[0].lower()
+    check(in_path, "installer appends dir to user PATH")
+    check(marker.exists(), "installer writes marker")
+    check("语言设置" in out, "installer reports language config")
+
+    rc2, _out2 = run_bat("uninstall-windows-gdpm.bat")
+    check(rc2 == 0, "uninstaller exit code", f"rc={rc2}")
+
+    path_after, _ = read_path()
+    if path_after == path_before:
+        check(True, "user PATH restored byte-identical")
+    else:
+        check(False, "user PATH restored byte-identical", "restoring snapshot")
+        write_path(path_before, path_type)
+        check(read_path()[0] == path_before, "fallback restore succeeded")
+
+    if marker_before is None:
+        check(not marker.exists(), "marker cleaned")
+    else:
+        if not marker.exists():
+            marker.write_bytes(marker_before)
+        check(marker.read_bytes() == marker_before, "pre-existing marker preserved")
+
+
+def smoke_archive(archive: Path, pyver: str, scripts: bool = False) -> None:
     shown = (
         archive.relative_to(PROJECT_DIR)
         if archive.is_relative_to(PROJECT_DIR)
@@ -151,6 +243,12 @@ def smoke_archive(archive: Path, pyver: str) -> None:
         if binary.exists():
             run_cli_checks([str(binary)], pyver)
 
+        if scripts:
+            if is_windows and sys.platform == "win32":
+                run_installer_roundtrip(root)
+            else:
+                print("  (installer roundtrip skipped: native Windows only)")
+
 
 def smoke_dev(pyver: str) -> None:
     print("\nDev install (uv run gdpm):")
@@ -169,7 +267,16 @@ def main() -> int:
     parser.add_argument(
         "--dev", action="store_true", help="test source install via uv run gdpm"
     )
+    parser.add_argument(
+        "--scripts",
+        action="store_true",
+        help="also run install->uninstall roundtrip in the extracted dir "
+        "(Windows native; snapshots and restores user PATH/marker)",
+    )
     args = parser.parse_args()
+
+    if args.dev and args.scripts:
+        print("note: --scripts applies to archive mode, ignored with --dev")
 
     pyver = pyproject_version()
     print(f"pyproject version: {pyver}")
@@ -181,7 +288,7 @@ def main() -> int:
         if not archive.exists():
             print(f"Archive not found: {args.archive}")
             return 1
-        smoke_archive(archive, pyver)
+        smoke_archive(archive, pyver, scripts=args.scripts)
     else:
         all_archives = sorted(
             DIST_DIR.glob("gdpm_*"),
@@ -199,7 +306,7 @@ def main() -> int:
         if len(all_archives) > 1:
             extra = len(all_archives) - 1
             print(f"({extra} other archive(s) in dist/, testing newest)")
-        smoke_archive(archives[0], pyver)
+        smoke_archive(archives[0], pyver, scripts=args.scripts)
 
     print()
     if _CHECK_FAILURES:
