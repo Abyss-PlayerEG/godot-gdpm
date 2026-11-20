@@ -9,11 +9,18 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import io
 import platform
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+# Windows pipes default to cp1252 — keep ✓/✗ output printable everywhere
+if isinstance(sys.stdout, io.TextIOWrapper):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if isinstance(sys.stderr, io.TextIOWrapper):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 PROJECT_DIR = Path(__file__).parent.parent
 DIST_DIR = PROJECT_DIR / "dist"

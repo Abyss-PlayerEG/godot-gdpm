@@ -12,6 +12,7 @@ Checks: mypy ruff format pylint vulture deptry test
 
 from __future__ import annotations
 
+import io
 import subprocess
 import sys
 from pathlib import Path
@@ -19,6 +20,12 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+# Windows pipes default to cp1252 — keep ✓/✗ output printable everywhere
+if isinstance(sys.stdout, io.TextIOWrapper):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if isinstance(sys.stderr, io.TextIOWrapper):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 PROJECT_DIR = Path(__file__).parent.parent
 SRC_DIR = PROJECT_DIR / "src"
