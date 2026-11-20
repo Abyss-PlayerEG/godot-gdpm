@@ -27,6 +27,7 @@
 - [ ] [引擎查找与创建命令修复](todo/引擎查找与创建命令修复.md) — 主体已完成，剩硬编码默认版本评估 + `create --open` 手动验收
 - [ ] [API 查询并发化](todo/API查询并发化.md) — lock/status/update 串行查询改 gather（目标 10 依赖 lock <3s）
 - [ ] [远程版本列表缓存](todo/远程版本列表缓存.md) — `godot list -r` 结果缓存到 `cache/metadata/godot_versions.json`（fetched_at/body/url + 24h TTL + 离线降级）（**设计已定，待实现**）
+- [ ] tests/ 纳入 mypy — 97 个未标注的测试函数参数（18 个文件），需逐个补 fixture 类型（`pytest.MonkeyPatch`、`Path` 等）；测试现由 ruff/format/pytest/pylint 覆盖
 - [ ] 官方主页 — Vue + Vite 产品宣传页（动画、特性展示、安装指南）
 - [ ] [其他待开发功能](todo/其他待开发功能.md)
 - [ ] [Godot Asset Library 支持](todo/asset-library.md)

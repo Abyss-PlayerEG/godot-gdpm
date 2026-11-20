@@ -14,6 +14,7 @@ from click.testing import CliRunner
 from gdpm.cli.commands.godot.open import godot_open
 
 
+# pylint: disable-next=too-few-public-methods
 class _FakeProc:
     """Popen 替身: wait 返回 None 表示启动成功仍在运行."""
 

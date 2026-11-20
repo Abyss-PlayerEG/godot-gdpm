@@ -64,9 +64,10 @@ def show_status() -> None:
         cwd=PROJECT_DIR,
         capture_output=True,
         text=True,
+        check=False,
     )
     version = subprocess.run(
-        [str(python), "-V"], capture_output=True, text=True
+        [str(python), "-V"], capture_output=True, text=True, check=False
     ).stdout.strip()
     print(f"  Python:  {version}")
     if result.returncode == 0:
@@ -97,7 +98,7 @@ def sync(refresh: bool) -> int:
         return 1
     cmd = ["uv", "sync", *(["--refresh"] if refresh else [])]
     print(f"  Running: {' '.join(cmd)}")
-    return subprocess.run(cmd, cwd=PROJECT_DIR).returncode
+    return subprocess.run(cmd, cwd=PROJECT_DIR, check=False).returncode
 
 
 def confirm(prompt: str, default: bool = False) -> bool:

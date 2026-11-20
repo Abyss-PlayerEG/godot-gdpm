@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 @pytest.fixture(autouse=True)
 def _hermetic_language(monkeypatch) -> Iterator[None]:
     """语言环境封闭: 默认英文 (隔离真实配置与环境变量), 用例内自行设 GDPM_LANG."""
-    monkeypatch.setattr(i18n, "read_global_config", lambda: GlobalConfig())
+    monkeypatch.setattr(i18n, "read_global_config", GlobalConfig)
     monkeypatch.delenv("GDPM_LANG", raising=False)
     i18n.get_language.cache_clear()
     yield

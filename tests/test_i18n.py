@@ -133,7 +133,7 @@ def test_language_falls_back_to_config(monkeypatch) -> None:
 def test_language_defaults_to_en(monkeypatch) -> None:
     """环境变量与配置都没有时默认英文."""
     monkeypatch.delenv("GDPM_LANG", raising=False)
-    monkeypatch.setattr(i18n, "read_global_config", lambda: GlobalConfig())
+    monkeypatch.setattr(i18n, "read_global_config", GlobalConfig)
     assert i18n.get_language() == "en"
 
 

@@ -96,7 +96,7 @@ def build(tag: str = "") -> None:
     args.append(str(SRC_DIR / "gdpm" / "__main__.py"))
 
     print("  Building with PyInstaller...")
-    result = subprocess.run(args, cwd=PROJECT_DIR)
+    result = subprocess.run(args, cwd=PROJECT_DIR, check=False)
 
     if result.returncode != 0:
         print("  ✗ Build failed!")

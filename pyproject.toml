@@ -111,6 +111,7 @@ disable = [
     "too-many-locals",
     "too-many-branches",
     "too-many-statements",
+    "too-many-return-statements",
     "too-many-nested-blocks",
     # 延迟导入（避免循环依赖）
     "import-outside-toplevel",
@@ -121,6 +122,8 @@ disable = [
     # 与 ruff 重叠的风格检查
     "no-else-return",
     "use-implicit-booleaness-not-comparison-to-zero",
+    # 断言用 == () / == [] 保留类型信息 (not x 会放行 None)
+    "use-implicit-booleaness-not-comparison",
     # 项目设计选择
     "broad-exception-caught",
     "unused-argument",
@@ -135,6 +138,10 @@ disable = [
 
 [tool.pylint.format]
 max-line-length = 88
+
+[tool.pylint.basic]
+# i/j/k/ex/Run/_ 为 pylint 默认项; do_GET/do_HEAD 为 http.server 协议要求的方法名
+good-names = ["i", "j", "k", "ex", "Run", "_", "do_GET", "do_HEAD"]
 
 [tool.pylint."MESSAGES CONTROL"]
 max-module-lines = 1100
