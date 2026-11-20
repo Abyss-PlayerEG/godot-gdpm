@@ -12,6 +12,12 @@ on:
   pull_request:
     branches: [main, dev]
 
+# 同一分支的旧运行自动取消：连续 push 只保留最新一次（省排队时间，
+# 也避免旧提交的绿色状态误导）。PR 的 ref 唯一，每次新提交同样生效。
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
