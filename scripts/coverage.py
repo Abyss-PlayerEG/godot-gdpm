@@ -6,10 +6,12 @@ Usage:
     python scripts/coverage.py --weak 15       # weakest files to list (default 10)
     python scripts/coverage.py --fail-under 45 # exit 1 below threshold (gate mode)
     python scripts/coverage.py --html          # also write htmlcov/ (gitignored)
+    python scripts/coverage.py --lcov          # also write lcov.info (editor gutters)
+    python scripts/coverage.py --xml           # also write coverage.xml (CI/Cobertura)
 
 Tests run through pytest-cov (dev dependency); the same gate is enforced
-by scripts/check.py. All artifacts (data file, JSON, HTML) land in
-coverage-report/ (gitignored).
+by scripts/check.py. All artifacts (data file, JSON, HTML, LCOV, XML) land
+in coverage-report/ (gitignored).
 """
 
 from __future__ import annotations
@@ -135,6 +137,16 @@ def main() -> int:
     parser.add_argument(
         "--html", action="store_true", help="also write htmlcov/ (gitignored)"
     )
+    parser.add_argument(
+        "--lcov",
+        action="store_true",
+        help="also write lcov.info (VSCode coverage gutters / Coveralls)",
+    )
+    parser.add_argument(
+        "--xml",
+        action="store_true",
+        help="also write coverage.xml (Cobertura, CI dashboards)",
+    )
     args = parser.parse_args()
 
     REPORT_DIR.mkdir(exist_ok=True)
@@ -154,6 +166,10 @@ def main() -> int:
     ]
     if args.html:
         cmd.append(f"--cov-report=html:{REPORT_DIR / 'html'}")
+    if args.lcov:
+        cmd.append(f"--cov-report=lcov:{REPORT_DIR / 'lcov.info'}")
+    if args.xml:
+        cmd.append(f"--cov-report=xml:{REPORT_DIR / 'coverage.xml'}")
 
     print("Running tests with coverage...")
     rc = run(cmd, env=env)
@@ -169,6 +185,10 @@ def main() -> int:
     print("  coverage.json  coverage-report/.coverage")
     if args.html:
         print("  html           coverage-report/html/index.html")
+    if args.lcov:
+        print("  lcov.info      coverage-report/lcov.info")
+    if args.xml:
+        print("  coverage.xml   coverage-report/coverage.xml")
 
     if rc != 0:
         print("\nTests failed — see pytest output above.")
