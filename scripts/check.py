@@ -77,11 +77,15 @@ def fix() -> bool:
     header("Auto-fixing issues")
 
     print("Running ruff fix...")
-    run(["uv", "run", "ruff", "check", "--fix"])
+    rc1 = run(["uv", "run", "ruff", "check", "--fix"])
 
     print("\nRunning ruff format...")
-    run(["uv", "run", "ruff", "format"])
+    rc2 = run(["uv", "run", "ruff", "format"])
 
+    if rc1 or rc2:
+        print("\nFix incomplete (unfixable issues or command error — see above).")
+        print("Run 'python scripts/check.py' for details.")
+        return False
     print("\nDone. Run 'python scripts/check.py' to verify.")
     return True
 
@@ -96,7 +100,7 @@ CHECKS: dict[str, Callable[[], bool]] = {
     ),
     "pylint": lambda: _run(
         "pylint (static analysis)",
-        ["uv", "run", "pylint", "src/gdpm/", "scripts/", "tests/"],
+        ["uv", "run", "pylint", "src/", "scripts/", "tests/"],
     ),
     "vulture": check_vulture,
     "deptry": lambda: _run("deptry (dependencies)", ["uv", "run", "deptry", "."]),

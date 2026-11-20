@@ -33,10 +33,22 @@ jobs:
         run: uv sync
 
       - name: Run mypy
-        run: uv run mypy src/ scripts/
+        run: python3 scripts/check.py mypy
 
       - name: Run ruff
-        run: uv run ruff check
+        run: python3 scripts/check.py ruff
+
+      - name: Run format
+        run: python3 scripts/check.py format
 
       - name: Run pylint
-        run: uv run pylint src/gdpm/ scripts/ tests/
+        run: python3 scripts/check.py pylint
+
+      - name: Run vulture
+        run: python3 scripts/check.py vulture
+
+      - name: Run deptry
+        run: python3 scripts/check.py deptry
+
+      - name: Run tests
+        run: python3 scripts/check.py test
