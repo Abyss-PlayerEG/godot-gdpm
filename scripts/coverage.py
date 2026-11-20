@@ -7,8 +7,9 @@ Usage:
     python scripts/coverage.py --fail-under 45 # exit 1 below threshold (gate mode)
     python scripts/coverage.py --html          # also write htmlcov/ (gitignored)
 
-Tests run via `uv run --with pytest-cov` — no project dependency changes.
-All artifacts (data file, JSON, HTML) land in coverage-report/ (gitignored).
+Tests run through pytest-cov (dev dependency); the same gate is enforced
+by scripts/check.py. All artifacts (data file, JSON, HTML) land in
+coverage-report/ (gitignored).
 """
 
 from __future__ import annotations
@@ -145,8 +146,6 @@ def main() -> int:
     cmd = [
         "uv",
         "run",
-        "--with",
-        "pytest-cov",
         "pytest",
         "tests/",
         "-q",

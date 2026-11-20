@@ -112,6 +112,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                     pass
 
                 # 显示版本信息
+                target_ver = ""
                 versions = await svc.store.get_versions(publisher, slug)
                 if versions:
                     # 查找符合版本约束的版本
@@ -157,9 +158,7 @@ def add(plugins: tuple[str, ...], dev: bool, local: bool, yes: bool) -> None:
                                 progress.update(_task, total=total)
                             progress.update(_task, completed=current)
 
-                        ver = (
-                            version_constraint.lstrip("v") if version_constraint else ""
-                        )
+                        ver = target_ver.lstrip("v")
                         zip_path, ver = await svc.manager.download(
                             publisher,
                             slug,

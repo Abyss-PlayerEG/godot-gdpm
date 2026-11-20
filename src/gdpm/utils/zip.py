@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import zipfile
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -129,6 +130,43 @@ def analyze_zip(zip_path: Path) -> ZipAnalysis:
     return result
 
 
+def _safe_member_path(dest: Path, rel: str) -> Path:
+    """
+    将 zip 成员相对路径安全拼接到目标目录.
+
+    拒绝绝对路径与包含 ``..`` 的成员名, 并校验解析后的真实路径仍在
+    目标目录内 —— 防御 zip-slip 路径穿越.
+
+    ----
+
+    Parameters
+    ----
+    dest : Path
+        解压目标目录.
+    rel : str
+        成员在归档内的相对路径.
+
+    Returns
+    ----
+    pathlib.Path
+        解析后的安全目标路径.
+
+    Raises
+    ------
+    ValueError
+        成员路径越出目标目录.
+    """
+    probe = PurePosixPath(rel.replace("\\", "/"))
+    target = (dest / rel).resolve()
+    if (
+        probe.is_absolute()
+        or ".." in probe.parts
+        or not target.is_relative_to(dest.resolve())
+    ):
+        raise ValueError(f"Unsafe path in zip archive: {rel!r}")
+    return target
+
+
 def extract_zip(zip_path: Path, dest: Path) -> None:
     """
     将压缩包完整解压到目标目录.
@@ -230,9 +268,9 @@ def extract_addon_from_zip(zip_path: Path, dest: Path, addon_name: str) -> list[
 
             if preserve_dir:
                 dir_name = addon_prefix.rstrip("/")
-                target = dest / dir_name / rel
+                target = _safe_member_path(dest, f"{dir_name}/{rel}")
             else:
-                target = dest / rel
+                target = _safe_member_path(dest, rel)
 
             if member.endswith("/"):
                 target.mkdir(parents=True, exist_ok=True)

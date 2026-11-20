@@ -7,7 +7,7 @@ Usage:
     python scripts/check.py fix        # Auto-fix lint & format issues
     python scripts/check.py --help     # Show this help
 
-Checks: mypy ruff format pylint vulture deptry test
+Checks: mypy ruff format pylint vulture deptry test (pytest + coverage gate)
 """
 
 from __future__ import annotations
@@ -31,6 +31,7 @@ PROJECT_DIR = Path(__file__).parent.parent
 SRC_DIR = PROJECT_DIR / "src"
 SCRIPTS_DIR = PROJECT_DIR / "scripts"
 TESTS_DIR = PROJECT_DIR / "tests"
+COVERAGE_MIN = 45
 
 
 def run(cmd: list[str]) -> int:
@@ -67,8 +68,8 @@ def check_vulture() -> bool:
 
 
 def check_test() -> bool:
-    """Run pytest."""
-    header("pytest (tests)")
+    """Run pytest with the coverage gate."""
+    header(f"pytest (tests + coverage ≥{COVERAGE_MIN}%)")
     if not TESTS_DIR.exists():
         print("  No tests directory found, skipping.")
         return True
@@ -76,7 +77,21 @@ def check_test() -> bool:
     if not list(TESTS_DIR.rglob("test_*.py")):
         print("  No test files found, skipping.")
         return True
-    return run(["uv", "run", "pytest", "tests/", "-v"]) == 0
+    return (
+        run(
+            [
+                "uv",
+                "run",
+                "pytest",
+                "tests/",
+                "-v",
+                f"--cov={SRC_DIR.name}/gdpm",
+                f"--cov-fail-under={COVERAGE_MIN}",
+                "--cov-report=term",
+            ]
+        )
+        == 0
+    )
 
 
 def fix() -> bool:
