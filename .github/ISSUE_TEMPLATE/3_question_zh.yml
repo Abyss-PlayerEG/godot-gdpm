@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        请先查阅[文档](https://github.com/Abyss-PlayerEG/godot-gdpm/tree/dev/docs/v0.1.0b1)。
+        请先查阅[文档](https://github.com/Abyss-PlayerEG/godot-gdpm/tree/main/docs)。
 
         **English users**: please use [Question (English)](?template=3_question_en.yml)。
 
