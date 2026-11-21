@@ -1,0 +1,24 @@
+name: 功能建议（中文）
+description: 建议新的命令、选项或工作流。
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **English users**: please use [Feature request (English)](?template=2_feature_request_en.yml)。
+
+  - type: textarea
+    attributes:
+      label: 问题概述
+      description: |
+        你希望新增什么功能或行为？如有必要，也请描述当前的行为。
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 使用示例
+      description: 描述用户体验会如何变化、新功能如何使用（命令名、参数、期望输出）。
+    validations:
+      required: false

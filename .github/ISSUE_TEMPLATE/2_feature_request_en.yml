@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest a new command, option, or workflow.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **中文用户**：请改用 [功能建议（中文）](?template=2_feature_request_zh.yml)。
+
+  - type: textarea
+    attributes:
+      label: Summary
+      description: |
+        What new feature or behavior would you like to see? If applicable, describe the current behavior as well.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Example
+      description: Provide an example of how the user experience would change or how the new feature would be used (command name, flags, expected output).
+    validations:
+      required: false
