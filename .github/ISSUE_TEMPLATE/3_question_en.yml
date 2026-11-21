@@ -1,4 +1,4 @@
-name: Question
+name: Question (English)
 description: Ask a question about using gdpm.
 title: "[Question] "
 labels: ["question"]
@@ -28,7 +28,7 @@ body:
   - type: input
     attributes:
       label: Version
-      description: Paste the output of `gdpm -i` (fall back to `gdpm --version`).
+      description: Paste the output of `gdpm --about` (fall back to `gdpm --version`).
       placeholder: e.g., gdpm v0.1.0b1 (binary | Windows x86_64)
     validations:
       required: false

@@ -1,4 +1,4 @@
-name: Bug report
+name: Bug report (English)
 description: Report a crash, wrong behavior, or installation problem.
 title: "[Bug] "
 labels: ["bug"]
@@ -34,7 +34,7 @@ body:
   - type: input
     attributes:
       label: Version
-      description: Paste the output of `gdpm -i` — version, platform and install type in one go (fall back to `gdpm --version`).
+      description: Paste the output of `gdpm --about` — version, platform and install type in one go (fall back to `gdpm --version`).
       placeholder: e.g., gdpm v0.1.0b1 (binary | Windows x86_64)
     validations:
       required: true
