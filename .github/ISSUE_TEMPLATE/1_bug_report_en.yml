@@ -1,0 +1,40 @@
+name: Bug report (English)
+description: Report a crash, wrong behavior, or installation problem.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please [search existing issues](https://github.com/Abyss-PlayerEG/godot-gdpm/issues) first.
+
+        **中文用户**：请改用 [Bug 报告（中文）](?template=1_bug_report_zh.yml)。
+
+  - type: textarea
+    attributes:
+      label: Summary
+      description: |
+        What went wrong and how to reproduce it — include the exact commands and the **full error output**.
+        If we cannot reproduce the bug, it is unlikely that we will be able to help you.
+      placeholder: |
+        1. gdpm init
+        2. gdpm add limbo-ai
+        Error: ...
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Platform
+      description: "Operating system and architecture (on macOS/Linux: `uname -orsm`)."
+      placeholder: e.g., Windows 11 x86_64, macOS 14 arm64, Ubuntu 24.04 amd64
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Version
+      description: Paste the output of `gdpm --about` — version, platform and install type in one go (fall back to `gdpm --version`).
+      placeholder: e.g., gdpm v0.1.0b1 (binary | Windows x86_64)
+    validations:
+      required: true

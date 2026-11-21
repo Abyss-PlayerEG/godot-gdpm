@@ -1,0 +1,34 @@
+name: 提问（中文）
+description: 询问 gdpm 的使用问题。
+title: "[Question] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先查阅[文档](https://github.com/Abyss-PlayerEG/godot-gdpm/tree/dev/docs/v0.1.0b1)。
+
+        **English users**: please use [Question (English)](?template=3_question_en.yml)。
+
+  - type: textarea
+    attributes:
+      label: 问题
+      description: 详细描述你的问题。
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: 平台
+      description: 操作系统与架构（macOS/Linux 可用 `uname -orsm` 查看）。
+      placeholder: 例如, Windows 11 x86_64、macOS 14 arm64、Ubuntu 24.04 amd64
+    validations:
+      required: false
+
+  - type: input
+    attributes:
+      label: 版本
+      description: 粘贴 `gdpm --about` 的输出（失败则用 `gdpm --version`）。
+      placeholder: 例如, gdpm v0.1.0b1 (binary | Windows x86_64)
+    validations:
+      required: false

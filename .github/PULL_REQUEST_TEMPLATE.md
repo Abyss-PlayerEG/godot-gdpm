@@ -1,26 +1,23 @@
+<!--
+感谢提交 PR！提交前请确认：
+
+- 这个 PR 有清晰的 Summary 吗？
+- 标题能准确描述改动吗？
+- 关联了相关 Issue 吗？（正文写 Closes #编号 可自动关闭）
+
+Thanks for contributing! Before submitting, please consider:
+
+- Does this pull request include a summary of the change?
+- Does it have a descriptive title?
+- Does it reference any relevant issues?
+-->
+
 ## Summary / 变更说明
 
-<!-- What does this change and why? / 改了什么、为什么 -->
+<!-- 改了什么、为什么？What does this change, and why? -->
 
-## Related issue / 关联 Issue
+## Test Plan / 测试计划
 
-Closes #
-
-## Type / 类型
-
-- [ ] Bug fix / 修复
-- [ ] Feature / 新功能
-- [ ] Refactor / 重构
-- [ ] Docs / 文档
-- [ ] CI / 构建
-
-## Testing / 测试
-
-- [ ] `python3 scripts/check.py` passes / 全绿
-- [ ] New or updated tests / 已新增或更新测试
-- [ ] Manually verified / 已手动验证（说明场景）
-
-## Checklist / 自查
-
-- [ ] User-facing changes are documented / 用户可见改动已同步文档
-- [ ] Breaking change with migration notes / 破坏性变更并说明迁移方式
+<!-- 怎么验证的？写明跑过的命令。
+     提交前 `python3 scripts/check.py` 必须全绿（mypy/ruff/format/pylint/vulture/deptry/test）。
+     How was it tested? Include the exact commands run. -->

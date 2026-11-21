@@ -1,0 +1,40 @@
+name: Bug 报告（中文）
+description: 报告崩溃、行为异常或安装问题。
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请先 [搜索现有 Issue](https://github.com/Abyss-PlayerEG/godot-gdpm/issues)。
+
+        **English users**: please use [Bug report (English)](?template=1_bug_report_en.yml)。
+
+  - type: textarea
+    attributes:
+      label: 问题概述
+      description: |
+        哪里错了、如何复现——请附上确切命令和**完整报错输出**。
+        如果我们无法复现，就很难帮你解决。
+      placeholder: |
+        1. gdpm init
+        2. gdpm add limbo-ai
+        报错: ...
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: 平台
+      description: 操作系统与架构（macOS/Linux 可用 `uname -orsm` 查看）。
+      placeholder: 例如, Windows 11 x86_64、macOS 14 arm64、Ubuntu 24.04 amd64
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: 版本
+      description: 粘贴 `gdpm --about` 的输出——版本、平台、安装方式一并包含（失败则用 `gdpm --version`）。
+      placeholder: 例如, gdpm v0.1.0b1 (binary | Windows x86_64)
+    validations:
+      required: true
