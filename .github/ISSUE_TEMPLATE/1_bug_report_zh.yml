@@ -34,7 +34,7 @@ body:
   - type: input
     attributes:
       label: 版本
-      description: 粘贴 `gdpm --about` 的输出——版本、平台、安装方式一并包含（失败则用 `gdpm --version`）。
+      description: 粘贴 `gdpm --version` 的输出内容。
       placeholder: 例如, gdpm v0.1.0b1 (binary | Windows x86_64)
     validations:
       required: true
