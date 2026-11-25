@@ -11,12 +11,56 @@ on:
     types: [published]
   workflow_dispatch:
 
+# 默认只读；upload job 单独申请 write（挂附件）——权限按 job 下沉，
+# 避免 build/checksums 白拿写权限（它们会执行依赖代码）。
 permissions:
-  contents: write # 仅 upload job 需要（挂附件）；最小权限声明
+  contents: read
 
 jobs:
+  # 门禁（阶段1）：发版前先过全部 8 项质量检查。
+  # build.yml 与 publish.yml 由同一 release 事件独立触发、互不依赖 —— 没有这道闸时，
+  # 门禁失败会出现"publish 挂了、PyPI 空着，build 却照样把 4 平台二进制挂上 Release"
+  # 的半成品交付。Godot 有 static-checks、uv 有 release-gate，此处同理。
+  # 失败后果：build 被跳过 → Release 无附件，一眼看出发版失败。
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+          lookup-only: true # 发版工作流只读 CI 填的缓存，不回写
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run all checks
+        run: python3 scripts/check.py
+
   build:
+    needs: gate
     strategy:
+      # 发布构建需要 4 腿全绿，让每条腿都跑完——一条失败不再连坐取消
+      # 其余（含排队中）的腿，一次运行就能看全所有平台的失败，
+      # 不用"修一个 → 重跑 → 才发现下一个"地串行排错。
+      fail-fast: false
       matrix:
         include:
           # 两个 Ubuntu 版本各出一份：二进制绑定构建机 glibc，
@@ -40,9 +84,15 @@ jobs:
             suffix: ""
 
     runs-on: ${{ matrix.os }}
+    # 单腿挂死时自动止损（历史上 macos-13 曾挂 12 分钟，卡住
+    # checksums/upload 直到人工取消）。计时从拿到 runner 开始，
+    # 排队等待不计入，不会因 macOS 容器排队久而误超时。
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false # 构建会执行依赖代码，token 不留在 .git/config
 
       - uses: actions/setup-python@v5
         with:
@@ -62,6 +112,8 @@ jobs:
           key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-uv-
+          # 发版工作流只读 CI 填的缓存、不回写——否则可能成为缓存投毒源
+          lookup-only: true
 
       - name: Install dependencies
         run: uv sync
@@ -89,9 +141,14 @@ jobs:
       # 显式指定 shell。
       - name: Build executable
         shell: bash
+        # 事件值只进环境变量、不内联进脚本文本——防止 tag 名被当 shell 代码解析
+        # （git ref 允许 ; $ 反引号）
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            TAG="${{ github.event.release.tag_name }}"
+          if [ "$EVENT_NAME" = "release" ]; then
+            TAG="$TAG_NAME"
           else
             TAG="dev-${GITHUB_SHA:0:7}"
           fi
@@ -117,6 +174,7 @@ jobs:
   checksums:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # 下载产物 + sha256sum，正常秒级
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -141,7 +199,10 @@ jobs:
   upload:
     needs: [build, checksums]
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # 下载产物 + 挂 Release 附件，正常秒级
     if: github.event_name == 'release'
+    permissions:
+      contents: write # 挂 Release 附件（job 级覆盖 workflow 级的 read）
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4

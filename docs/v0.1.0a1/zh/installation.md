@@ -9,7 +9,7 @@ pip install godot-gdpm
 预发布版本需要指定版本号：
 
 ```bash
-pip install godot-gdpm==0.1.0b12
+pip install godot-gdpm==0.1.0a1
 ```
 
 ## GitHub Releases

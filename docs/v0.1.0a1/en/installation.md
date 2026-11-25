@@ -9,7 +9,7 @@ pip install godot-gdpm
 Pre-release versions require specifying the version:
 
 ```bash
-pip install godot-gdpm==0.1.0b12
+pip install godot-gdpm==0.1.0a1
 ```
 
 ## GitHub Releases

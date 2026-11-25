@@ -140,9 +140,9 @@ def print_about(ctx: click.Context, _param: click.Parameter, value: bool) -> Non
         )
     )
 
-    # 从 GitHub API 拉取贡献者列表; 网络失败时静默跳过
+    # 从 GitHub API 拉取贡献者列表; 网络失败或证书校验失败时静默跳过
     try:
-        resp = httpx.get(f"{GITHUB_API_URL}contributors", timeout=5, verify=False)
+        resp = httpx.get(f"{GITHUB_API_URL}contributors", timeout=5)
         if resp.status_code == 200:
             contributors = sorted([c["login"] for c in resp.json()], key=str.lower)
             contrib_text = Text()
