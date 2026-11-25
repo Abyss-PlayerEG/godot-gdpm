@@ -17,6 +17,10 @@ permissions:
 jobs:
   build:
     strategy:
+      # 发布构建需要 4 腿全绿，让每条腿都跑完——一条失败不再连坐取消
+      # 其余（含排队中）的腿，一次运行就能看全所有平台的失败，
+      # 不用"修一个 → 重跑 → 才发现下一个"地串行排错。
+      fail-fast: false
       matrix:
         include:
           # 两个 Ubuntu 版本各出一份：二进制绑定构建机 glibc，
@@ -40,6 +44,10 @@ jobs:
             suffix: ""
 
     runs-on: ${{ matrix.os }}
+    # 单腿挂死时自动止损（历史上 macos-13 曾挂 12 分钟，卡住
+    # checksums/upload 直到人工取消）。计时从拿到 runner 开始，
+    # 排队等待不计入，不会因 macOS 容器排队久而误超时。
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
