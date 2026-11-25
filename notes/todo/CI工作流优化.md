@@ -9,7 +9,8 @@
 >
 > **进度（2026-11-25）**：A1–A5、B1、B2、C1、C2 已完成并本地验证 —— zizmor 由
 > **36 项（21 high / 4 medium）** 降至 **0 项 low+**（余 1 info = A6 未做的 `superfluous-actions`），
-> `python3 scripts/check.py` 8 项全绿。**待办：A6（可选）、B1 的 CI 彩排验收、D 批。**
+> `python3 scripts/check.py` 8 项全绿。**B1 已完成 CI 彩排双路径验收**（见下表）。
+> **待办：A6（可选）、C-b（C-a 的替代）、2 个可选升级、D 批。**
 
 ## 批次 A —— 安全修复（zizmor 实测，约 13 行）
 
@@ -122,8 +123,9 @@
 
 | 批次 | 改动量 | 验收 |
 |---|---|---|
-| A | ~13 行 YAML | `uvx zizmor` 中 A1–A5 对应告警归零 |
-| B | ~12 行 YAML | `gh workflow run build.yml` 彩排时 `gate` job 出现且绿；人为制造门禁失败确认 `build` 被跳过 |
-| C2 | 2–3 行配置 | `uvx zizmor .github/workflows/` 中 `unpinned-uses` 消失，其余告警 = 0 |
-| C1 | 2 行 Python + 1 行 YAML + 1 个依赖 | `python3 scripts/check.py` 全绿且摘要含 `zizmor`；**故意改回 A1 应变红** |
+| A | ~13 行 YAML | ✅ **已验收**：36 项（21 high / 4 medium）→ 0 项 low+；回归测试回退 A1 → `exit=1` + `template-injection` |
+| B | ~14 行 YAML | ✅ **已验收（2026-11-25）**：彩排 run `45584037084` → `gate: success` + 4 腿全绿 + `upload: skipped`；
+  探针分支（故意 F401）run `45584676889` → `gate: failure` + **`build: skipped`** + checksums/upload skipped + run=failure |
+| C2 | 5 行配置 | ✅ **已验收**：`unpinned-uses` 17 项 high 归零，规则仍活跃（`ref-pin` 策略而非 disable） |
+| C1 | 2 行 Python + 1 行 YAML + 1 个依赖 | ✅ **已验收**：8 项全绿含 `zizmor`；CI run `45583628408` 步骤 `Run zizmor: success`；回归测试通过 |
 | D | 按需 | 各自独立提交 |
