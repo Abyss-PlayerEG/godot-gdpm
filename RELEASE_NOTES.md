@@ -1,4 +1,4 @@
-# v0.1.0b1
+# v0.1.0a1
 
 ## English
 
@@ -29,14 +29,14 @@
 ### Installation
 
 ```bash
-pip install godot-gdpm==0.1.0b1
+pip install godot-gdpm==0.1.0a1
 ```
 
 Or download from GitHub Releases:
 
 ```bash
 # macOS / Linux
-tar -xzf gdpm_v0.1.0b1_*.tar.gz
+tar -xzf gdpm_v0.1.0a1_*.tar.gz
 cd gdpm
 ./install.sh
 
@@ -112,14 +112,14 @@ cd gdpm
 ### 安装
 
 ```bash
-pip install godot-gdpm==0.1.0b1
+pip install godot-gdpm==0.1.0a1
 ```
 
 或从 GitHub Releases 下载：
 
 ```bash
 # macOS / Linux
-tar -xzf gdpm_v0.1.0b1_*.tar.gz
+tar -xzf gdpm_v0.1.0a1_*.tar.gz
 cd gdpm
 ./install.sh
 

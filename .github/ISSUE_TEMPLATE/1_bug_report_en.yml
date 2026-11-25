@@ -35,6 +35,6 @@ body:
     attributes:
       label: Version
       description: Paste the output of `gdpm --version`.
-      placeholder: e.g., gdpm v0.1.0b1 (binary | Windows x86_64)
+      placeholder: e.g., gdpm v0.1.0a1 (binary | Windows x86_64)
     validations:
       required: true
