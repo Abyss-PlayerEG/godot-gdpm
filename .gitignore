@@ -53,9 +53,9 @@ site/
 *.spec
 
 
-# Cloudflare Worker (gdpm_cf_workers)
-src/gdpm_cf_workers/.wrangler/
-src/gdpm_cf_workers/node_modules/
+# Cloudflare Worker (gdpm_worker_godot_download)
+src/gdpm_worker_godot_download/.wrangler/
+src/gdpm_worker_godot_download/node_modules/
 
 # OS
 .DS_Store

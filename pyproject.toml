@@ -46,7 +46,7 @@ packages = ["src/gdpm"]
 
 [tool.hatch.build.targets.sdist]
 # leading / anchors to repo root — without it "installer/" also excludes src/gdpm/installer/
-exclude = ["/docs/", "/notes/", "/installer/", "/.github/", "/scripts/", "/src/gdpm_cf_workers/"]
+exclude = ["/docs/", "/notes/", "/installer/", "/.github/", "/scripts/", "/src/gdpm_worker_godot_download/"]
 
 [dependency-groups]
 dev = [

@@ -1,3 +1,9 @@
+<div align="center">
+
+[![English](https://img.shields.io/badge/English-gray?style=for-the-badge)](README.md) [![简体中文](https://img.shields.io/badge/简体中文-blue?style=for-the-badge)](README_CN.md)
+
+</div>
+
 # gdpm_cf_workers — 自建 Godot 下载 CDN (Cloudflare Worker)
 
 在自有域名 `godot-download.playereg.top` 上仿真官方下载接口
@@ -73,7 +79,7 @@ gdpm 客户端只消费 stable 通道 (install 有 stable-only 门禁), 非 stab
 ## 部署三步
 
 ```bash
-cd src/gdpm_cf_workers
+cd src/gdpm_worker_godot_download
 npx wrangler login                      # 首次: 浏览器授权 CF 账号
 npx wrangler deploy                     # routes 自动创建 DNS + 证书
 ```

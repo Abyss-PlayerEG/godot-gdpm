@@ -7,7 +7,7 @@ Usage:
     python3 scripts/deploy_worker.py --whoami    # show wrangler auth status
 
 Requires: Node.js (npx) and a one-time `npx wrangler login`
-(run inside src/gdpm_cf_workers/).
+(run inside src/gdpm_worker_godot_download/).
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent.parent
-WORKER_DIR = PROJECT_DIR / "src" / "gdpm_cf_workers"
+WORKER_DIR = PROJECT_DIR / "src" / "gdpm_worker_godot_download"
 
 
 def run(args: list[str]) -> int:
@@ -62,7 +62,7 @@ def main() -> int:
     if run(["npx", "wrangler", "whoami"]) != 0:
         print(
             "\nNot logged in. Run once:\n"
-            "  cd src/gdpm_cf_workers && npx wrangler login",
+            "  cd src/gdpm_worker_godot_download && npx wrangler login",
             file=sys.stderr,
         )
         return 1
