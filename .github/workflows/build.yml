@@ -123,6 +123,9 @@ jobs:
       # 仅 release 事件执行（手动 dispatch 时 GITHUB_REF_NAME 是分支名，跳过）。
       - name: Verify release tag matches pyproject version
         if: github.event_name == 'release'
+        # Windows runner 默认 pwsh, 本步骤是 bash 脚本 (${VAR#...} / if [ ] 在
+        # pwsh 下 ParserError) —— 与下方 Build executable 同因。
+        shell: bash
         run: |
           VER=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
           TAG="${GITHUB_REF_NAME#v}"
