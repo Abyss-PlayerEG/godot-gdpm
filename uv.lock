@@ -391,6 +391,7 @@ dev = [
     { name = "ruff" },
     { name = "twine" },
     { name = "vulture" },
+    { name = "zizmor" },
 ]
 
 [package.metadata]
@@ -418,6 +419,7 @@ dev = [
     { name = "ruff", specifier = ">=0.8" },
     { name = "twine", specifier = ">=6.0" },
     { name = "vulture", specifier = ">=2.10" },
+    { name = "zizmor", specifier = ">=1.33.1" },
 ]
 
 [[package]]
@@ -1218,4 +1220,23 @@ source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/49/b4/51fe890511f0f242d07cb1ebe6a5b6db417262b9d2568b460347c57d95cc/wcwidth-0.8.1.tar.gz", hash = "sha256:faf5b4a5366a72dc49cad48cdf21f52bdf63bdda995178e483ba247ff79089b9" }
 wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/bd/6e/95b0e537de1f4d4301f76f944642c6da50d1511cc7b3d64dc418a66c7509/wcwidth-0.8.1-py3-none-any.whl", hash = "sha256:f453740b1e4a4f3291faa37944c555d71056c4da08d59809b307ef4feba695c8" },
+]
+
+[[package]]
+name = "zizmor"
+version = "1.33.1"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/3d/70/a269633902781427600109dbf311a30d789d22a2f63d7a1731bfe87d2b22/zizmor-1.33.1.tar.gz", hash = "sha256:d4ec8974b3cbd6e997ceac7cd788b0d49392d1683bb509cd4a897fcccf79c71a" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/0d/54/697841064465eefacbbb425a364dc008a4e4ac4d96ced7b704d4a2932d06/zizmor-1.33.1-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:f4458e4d845075a2238aee01874d1fbab4e4ba3983d844415dcb4f7bcd61ee08" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/e1/fa/6e0fe9169c5675614767b120a0d34f42c30f7858beb3b2121d9fd798275d/zizmor-1.33.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:eaaeb5c4c4947fe4a29d69e90f45cd31bd68a7cb99f3171e4d32199761cb8aba" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/9f/34/17f1f41e41c9ca5a2f8e9f9b33a9f439d2838a339cf774ded871e69197b1/zizmor-1.33.1-py3-none-manylinux_2_24_aarch64.whl", hash = "sha256:0927b0f2f86d67a98444ae7fe2529963e29ffc3acff73e588f479f33361c926c" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/c1/4a/fd81a948f60a95dd9defb8fba032e6593010025ee49d15d4e19fa9414fa3/zizmor-1.33.1-py3-none-manylinux_2_28_armv7l.whl", hash = "sha256:807b7f8b86fe23ad6431f1663c37f707467f3996887c6cf91dfc378621a89fa0" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/49/bf/89961bcb9034e7c25af39f6e9d65d37eff9314b49034c2e2bb70ae42d818/zizmor-1.33.1-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:49eb92a95347e7da58c3123e4d5b297dbb6fe8ecc328e9db68df14c08e25e151" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/d6/20/2f658100b457113e61851df63f736531e62a2803cb7a1bb271a1239e6430/zizmor-1.33.1-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:3ed1dba4e9bbe590515a35359abbbe926c9cbd5f5fe52eb2f7e791250bdc536f" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/df/62/3003fd15f3fa44f6b05014b74a3e16e84d9aa430b91580ecfe2652123abd/zizmor-1.33.1-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:e31d5e0950fbbabd7b499a63950f10565c30c50ca8a1937a1121f547e2ce3c94" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/da/a7/de6527426732bf3bb701fdbddb31e124dec00b861b98a9f5d39d0c735c9a/zizmor-1.33.1-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:05d49c0ba1ba20531b1abe24d839dac3a6d5600d81944547015195d7cfccf336" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/3b/10/a0c765a7ceaa47a801863e98ce5ef611b0bd053fc42b1eb43659b4d930c1/zizmor-1.33.1-py3-none-win32.whl", hash = "sha256:17d3f0f563943493711cd94312ac5ba9ade0bd97d21a91c5d3a617a43cae5c78" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/35/ee/24f1d8f12ea4df22658978dfbe3d6cdfb01b5420f17a56c1735130f6342f/zizmor-1.33.1-py3-none-win_amd64.whl", hash = "sha256:1ebbb1111f5d98e6d0a3643afed1d808f880c7b7cbe671b0d08f37a26f0b7b0b" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/43/be/ea9d911d4116244b828c12e330237d9244b305b7560ac82be81350cddfa0/zizmor-1.33.1-py3-none-win_arm64.whl", hash = "sha256:9ad301363e4f7df39d6924ed5b3aabf09958817ef891c740c26680b5f9656851" },
 ]

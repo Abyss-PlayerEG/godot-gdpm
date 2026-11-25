@@ -21,8 +21,11 @@ jobs:
   # 第一阶段：构建 + 全部防护（全自动，无需人工介入）
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15 # 正常约 1min；无上限时挂死会吃 GitHub 的 6 小时硬上限
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false # 门禁会执行仓库代码，token 不留在 .git/config
 
       - uses: actions/setup-python@v5
         with:
@@ -38,6 +41,8 @@ jobs:
           path: |
             ~/.cache/uv
           key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+          # 发版工作流只读 CI 填的缓存、不回写——否则可能成为缓存投毒源
+          lookup-only: true
           restore-keys: |
             ${{ runner.os }}-uv-
 
@@ -95,6 +100,7 @@ jobs:
   publish:
     needs: build-and-test
     runs-on: ubuntu-latest
+    timeout-minutes: 15 # 下载产物 + 上传 PyPI；无上限时挂死会吃 6 小时硬上限
     environment: pypi
     permissions:
       id-token: write # OIDC 令牌：Trusted Publishing 免 token 认证

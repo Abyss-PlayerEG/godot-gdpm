@@ -1,0 +1,17 @@
+# zizmor 配置 —— GitHub Actions 工作流安全扫描
+#
+# 运行：python3 scripts/check.py zizmor（或 uvx zizmor .github/workflows/）
+# 背景与决策记录：notes/todo/CI工作流优化.md 批次 C2
+#
+# unpinned-uses 策略：接受 tag/branch 固定（ref-pin），暂不做 SHA 锁定。
+# 理由：SHA 锁定必须配套 Renovate 自动更新，否则 action 会陈旧、反而错过
+# 安全更新；本仓库的 7 个 action 全部来自 GitHub 官方 / PyPA 等低风险源。
+# 规则本身保持活跃 —— 完全不带 ref 的 uses（如 `foo/bar`）仍会被抓出。
+# 若将来引入高风险第三方 action，应单独要求它 hash-pin。
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        "actions/*": ref-pin
+        "pypa/*": ref-pin
+        "softprops/*": ref-pin

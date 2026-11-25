@@ -18,15 +18,21 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read # 门禁只读（仓库默认亦为 read，写明以自证最小权限）
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # 正常约 40s；无上限时挂死会吃 GitHub 的 6 小时硬上限
     strategy:
       matrix:
         # 与 pyproject 的 requires-python 对齐；单值矩阵只为保留多版本扩展位
         python-version: ["3.14"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false # 测试会执行仓库代码，token 不留在 .git/config
 
       - uses: actions/setup-python@v5
         with:
@@ -47,7 +53,7 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      # ---- 七项门禁（任一步非零退出 → 本 job 失败 → PR 不可合） ----
+      # ---- 八项门禁（任一步非零退出 → 本 job 失败 → PR 不可合） ----
       # mypy   严格类型检查（src/ + scripts/）
       # ruff   lint（整仓）
       # format 格式校验（整仓，仅检查不修改）
@@ -55,6 +61,7 @@ jobs:
       # vulture 死代码探测
       # deptry 依赖问题（缺失/未用/错位）
       # test   pytest 全量测试
+      # zizmor GitHub Actions 工作流安全扫描（策略见 .github/zizmor.yml）
       - name: Run mypy
         run: python3 scripts/check.py mypy
 
@@ -75,6 +82,9 @@ jobs:
 
       - name: Run tests
         run: python3 scripts/check.py test
+
+      - name: Run zizmor
+        run: python3 scripts/check.py zizmor
 
       # 覆盖率摘要写入 run 页顶部 Summary（GitHub 原生渲染，零第三方）：
       # 复用上一步 check.py 生成的 JSON，不重复跑测试；if: always() 保证

@@ -8,6 +8,8 @@ Usage:
     python scripts/check.py --help     # Show this help
 
 Checks: mypy ruff format pylint vulture deptry test (pytest + coverage gate)
+        zizmor (GitHub Actions workflow security; --min-severity=low so
+        informational style suggestions don't block, real findings do)
 """
 
 from __future__ import annotations
@@ -130,6 +132,13 @@ CHECKS: dict[str, Callable[[], bool]] = {
     "vulture": check_vulture,
     "deptry": lambda: _run("deptry (dependencies)", ["uv", "run", "deptry", "."]),
     "test": check_test,
+    # --min-severity=low: informational findings are style suggestions and
+    # must not block; low and above fail the gate. Policy and ignore list
+    # live in .github/zizmor.yml (see notes/todo/CI工作流优化.md, batch C2).
+    "zizmor": lambda: _run(
+        "zizmor (workflow security)",
+        ["uv", "run", "zizmor", "--min-severity=low", ".github/workflows/"],
+    ),
 }
 COMMANDS: dict[str, Callable[[], bool]] = {**CHECKS, "fix": fix}
 

@@ -33,3 +33,4 @@
 - [ ] [其他待开发功能](todo/其他待开发功能.md)
 - [ ] [Godot Asset Library 支持](todo/asset-library.md)
 - [ ] 加载动画（Rich spinner，解决 console.status 与 console.print 冲突问题）
+- [ ] [CI 工作流优化](todo/CI工作流优化.md) — 对比 Godot/uv 工作流 + `uvx zizmor` 实测 26 项 active（script injection、过宽权限、凭证残留、缓存投毒面）+ 发版门禁缺失 + 无超时上限；A/B/C/D 四批约 33 行 YAML，**zizmor 已定放进 `check.py`（不开独立 job）**，**明确不做项已记录**（勿重复讨论）
