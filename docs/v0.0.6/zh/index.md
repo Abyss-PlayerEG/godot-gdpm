@@ -1,0 +1,37 @@
+# GDPM
+
+Godot 插件的依赖包管理器，类似 uv/npm/cargo。
+
+## 特性
+
+- **一键安装** — `gdpm add limbo-ai`，告别手动下载
+- **依赖管理** — 自动依赖解析
+- **锁文件** — `gdpm.lock` 确保团队和 CI 安装一致
+- **Godot Asset Store** — 直接集成官方商店 API
+- **版本约束** — 支持 `^`、`~`、`>=` 语义化版本语法
+- **模板检测** — 自动区分项目模板与普通插件
+- **Godot 兼容性** — 检查插件与项目 Godot 版本的兼容性
+- **本地插件管理** — `gdpm add --local` 将本地插件打包到 gdpm-local/
+
+## 快速开始
+
+```bash
+pip install godot-gdpm
+
+# 初始化已有项目
+gdpm init
+
+# 添加插件
+gdpm add limbo-ai
+gdpm add phantom-camera
+
+# git clone 后同步
+gdpm sync
+```
+
+## 链接
+
+- [GitHub](https://github.com/Abyss-PlayerEG/godot-gdpm)
+- [PyPI](https://pypi.org/project/godot-gdpm/)
+- [Godot Asset Store](https://store.godotengine.org/)
+- [Godot Asset Library](https://godotengine.org/asset-library/)
