@@ -1,8 +1,6 @@
 {
   "version": "0.0.3",
   "tag": "v0.0.3",
-  "channel": "stable",
-  "latest": false,
   "nav": [
     {
       "file": "index.md",
