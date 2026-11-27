@@ -1,5 +1,173 @@
 {
   "paths": {
+    "/api/v1/publishers/{publisher_slug}/": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublisherDataDetailed"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Get publisher details",
+        "tags": [
+          "Publishers"
+        ]
+      },
+      "put": {
+        "responses": {
+          "422": {
+            "$ref": "#/components/responses/UNPROCESSABLE_CONTENT"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublisherDataDetailed"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublisherDataDetailed"
+              }
+            }
+          }
+        },
+        "tags": [
+          "Publishers"
+        ],
+        "security": [
+          {
+            "API Key": []
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "name": "publisher_slug",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Slug that uniquely identifies the publisher"
+        }
+      ]
+    },
+    "/api/v1/publishers/{publisher_url_slug}/managers": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Get a list of users that can manager this publisher",
+        "tags": [
+          "Publishers"
+        ],
+        "security": [
+          {
+            "API Key": []
+          }
+        ]
+      },
+      "post": {
+        "responses": {
+          "422": {
+            "$ref": "#/components/responses/UNPROCESSABLE_CONTENT"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublisherManagerRequest"
+              }
+            }
+          }
+        },
+        "summary": "Add a manager to this publisher",
+        "tags": [
+          "Publishers"
+        ],
+        "security": [
+          {
+            "API Key": []
+          }
+        ]
+      },
+      "delete": {
+        "responses": {
+          "422": {
+            "$ref": "#/components/responses/UNPROCESSABLE_CONTENT"
+          },
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublisherManagerRequest"
+              }
+            }
+          }
+        },
+        "summary": "Delete a manager from this publisher. Publishers must have at least\n1 manager, so this method will fail when trying to remove a publisher's\nlast manager. In that case, you should delete the publisher instead.",
+        "tags": [
+          "Publishers"
+        ],
+        "security": [
+          {
+            "API Key": []
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "publisher_url_slug",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ]
+    },
     "/api/v1/": {
       "get": {
         "responses": {
@@ -20,6 +188,107 @@
         "summary": "Get details about the API itself",
         "tags": [
           "API_V1"
+        ]
+      }
+    },
+    "/api/v1/auth/introspection": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiIntrospectionData"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "summary": "Get details about your own connection",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "API Key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/token": {
+      "post": {
+        "responses": {
+          "422": {
+            "$ref": "#/components/responses/UNPROCESSABLE_CONTENT"
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiTokenData"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          }
+        },
+        "summary": "Create a new API key for the currently authenticated user",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "API Key": []
+          }
+        ]
+      },
+      "delete": {
+        "responses": {
+          "422": {
+            "$ref": "#/components/responses/UNPROCESSABLE_CONTENT"
+          },
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/DEFAULT_ERROR"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenDeleteRequest"
+              }
+            }
+          }
+        },
+        "summary": "Deletes an existing token",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "API Key": []
+          }
         ]
       }
     },
@@ -132,7 +401,7 @@
             "description": "Only include results that have a stable release.\n\n**Note:** Parameter will be ignored when require_release is set to false!",
             "schema": {
               "type": "boolean",
-              "default": true
+              "default": false
             },
             "required": false
           },
@@ -221,6 +490,30 @@
               "minimum": 0
             },
             "required": false
+          },
+          {
+            "in": "query",
+            "name": "uses_ai",
+            "description": "Filter assets based on AI usage. True: Uses AI, False: No AI.",
+            "schema": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "default": null
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "fuzzy",
+            "description": "For values of 1 or higher, this enables fuzzy matching. The given integer defines the maximum Levenshtein distance.",
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -246,40 +539,6 @@
           "Searching"
         ]
       }
-    },
-    "/api/v1/publishers/{publisher_slug}/": {
-      "get": {
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublisherDataDetailed"
-                }
-              }
-            }
-          },
-          "default": {
-            "$ref": "#/components/responses/DEFAULT_ERROR"
-          }
-        },
-        "summary": "Get publisher details",
-        "tags": [
-          "Publishers"
-        ]
-      },
-      "parameters": [
-        {
-          "name": "publisher_slug",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Slug that uniquely identifies the publisher"
-        }
-      ]
     },
     "/api/v1/assets/": {
       "get": {
@@ -319,7 +578,7 @@
             "description": "Only include results that have a stable release.\n\n**Note:** Parameter will be ignored when require_release is set to false!",
             "schema": {
               "type": "boolean",
-              "default": true
+              "default": false
             },
             "required": false
           },
@@ -464,7 +723,7 @@
             "description": "Only include stable releases.",
             "schema": {
               "type": "boolean",
-              "default": true
+              "default": false
             },
             "required": false
           },
@@ -621,7 +880,7 @@
   },
   "info": {
     "title": "Godot Asset Store API",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "tags": [
     {
@@ -680,6 +939,56 @@
           }
         }
       },
+      "PublisherDataDetailed": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "description": "Unique identifier for the publisher."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human readable display name."
+          },
+          "thumbnail": {
+            "description": "URL to the thumbnail."
+          },
+          "store_url": {
+            "description": "URL to view the publisher page."
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Indicates if the publisher is verified."
+          },
+          "description_html": {
+            "type": "string",
+            "description": "Description rendered as HTML."
+          },
+          "description_bbcode": {
+            "type": "string",
+            "description": "Description rendered as BBCode."
+          },
+          "links": {
+            "type": "array",
+            "description": "List of URLs provided by the publisher.\n\n**Note:** The target page is neither hosted by nor affiliated with the Godot Foundation.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PublisherManagerRequest": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "ID of the user to be added as a manager for the publisher."
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
       "ApiOverviewData": {
         "type": "object",
         "properties": {
@@ -701,6 +1010,66 @@
           }
         }
       },
+      "ApiIntrospectionData": {
+        "type": "object",
+        "properties": {
+          "authenticated": {
+            "type": "string",
+            "description": "Indicating if the current request comes from an authenticated user."
+          },
+          "method": {
+            "type": "string",
+            "description": "Used authentication method."
+          },
+          "id": {
+            "type": "string",
+            "description": "User ID of the authenticated user."
+          },
+          "name": {
+            "type": "string",
+            "description": "User name of the authenticated user."
+          }
+        }
+      },
+      "TokenRequest": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Description of the new API key."
+          },
+          "lifespan": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Duration in seconds until the API key schould expire."
+          }
+        },
+        "required": [
+          "description"
+        ]
+      },
+      "ApiTokenData": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token that can be used for API authentication. It will only be returned once by the server. Keep this data secret!"
+          }
+        }
+      },
+      "TokenDeleteRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "The ID of the key to delete. Mutually exclusive with `token`."
+          },
+          "token": {
+            "type": "string",
+            "description": "The API key to delete. Mutually exclusive with `id`."
+          }
+        }
+      },
       "AutocompleteResult": {
         "type": "object",
         "properties": {
@@ -715,7 +1084,7 @@
         "properties": {
           "slug": {
             "type": "string",
-            "description": "Unique identifier for the Publisher."
+            "description": "Unique identifier for the publisher."
           },
           "name": {
             "type": "string",
@@ -755,10 +1124,10 @@
         "properties": {
           "slug": {
             "type": "string",
-            "description": "Unique identifier for the Asset."
+            "description": "Unique identifier for the asset."
           },
           "publisher": {
-            "description": "Publisher of this asset",
+            "description": "Publisher of this asset.",
             "$ref": "#/components/schemas/PublisherData"
           },
           "name": {
@@ -801,6 +1170,10 @@
           },
           "store_url": {
             "description": "URL to view the asset page."
+          },
+          "uses_ai": {
+            "type": "boolean",
+            "description": "Indicates if the asset uses AI generated assets and/or code."
           }
         }
       },
@@ -887,53 +1260,15 @@
           }
         }
       },
-      "PublisherDataDetailed": {
-        "type": "object",
-        "properties": {
-          "slug": {
-            "type": "string",
-            "description": "Unique identifier for the Publisher."
-          },
-          "name": {
-            "type": "string",
-            "description": "Human readable display name."
-          },
-          "thumbnail": {
-            "description": "URL to the thumbnail."
-          },
-          "store_url": {
-            "description": "URL to view the publisher page."
-          },
-          "verified": {
-            "type": "boolean",
-            "description": "Indicates if the publisher is verified."
-          },
-          "description_html": {
-            "type": "string",
-            "description": "Description rendered as HTML"
-          },
-          "description_bbcode": {
-            "type": "string",
-            "description": "Description rendered as BBCode."
-          },
-          "links": {
-            "type": "array",
-            "description": "List of URLs provided by the publisher.\n\n**Note:** The target page is neither hosted by nor affiliated with the Godot Foundation.",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
       "AssetDataDetailed": {
         "type": "object",
         "properties": {
           "slug": {
             "type": "string",
-            "description": "Unique identifier for the Asset."
+            "description": "Unique identifier for the asset."
           },
           "publisher": {
-            "description": "Publisher of this asset",
+            "description": "Publisher of this asset.",
             "$ref": "#/components/schemas/PublisherData"
           },
           "name": {
@@ -976,6 +1311,10 @@
           },
           "store_url": {
             "description": "URL to view the asset page."
+          },
+          "uses_ai": {
+            "type": "boolean",
+            "description": "Indicates if the asset uses AI generated assets and/or code."
           },
           "body_html": {
             "type": "string",
@@ -1029,6 +1368,14 @@
           },
           "video_thumbnail_url": {
             "description": "URL to the thumbnail from the external video provider."
+          },
+          "uses_ai_reason": {
+            "type": "string",
+            "description": "Details about AI usage in the asset."
+          },
+          "documentation_url": {
+            "type": "string",
+            "description": "URL to the documentation for the asset.\n\n**Note:** The target page is neither hosted by nor affiliated with the Godot Foundation."
           }
         }
       },
@@ -1070,10 +1417,10 @@
             "description": "Date when the release was created."
           },
           "min_godot_version": {
-            "description": "Minimum Godot Version."
+            "description": "Minimum Godot version."
           },
           "max_godot_version": {
-            "description": "Maximum Godot Version."
+            "description": "Maximum Godot version."
           },
           "notes": {
             "type": "string",
@@ -1167,6 +1514,13 @@
         "schema": {
           "$ref": "#/components/schemas/PaginationMetadata"
         }
+      }
+    },
+    "securitySchemes": {
+      "API Key": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "token"
       }
     }
   }
