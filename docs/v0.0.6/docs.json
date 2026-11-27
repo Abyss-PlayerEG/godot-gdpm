@@ -1,52 +1,47 @@
 {
-  "name": "GDPM Documentation",
   "version": "0.0.6",
   "tag": "v0.0.6",
   "channel": "stable",
   "latest": true,
-  "languages": [
-    "en",
-    "zh"
-  ],
-  "pages": [
+  "nav": [
     {
       "file": "index.md",
-      "titles": {
-        "en": "GDPM",
-        "zh": "GDPM"
+      "label": {
+        "en": "Home",
+        "zh": "首页"
       }
     },
     {
       "file": "installation.md",
-      "titles": {
+      "label": {
         "en": "Installation",
         "zh": "安装指南"
       }
     },
     {
       "file": "quick-start.md",
-      "titles": {
+      "label": {
         "en": "Quick Start",
         "zh": "快速入门"
       }
     },
     {
       "file": "commands.md",
-      "titles": {
+      "label": {
         "en": "Commands",
         "zh": "命令参考"
       }
     },
     {
       "file": "configuration.md",
-      "titles": {
+      "label": {
         "en": "Configuration",
         "zh": "配置参考"
       }
     },
     {
       "file": "faq.md",
-      "titles": {
+      "label": {
         "en": "FAQ",
         "zh": "常见问题"
       }
