@@ -4,11 +4,47 @@
   "channel": "stable",
   "latest": true,
   "nav": [
-    "index.md",
-    "installation.md",
-    "quick-start.md",
-    "commands.md",
-    "configuration.md",
-    "faq.md"
+    {
+      "file": "index.md",
+      "label": {
+        "en": "Home",
+        "zh": "首页"
+      }
+    },
+    {
+      "file": "installation.md",
+      "label": {
+        "en": "Installation",
+        "zh": "安装指南"
+      }
+    },
+    {
+      "file": "quick-start.md",
+      "label": {
+        "en": "Quick Start",
+        "zh": "快速入门"
+      }
+    },
+    {
+      "file": "commands.md",
+      "label": {
+        "en": "Commands",
+        "zh": "命令参考"
+      }
+    },
+    {
+      "file": "configuration.md",
+      "label": {
+        "en": "Configuration",
+        "zh": "配置参考"
+      }
+    },
+    {
+      "file": "faq.md",
+      "label": {
+        "en": "FAQ",
+        "zh": "常见问题"
+      }
+    }
   ]
 }

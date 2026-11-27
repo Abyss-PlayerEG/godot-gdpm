@@ -28,36 +28,6 @@
       "default": false
     }
   ],
-  "pages": {
-    "index.md": {
-      "en": "Home",
-      "zh": "首页"
-    },
-    "installation.md": {
-      "en": "Installation",
-      "zh": "安装指南"
-    },
-    "quick-start.md": {
-      "en": "Quick Start",
-      "zh": "快速入门"
-    },
-    "commands.md": {
-      "en": "Commands",
-      "zh": "命令参考"
-    },
-    "engine-management.md": {
-      "en": "Engine Management",
-      "zh": "引擎管理"
-    },
-    "configuration.md": {
-      "en": "Configuration",
-      "zh": "配置参考"
-    },
-    "faq.md": {
-      "en": "FAQ",
-      "zh": "常见问题"
-    }
-  },
   "markdown_extensions": [
     "admonition",
     "pymdownx.details",
