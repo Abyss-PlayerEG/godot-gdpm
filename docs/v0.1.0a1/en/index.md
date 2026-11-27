@@ -9,6 +9,7 @@ A dependency package manager for Godot plugins, like uv/npm/cargo.
 - **Lock file** — `gdpm.lock` ensures reproducible installs across team and CI
 - **Godot Asset Store** — Direct integration with the official store API
 - **Version constraints** — Support for `^`, `~`, `>=` semver syntax
+- **Template detection** — Automatically identifies project templates vs addons
 - **Godot engine management** — Install, manage, and switch Godot versions
 - **Global cache** — Shared cache across projects, saves disk space
 
