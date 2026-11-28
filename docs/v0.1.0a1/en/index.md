@@ -11,7 +11,7 @@ A dependency package manager for Godot plugins, like uv/npm/cargo.
 - **Version constraints** — Support for `^`, `~`, `>=` semver syntax
 - **Template detection** — Automatically identifies project templates vs addons
 - **Godot engine management** — Install, manage, and switch Godot versions
-- **Global cache** — Shared cache across projects, saves disk space
+- **Global cache** — Download cache shared across projects, skips re-downloading already-fetched plugins
 
 ## Quick Start
 
