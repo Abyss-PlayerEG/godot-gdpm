@@ -46,8 +46,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-uv-
 
+      # uv.lock pins mirrors.aliyun.com URLs (recorded from a user-level uv
+      # config); that mirror intermittently 403s GitHub runner IPs — retry.
       - name: Install dependencies
-        run: uv sync
+        run: |
+          attempt=0
+          until uv sync; do
+            attempt=$((attempt + 1))
+            if [ "$attempt" -ge 3 ]; then
+              echo "uv sync failed after 3 attempts" >&2
+              exit 1
+            fi
+            echo "uv sync failed (attempt $attempt), retrying in 10s..." >&2
+            sleep 10
+          done
 
       # 防护①：tag == pyproject 版本。
       # 上传的版本号来自 pyproject 而非 tag；忘了跑 version.py 会让
