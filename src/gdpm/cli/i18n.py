@@ -176,7 +176,7 @@ _EXAMPLE_LABELS: dict[str, dict[str, str]] = {
     "Search for MCP plugins": {"zh": "搜索 MCP 插件"},
     "Show top 5 results": {"zh": "显示前 5 条结果"},
     "Include templates": {"zh": "包含模板"},
-    "Sort by downloads": {"zh": "按下载量排序"},
+    "Sort by recently updated": {"zh": "按最近更新排序"},
     "Show status of all plugins": {"zh": "显示全部插件状态"},
     "Show status of specific plugin": {"zh": "显示指定插件状态"},
     "Sync all plugins": {"zh": "同步全部插件"},
@@ -259,6 +259,10 @@ _UI: dict[str, dict[str, str]] = {
     "ui.contributors": {"en": "Contributors", "zh": "贡献者"},
     "ui.opt_version": {"en": "Show version", "zh": "显示版本"},
     "ui.opt_yes": {"en": "Skip confirmation prompts", "zh": "跳过确认提示"},
+    "ui.opt_completion": {
+        "en": "Generate shell completion script",
+        "zh": "生成 shell 补全脚本",
+    },
     "ui.default": {"en": "(default: {v})", "zh": "(默认: {v})"},
     "ui.default_on": {"en": "(default: on)", "zh": "(默认: 开启)"},
     "ui.reinstall_confirm": {

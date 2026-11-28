@@ -347,6 +347,7 @@ def render_main_help(commands: Mapping[str, click.Command]) -> None:
             ("-a, --about", "ui.opt_about"),
             ("-V, --version", "ui.opt_version"),
             ("-y, --yes", "ui.opt_yes"),
+            ("--completion", "ui.opt_completion"),
         )
     )
     console.print(

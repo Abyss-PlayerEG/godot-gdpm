@@ -33,7 +33,7 @@ from gdpm.store.client import StoreClient
         ("gdpm search mcp", "Search for MCP plugins"),
         ("gdpm search ai --limit 5", "Show top 5 results"),
         ("gdpm search controller --all", "Include templates"),
-        ("gdpm search input --sort downloads", "Sort by downloads"),
+        ("gdpm search input --sort updated_desc", "Sort by recently updated"),
     ],
 )
 @click.argument("query")
