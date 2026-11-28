@@ -48,8 +48,20 @@ jobs:
             ${{ runner.os }}-uv-
           lookup-only: true # 发版工作流只读 CI 填的缓存，不回写
 
+      # uv.lock pins mirrors.aliyun.com URLs (recorded from a user-level uv
+      # config); that mirror intermittently 403s GitHub runner IPs — retry.
       - name: Install dependencies
-        run: uv sync
+        run: |
+          attempt=0
+          until uv sync; do
+            attempt=$((attempt + 1))
+            if [ "$attempt" -ge 3 ]; then
+              echo "uv sync failed after 3 attempts" >&2
+              exit 1
+            fi
+            echo "uv sync failed (attempt $attempt), retrying in 10s..." >&2
+            sleep 10
+          done
 
       - name: Run all checks
         run: python3 scripts/check.py
@@ -115,8 +127,20 @@ jobs:
           # 发版工作流只读 CI 填的缓存、不回写——否则可能成为缓存投毒源
           lookup-only: true
 
+      # uv.lock pins mirrors.aliyun.com URLs (recorded from a user-level uv
+      # config); that mirror intermittently 403s GitHub runner IPs — retry.
       - name: Install dependencies
-        run: uv sync
+        run: |
+          attempt=0
+          until uv sync; do
+            attempt=$((attempt + 1))
+            if [ "$attempt" -ge 3 ]; then
+              echo "uv sync failed after 3 attempts" >&2
+              exit 1
+            fi
+            echo "uv sync failed (attempt $attempt), retrying in 10s..." >&2
+            sleep 10
+          done
 
       # tag == pyproject 版本校验：防"忘跑 version.py 就打 release"。
       # PyPI 版本不可覆盖、归档名也带 tag，不一致必须当场失败。
