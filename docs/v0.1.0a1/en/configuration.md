@@ -56,6 +56,7 @@ All of gdpm's runtime data lives in a single directory:
 - Config files from older installs (the platformdirs location) migrate here automatically on the first run.
 - Uninstalling gdpm removes only the executable and the PATH entry — everything under `~/.gdpm` is kept.
 - `cache/` is safe to delete at any time (files are re-downloaded on demand); the rest is worth keeping.
+- Changing `cache_dir` only redirects **future** downloads — existing files are **not** moved. To keep them, move them yourself (`mkdir -p ~/gdpm-cache && mv ~/.gdpm/cache/* ~/gdpm-cache/`); the old directory is never read or cleaned again.
 
 ## Global configuration
 
