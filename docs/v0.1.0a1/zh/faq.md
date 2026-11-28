@@ -31,3 +31,7 @@ addons/
 ## 缓存存储在哪里？
 
 全局缓存在 `~/.gdpm/cache/`。使用 `gdpm cache info` 查看大小和位置。
+
+## gdpm 把数据存在哪里？
+
+全部集中在 `~/.gdpm/`：`config.toml`（全局配置）、`cache/`（下载缓存）、`engines/`（已安装的 Godot 引擎）与 `local-engines.json`（手动注册的本地引擎）。完整布局见[配置参考](configuration.md)——该目录在卸载后会保留，`cache/` 可随时删除。

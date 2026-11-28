@@ -31,3 +31,7 @@ Yes. GDPM supports Godot 3.x and 4.x. Version detection reads `project.godot` au
 ## Where is the cache stored?
 
 Global cache is in `~/.gdpm/cache/`. Use `gdpm cache info` to check size and location.
+
+## Where does gdpm store its data?
+
+Everything lives under `~/.gdpm/`: `config.toml` (global configuration), `cache/` (download cache), `engines/` (installed Godot engines) and `local-engines.json` (locally registered engines). See [Configuration](configuration.md) for the full layout — the directory survives uninstalls, and `cache/` is safe to delete.

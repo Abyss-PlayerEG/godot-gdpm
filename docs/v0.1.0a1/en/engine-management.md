@@ -41,6 +41,8 @@ With alias:
 gdpm godot add /path/to/Godot --name 4.7-custom
 ```
 
+The registration is stored in `~/.gdpm/local-engines.json`; use `gdpm godot remove <name>` to remove it.
+
 !!! note
     Use quotes when the path contains spaces. This applies to all platforms.
 
