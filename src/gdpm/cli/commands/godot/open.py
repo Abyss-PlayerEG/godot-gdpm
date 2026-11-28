@@ -8,12 +8,14 @@ gdpm godot open 命令
 Notes
 ----
 - godot_open: 打开 Godot 编辑器或运行当前项目.
+- 启动失败时回显 Godot 输出尾部 (原先输出被 DEVNULL 吞掉, 只剩 exit code 无法诊断).
 """
 
 from __future__ import annotations
 
 import json
 import subprocess
+import tempfile
 from pathlib import Path
 
 import click
@@ -105,22 +107,42 @@ def godot_open(engine_id: str | None, run: bool) -> None:
 
     console.print(f"Opening [cyan]{engine_name}@{engine_ver}[/cyan]...")
 
-    try:
-        proc = subprocess.Popen(
-            args,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+    # 启动失败时必须回显 Godot 的原始输出 (否则用户只能看到一个 exit code;
+    # 实测案例: 缺 libX11/libwayland 时真实病因全被 DEVNULL 吞掉)。
+    # 用临时文件而非 PIPE: 编辑器长期运行时无人读管道, 缓冲区填满会死锁。
+    with tempfile.TemporaryFile(mode="w+b") as log:
+        try:
+            proc = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT)
+        except Exception as e:
+            console.print(f"[red]Error:[/red] Failed to open Godot: {e}")
+            return
+
         try:
             # 短暂等待以捕获启动失败
             ret: int | None = proc.wait(timeout=1)
         except subprocess.TimeoutExpired:
             ret = None
-        if ret is not None and ret != 0:
+
+        # 1 秒后仍在运行 → 正常启动 (临时文件描述符由子进程继续持有)
+        if ret is None:
+            console.print(
+                f"[green]✓[/green] Opened [cyan]{engine_name}@{engine_ver}[/cyan]"
+            )
+            return
+
+        log.seek(0)
+        output = log.read().decode("utf-8", errors="replace").strip()
+
+        if ret != 0:
+            # 启动失败: 打印输出尾部, 让 Godot 自己说明死因
+            if output:
+                for line in output.splitlines()[-20:]:
+                    console.print(line, style="dim", markup=False)
             console.print(f"[red]Error:[/red] Godot exited with code {ret}")
             return
-    except Exception as e:
-        console.print(f"[red]Error:[/red] Failed to open Godot: {e}")
-        return
+
+        # 秒内自行退出 (如 --run 短脚本): 补打其输出 (原先被丢弃)
+        if output:
+            console.print(output, markup=False)
 
     console.print(f"[green]✓[/green] Opened [cyan]{engine_name}@{engine_ver}[/cyan]")
