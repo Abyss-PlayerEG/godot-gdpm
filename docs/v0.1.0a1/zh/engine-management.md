@@ -41,6 +41,8 @@ gdpm godot install 4.7 --csharp
 gdpm godot add /path/to/Godot --name 4.7-custom
 ```
 
+注册信息保存在 `~/.gdpm/local-engines.json`；用 `gdpm godot remove <name>` 移除注册。
+
 !!! note
     路径包含空格时需要使用引号，所有平台通用。
 
